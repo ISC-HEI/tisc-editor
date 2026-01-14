@@ -24,7 +24,7 @@ git clone https://github.com/areynard13/typst-editor.git
 cd typst-editor
 ```
 ### Start with docker
-- Go back to the racine.
+- Verify that you are at the project root.
 - Start with docker
 ```docker
 docker compose up -d --build
