@@ -135,3 +135,35 @@ function openAndShowFile() {
     reader.onload = (e) => { textarea.value = e.target.result; updateLineNumbers(); fetchCompile(); };
     reader.readAsText(file);
 }
+
+
+// -------- Change pages size --------
+const separator = document.getElementById('separator');
+const left = document.getElementById("preview")
+
+const container = left.parentElement;
+const containerWidth = container.getBoundingClientRect().width;
+let isDragging = false;
+const previewMinWidth=250
+
+separator.addEventListener('mousedown', () => {
+    isDragging = true;
+    document.body.style.cursor = 'col-resize';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    const containerLeft = left.parentElement.getBoundingClientRect().left;
+    const newWidth = containerWidth - (e.clientX - containerLeft);
+
+    if (newWidth < previewMinWidth) {
+        newWidth=previewMinWidth
+    }
+    left.style.width = newWidth + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+    document.body.style.cursor = 'default';
+});

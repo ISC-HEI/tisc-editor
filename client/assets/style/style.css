@@ -72,7 +72,7 @@ button {
 }
 
 .editor-container {
-    width: 50%;
+    flex: 1;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -233,4 +233,12 @@ ul {
 }
 .selected-folder {
     background-color: #00000020;
+}
+.separator {
+    width: 5px;
+    height: 100%;
+    background-color: #94a3b8;
+}
+.separator:hover {
+    cursor: col-resize;
 }
