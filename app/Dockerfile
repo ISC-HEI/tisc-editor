@@ -12,9 +12,6 @@ RUN bun install
 
 COPY . .
 
-RUN npx auth secret
-RUN npx prisma generate
-
 EXPOSE 3000
 
 CMD ["bun", "dev"]
