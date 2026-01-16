@@ -1,64 +1,74 @@
-# Typst API
-**Typst API** is an API for compiling and exporting Typst documents. It supports images and all core Typst features.
+<div align="center">
+  <img alt="Typst" src="https://user-images.githubusercontent.com/17899797/226108480-722b770e-6313-40d7-84f2-26bebb55a281.png">
+  <h1>Typst Compilation API</h1>
+  <p>A Node.js microservice for on-the-fly Typst rendering.</p>
+</div>
 
-## Table of Contents
-- [Features](#features)
-- [Installation and Setup](#installation-and-setup)
-    - [Clone the repository](#clone-the-repository)
-    - [Start with docker](#start-with-docker)
-- [Usage](#usage)
-    - [Payload example](#payload-example)
-- [Images Processing Workflow](#images-processing-workflow)
-- [License](#license)
+## Overview
 
-## Features
-- Compile Typst documents to SVG
-- Compile Typst documents to PDF
-- Support for images in documents
-- Full Typst functionality available through API
+The **Typst API** is a dedicated service that compile and convert typst document. It is designed to be **stateless** and **secure**, receiving all project assets (code, images, modules) via Base64 to produce professional PDF or SVG outputs instantly.
 
-## Installation and Setup
-### Clone the repository
+
+
+### Key Capabilities
+- **On-the-fly Rendering:** Instant conversion of Typst code to SVG or PDF.
+- **Stateless Architecture:** No database or persistent storage required on the server; everything is in the payload.
+- **Secure Sandboxing:** Each request is processed in a unique temporary directory, ensuring total isolation between users.
+- **Recursive File Support:** Handles not only images but also nested `.typ` files and assets.
+
+
+## Getting Started
+
+### 1. Prerequisites
+- **Node.js**
+
+### 2. Installation
 ```bash
-git clone https://github.com/ISC-HEI/typst-editor.git
-cd typst-editor
-```
-### Start Only The API
-install dependencies and run
-```
+# Navigate to the server directory
+cd server
+
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
 ```
 
-## Usage
-You can send requests to the API to compile Typst documents. Here's the endpoints:
+## API Reference
+The API exposes two main endpoints for document generation.
 
 | Endpoint       | Method | Body | Description |
 |----------------|--------|------|-------------|
-| /render        | POST   |   `payload`   | Renders a Typst document to SVG |
+| /render        | POST   |   `payload`   |Renders the document to SVG (best for live previews). |
 | /export/pdf    | POST   | `payload` | Exports a Typst document to PDF |
 
-### Payload example
+
+### Payload Structure
+The API expects a JSON body with the following format:
 ```json
 {
-  "source": "=Heading1",
+  "source": "= Hello Typst\n#image(\"/assets/logo.png\")",
   "imgPaths": {
-    "/assets/logo.png": "base64_string"
+    "/assets/logo.png": "data:image/png;base64,iVBORw0KGgoAAA..."
   }
 }
 ```
-`source` → The Typst document content as a string.  
-`imgPaths` → Optional object mapping image paths to Base64-encoded images.
+`source` : The Typst document content as a string.  
+`imgPaths` : Optional object mapping image paths to Base64-encoded images.
 
-## Images Processing Workflow
-When rendering images in a Typst document, the API handles them in the following way:
+## Asset Processing Workflow
 
-1. **Receive Base64 Image** – The image is sent as a Base64-encoded string in the imgPaths payload.
-2. **Temporary File Creation** – The API creates a temporary image file from the Base64 data.
-3. **Document Compilation** – Typst generates the SVG or PDF, including the temporary image.
-4. **Cleanup** – After compilation, the temporary image file and its folder are automatically deleted to save storage and keep the server clean.
+To ensure high performance and zero-clutter, the API follows a strict lifecycle for every request:
 
-This process ensures that images are included in the document without leaving unnecessary files on the server.
+1. **Virtual Mapping**: The API parses the imgPaths and recreates the directory structure in a temporary "sandbox".
 
+2. **Decoding**: Base64 strings are converted back into binary files on the fly.
+
+3. **Compilation**: The Typst binary is executed within the sandbox.
+
+4. **Streaming**: The resulting SVG/PDF is read and sent back to the client as a stream.
+
+5. **Auto-Cleanup**: The entire temporary workspace is deleted immediately after the response is sent, regardless of whether the compilation succeeded or failed.
+  
 ## License
-The current License is Apache version 2.0, you can see it in the [LICENSE](../LICENSE) file.
+This service is licensed under the Apache License 2.0. See the [LICENSE](../LICENSE) file for details.

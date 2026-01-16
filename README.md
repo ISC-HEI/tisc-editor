@@ -1,63 +1,72 @@
 <div align="center">
+    <h1>
+        <img alt="Typst" src="https://user-images.githubusercontent.com/17899797/226108480-722b770e-6313-40d7-84f2-26bebb55a281.png">
+        Typst Online Editor
+    </h1>
+  
+  <p><strong>A professional, full-stack solution for cloud-based Typst authoring.</strong></p>
 
-# Typst Online Editor
-<img src="https://img.shields.io/badge/language-js-yellow" />
-<img src="https://img.shields.io/github/last-commit/areynard13/typst-editor" />
-<img src="https://img.shields.io/github/issues/areynard13/typst-editor" />
+  <div>
+    <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
+    <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+    <img src="https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white" />
+  </div>
 
-**Typst Online Editor** is a full web-based solution for creating, editing, and compiling Typst documents.
-This repository contains both the **web editor (client)** and the **compilation API (server)**.
+  <br />
+
+  [Explore Docs](./app/README.md) • [API Reference](./server/README.md) • [Report Bug](https://github.com/ISC-HEI/typst-editor/issues)
 </div>
 
-## Project Overview
 
-This monorepo is split into two main components:
+## Key Features
 
-**1. Client – Online Typst Editor**
-- A browser-based editor offering:
-- Real-time Typst editing
-- File & folder management
-- Image and table support
-- PDF & SVG export
-- Zoom and interface utilities
+| Component | Highlights |
+| :--- | :--- |
+| **Web Editor** | Real-time preview, VSCode-like editor, template gallery, multi-user project sharing. |
+| **Compilation API** | Typst to PDF/SVG rendering, isolated environments, Base64 image processing. |
+| **Architecture** | Dockerized monorepo, Prisma ORM for seamless DB management, Next.js Server Actions. |
 
-> Detailed documentation available in [client/README.md](client/README.md).
+## Tech Stack
 
-**2. Server – Typst API**
-- A REST API for compiling Typst documents, supporting:
-- SVG & PDF rendering
-- Image handling (Base64 → temporary storage → cleanup)
-- Full Typst features
+- **Frontend:** Next.js 16, TailwindCSS, Lucide Icons.
+- **Backend:** Node.js API with Typst binary integration.
+- **Database:** PostgreSQL with Prisma ORM.
+- **DevOps:** Docker Compose, GitHub Actions (CI/CD).
 
-> Full setup and usage in [server/README.md](server/README.md).
+## Getting Started
 
-## Getting started
-Clone the repository
+### Prerequisites
+- Docker & Docker Compose
+- Node.js (Optional, for local development)
+
+### One-Command Setup
+The entire stack (App, API, Database) can be launched instantly:
 ```bash
-git clone https://github.com/ISC-HEI/typst-editor.git
-```
-Each component has its own installation and run instructions.
-Refer to the corresponding README:
-
-- `client/README.md`
-- `server/README.md`
-
-The entire stack can be deployed using Docker Compose.
-```docker
+git clone [https://github.com/ISC-HEI/typst-editor.git](https://github.com/ISC-HEI/typst-editor.git)
+cd typst-editor
 docker compose up -d --build
 ```
-## Repository structure
+*The editor will be available at http://localhost:3000 and the API at http://localhost:3001*
+
+> For developement start, please see both README.
+
+## Configuration & Environment (optional)
+
+To support frequent template searches and avoid GitHub API rate limiting, you must configure a Personal Access Token.
+
+1. **Create a Token:** Go to [GitHub Settings](https://github.com/settings/tokens) and generate a **Personal Access Token (classic)**. No specific scopes are required for public repositories.
+2. **Update your `.env`:** Add your token to the `app/` environment file:
+
+```env
+GITHUB_TOKEN=your_github_token_here
+```
+> **Note:** Without this token, GitHub limits requests to 60 per hour per IP. With a token, this limit is increased to 5,000 requests per hour.
+
+## Repository Structure
 ```bash
 .
-├── app/     # Web editor
-│   └── README.md
-├── server/     # Typst API
-│   └── README.md
+├── app/            # Frontend Next.js application
+├── server/         # Node.js Typst Compilation Service
+├── docker-compose.yml
 └── LICENSE
 ```
-
-## User attention
-If you start the server manually (without Docker), make sure to open **ONLY** the `client` folder when starting the Live Server.
-
-## License
-This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE) file for details.

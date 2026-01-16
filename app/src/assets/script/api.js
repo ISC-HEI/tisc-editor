@@ -1,6 +1,6 @@
 import { downloadBlob, formatDateNow } from './utils.js';
 
-const API_URL = "http://127.0.0.1:3001";
+const NEXT_PUBLIC_COMPILER_URL = process.env.NEXT_PUBLIC_COMPILER_URL
 
 // Collect images from file tree recursively
 function collectImages(folder) {
@@ -24,7 +24,7 @@ function collectImages(folder) {
 export async function fetchSvg(source, fileTree) {
     if (!source && Object.keys(fileTree.children).length === 0) return "";
     try {
-        const response = await fetch(`${API_URL}/render`, {
+        const response = await fetch(`${NEXT_PUBLIC_COMPILER_URL}/render`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ source, images: collectImages(fileTree) })
@@ -42,7 +42,7 @@ export async function exportPdf(source, fileTree) {
 
     const payload = { source, images: collectImages(fileTree) };
     try {
-        const response = await fetch(`${API_URL}/export/pdf`, {
+        const response = await fetch(`${NEXT_PUBLIC_COMPILER_URL}/export/pdf`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)

@@ -1,85 +1,75 @@
-# Typst Editor
-**Typst Editor** is an online editor for Typst, offering a variety of features such as images, tables, and more. It is designed to make creating and managing Typst documents simple and efficient.
+<div align="center">
+  <img alt="Typst" src="https://user-images.githubusercontent.com/17899797/226108480-722b770e-6313-40d7-84f2-26bebb55a281.png">
+  <h1>Typst Editor — Client App</h1>
+  <p>The Next.js frontend for the Typst Online ecosystem.</p>
+</div>
 
-## Table of Contents
-- [Project Structure](#project-structure)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Installation and Setup](#installation-and-setup)
-- [License](#license)
-
-## Project Structure
-Here is the structure of the project:
-```bash
-src/
-├── app
-│   ├── api
-│   │   └── projects
-│   │       └── save        # Saving the project to the db
-│   ├── dashboard           # Dashboard page
-│   ├── login               # Login page
-│   ├── page.tsx            # Default page (editor)
-│   └── signup              # Sign up page
-├── assets
-│   ├── script              # Script for the editor
-│   └── style
-├── components
-│   ├── Editor.jsx          # The editor
-│   ├── Footer.jsx          # The footer use in the dashboard
-│   ├── ProjectAction.jsx   # The menu of action in the dashboard
-│   └── ProjectCard.jsx     # A card of each project
-├── lib
-│   ├── auth.config.ts
-│   ├── auth.ts             # Authentification
-│   └── prisma.ts
-└── middleware.ts           # Middleware for route protection
-```
 
 ## Features
-- Real-time Typst document editing
-- File and folder management directly in the browser
-- Zoom functionality for better readability
-- Saving in database and document export (PDF and SVG)
-- Opening file from the interface
-- Sharing a project to somebody else
 
-## Prerequisites
-1. Developpement
-    - Node.js
-    - Bun
+The editor provides a full IDE-like experience in the browser:
 
+- **Live Preview:** Instant rendering of SVG/PDF while typing.
+- **Smart File System:** Manage folders and files with a VSCode editor.
+- **Base64 Synchronization:** Assets (images, includes) are transferred via Base64 to the compilation server for maximum portability.
+- **Collaboration:** Share projects with other users via email with granular access control.
+- **Templates:** Instant project bootstrapping using GitHub-integrated templates.
+- **Responsive IDE:** Zoom controls, split-pane view, and full-screen editor mode.
 
-## Installation and Setup
-- Clone the repository:
+---
+
+## Project Structure
+
 ```bash
-git clone https://github.com/ISC-HEI/typst-editor.git
+src/
+├── app/
+│   ├── api/                # API use for auto saving
+│   ├── dashboard/          # Dashboard with the projects
+│   ├── login/ & signup/    # Authentication pages
+├── components/             # Reusable UI (Editor, Modals, ProjectCards)
+├── lib/                    # Shared logic (Prisma client, Auth.js config)
+└── assets/                 # Global styles and static scripts
 ```
-### Start with docker
-- Verify that you are at the project root.
-- Start with docker
-```docker
-docker compose up -d --build
+
+## Getting Started
+
+### Prerequisites
+- **Node.js** (v20+) **or Bun**
+- **Postgresql** instance
+- **Compilation server**: Ensure the [Typst Server](../server/README.md) is running
+
+### Environment Setup
+Create a `.env` file in the `app/` directory:
+```bash
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/typst_db"
+
+# GitHub API (Optional but recommended)
+# Needed to avoid rate limits when fetching templates
+GITHUB_TOKEN="your_personal_access_token"
+
+# Compilation API
+NEXT_PUBLIC_COMPILER_URL="http://localhost:5000"
 ```
-### Local Development
-- Open this repo (app)
-- Create a db in postgres
-- Enter the DATABASE_URL in the .env
-    Here's an example
-    ```dotenv
-    DATABASE_URL="postgresql://user:password@db:5432/typst_db"
-    ```
-- Install dependencies and generate prisma
+
+### Installation
 ```bash
 bun install
-bunx auth secret
-bunx prisma migrate dev
-bunx prisma generate
+
+bun x prisma migrate dev
+bun x prisma generate
+
+bun dev
 ```
 
-- Start the api, documentation [here](../server/README.md)
+## Technical Architecture
 
-## Configuration
-The API url can be configured in [client/assets/script/api.js](/client/assets/script/api.js)
+**1. Asset Management**  
+    Unlike traditional editors, this app converts all local assets (images, fonts, nested files) into Base64 strings within the fileTree object. This allows the backend to be completely stateless and perform compilations without needing a shared persistent volume.
+
+**2. GitHub Integration**  
+    The template engine uses the GitHub Content API to pull official Typst packages.  
+- Rate Limit Tip: If you are working in a team or deploying publicly, a GITHUB_TOKEN is mandatory to increase the limit from 60 to 5000 requests/hour.
 
 ## License
-The current License is Apache version 2.0, you can see it in the [LICENSE](../LICENSE) file.
+Licensed under the Apache License 2.0. See the [LICENSE](/LICENSE) file for more details.
