@@ -22,7 +22,6 @@ function collectImages(folder) {
 
 // Send source + images to server and get SVG
 export async function fetchSvg(source, fileTree) {
-    console.log(source)
     if (!source && Object.keys(fileTree.children).length === 0) return "";
     try {
         const response = await fetch(`${API_URL}/render`, {

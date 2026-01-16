@@ -4,6 +4,23 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 
+interface FileNode {
+    type: 'file' | 'folder';
+    name: string;
+    fullPath?: string;
+    data?: string;
+    content?: string;
+    children?: { [key: string]: FileNode };
+}
+
+const fetchOptions = {
+    headers: {
+        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+        'User-Agent': 'Typst-Editor-App'
+    },
+    next: { revalidate: 3600 }
+};
+
 export async function getUserProjects() {
     const session = await auth()
     if (!session?.user?.id) throw new Error("No authorization")
@@ -37,25 +54,109 @@ export async function createProject(formData: FormData) {
     if (!session?.user?.id) throw new Error("No authorization")
 
     const title = formData.get("title") as string
-    if (!title) return
+    const packageId = formData.get("template") as string
+    const entryFile = formData.get("entryFile") as string
+    console.log(formData)
+    if (!title || !packageId) return
+
+    let projectData = { content: "", fileTree: {} };
+
+    if (packageId !== "blank") {
+        const imported = await importPackageAsTree(packageId, entryFile);
+        if (imported) {
+            projectData = {
+                content: imported.content,
+                fileTree: imported.fileTree
+            };
+        }
+    }
 
     await prisma.project.create({
         data: {
             title: title,
             userId: parseInt(session.user.id),
-            fileTree: {},
+            content: projectData.content,
+            fileTree: projectData.fileTree as any,
         }
     })
 
     revalidatePath("/")
 }
 
+const buildTreeFromGitHub = async (url: string, currentPath: string = "", templateFile = ""): Promise<{ [key: string]: FileNode }> => {
+    const response = await fetch(url, fetchOptions);
+    if (response.status === 403) throw new Error("GitHub API Rate limit exceeded.");
+
+    const items = await response.json();
+    if (!Array.isArray(items)) return {};
+
+    const children: { [key: string]: FileNode } = {};
+
+    for (const item of items) {
+        if (item.name.startsWith('.') || item.name.endsWith('.md') || item.name === "LICENSE" || item.name === templateFile) {
+            continue;
+        }
+
+        const newPath = currentPath === "" ? `${item.name}` : `${currentPath}/${item.name}`;
+
+        if (item.type === 'dir') {
+            children[item.name] = {
+                type: 'folder',
+                name: item.name,
+                children: await buildTreeFromGitHub(item.url, newPath, templateFile)
+            };
+        } else {
+            children[item.name] = {
+                type: 'file',
+                name: item.name,
+                fullPath: newPath,
+                data: await getFileContentAsBase64(item.download_url)
+            };
+        }
+    }
+    return children;
+};
+
+async function getFileContentAsBase64(url: string) {
+    const response = await fetch(url, fetchOptions);
+    if (!response.ok) return "";
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
+
+    return `data:application/octet-stream;base64,${base64}`;
+}
+
+export const importPackageAsTree = async (packageName: string, templateFile: string) => {
+    const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${packageName}`;
+
+    try {
+        const treeData = await buildTreeFromGitHub(url, "", templateFile);
+
+        const response = await fetch(`https://raw.githubusercontent.com/typst/packages/main/packages/preview/${packageName}/${templateFile}`, fetchOptions);
+        const content = await response.text();
+
+        return {
+            content: content.replace(/\0/g, ''),
+            fileTree: {
+                type: "folder",
+                name: "root",
+                children: treeData
+            }
+        };
+    } catch (error) {
+        console.error("Erreur lors de la récupération du template:", error);
+        return null;
+    }
+};
+
 export async function deleteProject(formData: FormData) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("No authorization")
 
     const projectId = formData.get("id") as string
-    
+
     if (!projectId) return
 
     await prisma.project.delete({
@@ -73,9 +174,9 @@ export async function saveProjectData(projectId: number, content: string, fileTr
     if (!session?.user?.id) throw new Error("Non autorisé")
 
     await prisma.project.update({
-        where: { 
+        where: {
             id: projectId,
-            userId: parseInt(session.user.id) 
+            userId: parseInt(session.user.id)
         },
         data: {
             content: content,
@@ -84,7 +185,7 @@ export async function saveProjectData(projectId: number, content: string, fileTr
     })
     revalidatePath("/")
 }
-                    
+
 export async function loadProject(id: number) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("Non autorisé")
@@ -106,7 +207,7 @@ async function getProjectById(projectId: number, userId: number) {
     if (project.sharedUsers.includes(userId)) {
         return project;
     }
-    
+
 
     return null;
 }
@@ -121,7 +222,7 @@ export async function shareProject(projectId: number, sharedUserEmail: string) {
     });
 
     if (!project) throw new Error("Projet introuvable");
-    
+
     const sharedUser = await prisma.user.findUnique({ where: { email: sharedUserEmail } });
     if (!sharedUser) throw new Error("This user didn't exist.");
 
@@ -140,7 +241,7 @@ export async function shareProject(projectId: number, sharedUserEmail: string) {
         })
     ]);
 
-    revalidatePath("/dashboard"); 
+    revalidatePath("/dashboard");
     return updatedUser;
 }
 
