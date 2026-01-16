@@ -129,29 +129,36 @@ async function openAndShowFile() {
 
 // -------- Change pages size --------
 const separator = document.getElementById('separator');
-const right = document.getElementById("preview")
+const container = separator.parentElement;
 
-const container = right.parentElement;
-const containerWidth = container.getBoundingClientRect().width;
 let isDragging = false;
 
-separator.addEventListener('mousedown', () => {
+separator.addEventListener('mousedown', (e) => {
     isDragging = true;
     document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none'; 
 });
 
 document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
 
-    const containerLeft = right.parentElement.getBoundingClientRect().left;
-    let newWidth = containerWidth - (e.clientX - containerLeft);
+    const containerRect = container.getBoundingClientRect();
+    const relativeX = e.clientX - containerRect.left;
 
-    right.style.width = newWidth + 'px';
+    const containerWidth = containerRect.width;
+    let percentage = (relativeX / containerWidth) * 100;
+
+    const editorSide = container.firstElementChild;
+    
+    editorSide.style.flex = `0 0 ${percentage}%`;
 });
 
 document.addEventListener('mouseup', () => {
-    isDragging = false;
-    document.body.style.cursor = 'default';
+    if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = 'default';
+        document.body.style.userSelect = 'auto';
+    }
 });
 
 async function autoSave() {

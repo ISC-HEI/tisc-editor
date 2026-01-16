@@ -265,7 +265,8 @@ export function getIcon(filename) {
         py: Terminal,
         js: FileCode,
         jpg: Image,
-        png: Image
+        png: Image,
+        svg: Image
     };
 
     const IconData = iconMap[ext] || FileQuestion;
