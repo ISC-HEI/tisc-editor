@@ -68,56 +68,77 @@ export async function saveProjectData(projectId: number, content: string, fileTr
     revalidatePath("/")
 }
                     
-export async function loadProject(id: number, code?: string) {
+export async function loadProject(id: number) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("Non autorisé")
 
-    const project = await getProjectById(id, session.user.id, code)
+    const project = await getProjectById(id, parseInt(session.user.id))
     return project
 }
 
-async function getProjectById(projectId: number, userId: string, code?: string) {
+async function getProjectById(projectId: number, userId: number) {
     const project = await prisma.project.findUnique({
         where: { id: projectId }
     })
 
     if (!project) return null;
 
-    if (code && project.shareCode === code) {
+    if (project.userId === userId) {
+        return project;
+    }
+    if (project.sharedUsers.includes(userId)) {
         return project;
     }
     
-    if (project.userId === parseInt(userId)) {
-        return project;
-    }
 
     return null;
 }
 
-export async function getShareCode(projectId: number) {
-    const session = await auth()
-    if (!session?.user?.id) throw new Error("Non autorisé")
+export async function shareProject(projectId: number, sharedUserEmail: string) {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Non autorisé");
 
-    const project = await getProjectById(projectId, session.user.id)
-
-    if (!project) throw new Error("No project find")
-
-    if (project.shareCode) {
-        return project.shareCode
-    } else {
-        const code = generateRandomString(10)
-        await prisma.project.update({
+    const project = await prisma.project.findUnique({
         where: { id: projectId },
-        data: { shareCode: code }
-        })
-        return code
+        select: { sharedUsers: true, userId: true }
+    });
+
+    if (!project) throw new Error("Projet introuvable");
+    
+    const sharedUser = await prisma.user.findUnique({ where: { email: sharedUserEmail } });
+    if (!sharedUser) throw new Error("This user didn't exist.");
+
+    if (project.sharedUsers.includes(sharedUser.id) || project.userId === sharedUser.id) {
+        throw new Error("This user already have access to this project.");
     }
+
+    const [updatedProject, updatedUser] = await prisma.$transaction([
+        prisma.project.update({
+            where: { id: projectId },
+            data: { sharedUsers: { push: sharedUser.id } }
+        }),
+        prisma.user.update({
+            where: { id: sharedUser.id },
+            data: { sharedProjects: { push: projectId } }
+        })
+    ]);
+
+    revalidatePath("/dashboard"); 
+    return updatedUser;
 }
 
-function generateRandomString(length: number) {
-  const bytesNeeded = Math.ceil(length * 3 / 4);
-  return randomBytes(bytesNeeded)
-    .toString('base64')
-    .slice(0, length)
-    .replace(/[/+]/g, '_');
+export async function getUsersEmailFromId(usersId: number[]) {
+    const users = await prisma.user.findMany({
+        where: {
+            id: {
+                in: usersId
+            }
+        },
+        select: {
+            id: true,
+            email: true
+        }
+    });
+
+    return users;
 }

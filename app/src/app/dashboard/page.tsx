@@ -40,9 +40,12 @@ export default async function Dashboard() {
                 <p className="text-gray-400">No projects currently.</p>
               </div>
             ) : (
-              projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))
+              <>
+                <h3>Your projects</h3>
+                {projects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </>
             )}
           </div>
 

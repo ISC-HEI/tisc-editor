@@ -3,6 +3,7 @@ CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
     "email" VARCHAR(60) NOT NULL,
     "password" TEXT NOT NULL,
+    "shared_projects" INTEGER[],
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -14,6 +15,7 @@ CREATE TABLE "projects" (
     "title" VARCHAR(60) NOT NULL,
     "content" TEXT,
     "file_tree" JSONB NOT NULL,
+    "shared_users" INTEGER[],
 
     CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
 );

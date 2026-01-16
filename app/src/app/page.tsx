@@ -8,8 +8,8 @@ type FileTree = {
   children: Record<string, FileTree>;
 };
 
-export default async function Page({ searchParams, }: { searchParams: Promise<{ projectId?: string, code?: string }> }) {
-  const { projectId, code } = await searchParams;
+export default async function Page({ searchParams, }: { searchParams: Promise<{ projectId?: string }> }) {
+  const { projectId } = await searchParams;
 
   function normalizeFileTree(value: any): FileTree {
     if (
@@ -45,8 +45,7 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
     fileTree: { type: "folder", name: "root", children: {} },
   };
 
-  const project = await loadProject(parseInt(projectId), code || undefined);
-  console.log(project)
+  const project = await loadProject(parseInt(projectId));
 
   if (!project) {
     redirect("/dashboard");

@@ -17,7 +17,11 @@ export function ProjectCard({ project }) {
       </Link>
 
       <div className="ml-4">
-        <ProjectActions projectId={project.id} />
+        <ProjectActions
+          projectId={project.id}
+          usersSharing={project.sharedUsers}
+          title={project.title}
+          />
       </div>
     </div>
   )
