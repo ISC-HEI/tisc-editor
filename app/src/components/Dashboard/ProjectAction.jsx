@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { deleteProject, getUsersEmailFromId } from "../app/dashboard/actions"
+import { deleteProject, getUsersEmailFromId } from "@/app/dashboard/actions";
 import SharedUserWindows from "./SharedUserWindow"
 import { Ellipsis, Link as LinkIcon, Share2, Trash } from "lucide-react" 
 

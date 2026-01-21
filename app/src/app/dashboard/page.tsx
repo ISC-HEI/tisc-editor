@@ -1,7 +1,7 @@
 import { getUserProjects } from "./actions"
-import { ProjectList } from "../../components/ProjectList"
+import { ProjectList } from "../../components/Dashboard/ProjectList"
 import Footer from "../../components/Footer"
-import CreateProjectModal from "../../components/CreateProjectModal"
+import CreateProjectModal from "../../components/Dashboard/CreateProjectModal"
 import { SignOutButton } from "@/components/SignOutButton"
 import { LayoutGrid, Users, HandshakeIcon } from "lucide-react"
 
@@ -9,7 +9,7 @@ export default async function Dashboard() {
   const projects = await getUserProjects()
   
   const totalProjects = projects.length
-  const sharedProjects = projects.filter(p => p.sharedUsers?.length > 0).length
+  const sharedProjects = projects.filter(p => p.sharedUsers?.length > 0 && p.isAuthor).length
   const collaborations = projects.filter(p => !p.isAuthor).length
 
   return (
@@ -76,7 +76,7 @@ export default async function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h2 className="font-bold text-slate-800">Your Projects</h2>
               <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">

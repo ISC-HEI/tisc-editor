@@ -1,6 +1,10 @@
 import { loadProject } from "@/app/dashboard/actions"
-import EditorClient from "../components/EditorClient";
 import { redirect } from "next/navigation";
+import dynamic from "next/dynamic";
+
+const Editor = dynamic(() => import("../components/Editor/Editor"), {
+  loading: () => <h2>The editor is loading</h2>
+})
 
 type FileTree = {
   type: "folder" | "file";
@@ -58,7 +62,7 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
   };
 
   return (
-    <EditorClient
+    <Editor
       projectId={projectData.id}
       title={projectData.title}
       content={projectData.content}

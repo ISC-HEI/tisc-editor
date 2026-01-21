@@ -42,7 +42,7 @@
 ### One-Command Setup
 The entire stack (App, API, Database) can be launched instantly:
 ```bash
-git clone [https://github.com/ISC-HEI/typst-editor.git](https://github.com/ISC-HEI/typst-editor.git)
+git clone https://github.com/ISC-HEI/typst-editor.git
 cd typst-editor
 docker compose up -d --build
 ```
