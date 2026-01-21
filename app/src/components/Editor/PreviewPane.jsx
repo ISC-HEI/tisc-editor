@@ -19,8 +19,8 @@ export const PreviewPane = () => (
       </div>
     </div>
     
-    <div id="preview" className="flex-1 overflow-auto p-8 flex justify-center">
-      <div id="page" className="bg-white shadow-2xl origin-top transition-transform duration-200 min-h-[29.7cm] w-[21cm]"></div>
+    <div id="preview" className="flex-1 overflow-auto p-8 flex justify-center items-baseline">
+      <div id="page" className="shadow-2xl origin-top transition-transform duration-200"></div>
     </div>
   </div>
 );

@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import * as monaco from "monaco-editor";
+import { typstSyntax, typstConfig } from "../../assets/typst-definition";
 
 export const MonacoEditor = ({ content, onInstanceReady }) => {
   const editorRef = useRef(null);
@@ -7,9 +8,19 @@ export const MonacoEditor = ({ content, onInstanceReady }) => {
 
   useEffect(() => {
     if (editorRef.current && !monacoInstance.current) {
+      
+      const langId = "typst";
+      const isRegistered = monaco.languages.getLanguages().some(l => l.id === langId);
+      
+      if (!isRegistered) {
+        monaco.languages.register({ id: langId });
+        monaco.languages.setLanguageConfiguration(langId, typstConfig);
+        monaco.languages.setMonarchTokensProvider(langId, typstSyntax);
+      }
+
       monacoInstance.current = monaco.editor.create(editorRef.current, {
         value: content || "",
-        language: "pug",
+        language: langId,
         theme: "vs-light",
         automaticLayout: true,
         fontSize: 14,
