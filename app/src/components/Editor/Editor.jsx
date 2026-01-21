@@ -1,5 +1,5 @@
 "use client";
-import {useState } from "react";
+import {useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { EditorHeader } from "./EditorHeader";
@@ -20,16 +20,19 @@ export default function Editor({ projectId, title, content, fileTree }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: "", callback: null });
   const [inputValue, setInputValue] = useState("");
+  const separatorRef=useRef(null)
   useEditorWatcher()
 
   const handleEditorReady = async (instance) => {
-    if (instance) {
+    if (instance && separatorRef.current) {
       initPreviewRefs({
-        editor: instance
+        editor: instance,
+        separator: separatorRef.current
       })
     }
     initPreviewInfos({
-      currentProjectId: projectId
+      currentProjectId: projectId,
+      defaultFileTree: fileTree
     })
     initPreviewFunctions({
       openCustomPrompt: openCustomPrompt
@@ -66,7 +69,7 @@ export default function Editor({ projectId, title, content, fileTree }) {
           </div>
         </div>
 
-        <div id="separator" className="w-1.5 bg-slate-100 hover:bg-blue-200 cursor-col-resize shrink-0 border-x border-slate-200" />
+        <div ref={separatorRef} className="w-1.5 bg-slate-100 hover:bg-blue-200 cursor-col-resize shrink-0 border-x border-slate-200" />
 
         <PreviewPane />
       </div>

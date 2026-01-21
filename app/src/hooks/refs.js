@@ -23,11 +23,14 @@ export let refs = {
   btnCreateFolder: null,
   btnUploadImages: null,
   imageFilesInput: null,
-  rootDropZone: null
+  rootDropZone: null,
+
+  separator: null,
 };
 
 export let infos = {
-    currentProjectId: null
+    currentProjectId: null,
+    defaultFileTree: null
 }
 
 export let functions = {

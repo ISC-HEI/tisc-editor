@@ -15,7 +15,7 @@ const debounceFetchCompile = debounce(async () => {
 // ----------------------------------------------------
 
 function initEditor() {
-    if (!refs.editor || !refs.btnBold || !refs.btnItalic || !refs.btnUnderline || !refs.page || !refs.btnSave || !refs.btnOpen || !refs.fileInputOpen || !refs.btnExportPdf || !refs.btnExportSvg) {
+    if (!refs.editor || !refs.btnBold || !refs.btnItalic || !refs.btnUnderline || !refs.page || !refs.btnSave || !refs.btnOpen || !refs.fileInputOpen || !refs.btnExportPdf || !refs.btnExportSvg || !refs.separator) {
         return
     }
 
@@ -33,11 +33,14 @@ function initEditor() {
     refs.btnExportPdf.addEventListener('click', () => {exportPdf(refs.editor.getValue(), { children: fileTree.children })})
     refs.btnExportSvg.addEventListener('click', async () => {exportSvg(await fetchSvg(refs.editor.getValue(), { children: fileTree.children }))})
 
-    if (!infos.currentProjectId) {
+    setupResizable();
+
+    if (!infos.currentProjectId || !infos.defaultFileTree) {
         return
     }
-
     currentProjectId=infos.currentProjectId
+    fileTree=infos.defaultFileTree
+    fetchCompile();
 
     return true
 }
@@ -183,4 +186,40 @@ async function autoSave() {
     } catch (err) {
         console.error("Erreur sauvegarde:", err);
     }
+}
+
+// ----------------------------------------------------
+let isDragging = false;
+let container;
+
+function setupResizable() {
+    if (!refs.separator) return;
+
+    container = refs.separator.parentElement;
+
+    refs.separator.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging || !container) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const relativeX = e.clientX - containerRect.left;
+        const containerWidth = containerRect.width;
+        let percentage = (relativeX / containerWidth) * 100;
+
+        const editorSide = container.firstElementChild;
+        editorSide.style.flex = `0 0 ${percentage}%`;
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = 'auto';
+        }
+    });
 }

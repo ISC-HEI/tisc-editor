@@ -279,6 +279,7 @@ async function deleteItem(path, fileTree) {
 // ----------------------------------------------------
 
 async function saveFileTree() {
+    console.log("SAVE")
     if (!currentProjectId) return;
 
     const currentFileTree = fileTree;
