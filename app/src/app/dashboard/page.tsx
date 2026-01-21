@@ -10,7 +10,7 @@ export default async function Dashboard() {
   
   const totalProjects = projects.length
   const sharedProjects = projects.filter(p => p.sharedUsers?.length > 0 && p.isAuthor).length
-  const collaborations = projects.filter(p => !p.isAuthor).length
+  const guest_projects = projects.filter(p => !p.isAuthor).length
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
@@ -57,7 +57,7 @@ export default async function Dashboard() {
                   <Users size={24} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Shared With</p>
+                  <p className="text-sm font-medium text-slate-500">Shared with me</p>
                   <p className="text-2xl font-bold text-slate-900">{sharedProjects}</p>
                 </div>
               </div>
@@ -65,12 +65,12 @@ export default async function Dashboard() {
 
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
                   <HandshakeIcon size={24} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Collaborations</p>
-                  <p className="text-2xl font-bold text-slate-900">{collaborations}</p>
+                  <p className="text-sm font-medium text-slate-500">Guest projects</p>
+                  <p className="text-2xl font-bold text-slate-900">{guest_projects}</p>
                 </div>
               </div>
             </div>

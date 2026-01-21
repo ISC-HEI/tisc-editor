@@ -33,7 +33,7 @@ export function ProjectCard({ project }) {
               </span>
             )}
             {isShared && (
-              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md">
+              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md">
                 Shared
               </span>
             )}
