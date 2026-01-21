@@ -25,7 +25,7 @@ export async function getUserProjects() {
     const session = await auth()
     if (!session?.user?.id) throw new Error("No authorization")
 
-    const userId = parseInt(session.user.id)
+    const userId = session.user.id
 
     const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -56,7 +56,7 @@ export async function createProject(formData: FormData) {
     const title = formData.get("title") as string
     const packageId = formData.get("template") as string
     const entryFile = formData.get("entryFile") as string
-    console.log(formData)
+
     if (!title || !packageId) return
 
     let projectData = { content: "", fileTree: {} };
@@ -74,7 +74,7 @@ export async function createProject(formData: FormData) {
     await prisma.project.create({
         data: {
             title: title,
-            userId: parseInt(session.user.id),
+            userId: session.user.id,
             content: projectData.content,
             fileTree: projectData.fileTree as any,
         }
@@ -161,22 +161,22 @@ export async function deleteProject(formData: FormData) {
 
     await prisma.project.delete({
         where: {
-            id: parseInt(projectId),
-            userId: parseInt(session.user.id)
+            id: projectId,
+            userId: session.user.id
         }
     })
 
     revalidatePath("/")
 }
 
-export async function saveProjectData(projectId: number, content: string, fileTree: any) {
+export async function saveProjectData(projectId: string, content: string, fileTree: any) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("Non autorisé")
 
     await prisma.project.update({
         where: {
             id: projectId,
-            userId: parseInt(session.user.id)
+            userId: session.user.id
         },
         data: {
             content: content,
@@ -186,15 +186,15 @@ export async function saveProjectData(projectId: number, content: string, fileTr
     revalidatePath("/")
 }
 
-export async function loadProject(id: number) {
+export async function loadProject(id: string) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("Non autorisé")
 
-    const project = await getProjectById(id, parseInt(session.user.id))
+    const project = await getProjectById(id, session.user.id)
     return project
 }
 
-async function getProjectById(projectId: number, userId: number) {
+async function getProjectById(projectId: string, userId: string) {
     const project = await prisma.project.findUnique({
         where: { id: projectId }
     })
@@ -212,7 +212,7 @@ async function getProjectById(projectId: number, userId: number) {
     return null;
 }
 
-export async function shareProject(projectId: number, sharedUserEmail: string) {
+export async function shareProject(projectId: string, sharedUserEmail: string) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Non autorisé");
 
@@ -245,7 +245,7 @@ export async function shareProject(projectId: number, sharedUserEmail: string) {
     return updatedUser;
 }
 
-export async function removeSharedUser(projectId: number, sharedUserEmail: string) {
+export async function removeSharedUser(projectId: string, sharedUserEmail: string) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -263,7 +263,7 @@ export async function removeSharedUser(projectId: number, sharedUserEmail: strin
     if (!project) throw new Error("Project not found");
     if (!userToRemove) throw new Error("User not found");
 
-    if (project.userId !== Number(session.user.id)) {
+    if (project.userId !== session.user.id) {
         throw new Error("Only the owner can remove collaborators");
     }
 
@@ -285,7 +285,7 @@ export async function removeSharedUser(projectId: number, sharedUserEmail: strin
     return { success: true };
 }
 
-export async function getUsersEmailFromId(usersId: number[]) {
+export async function getUsersEmailFromId(usersId: string[]) {
     const users = await prisma.user.findMany({
         where: {
             id: {

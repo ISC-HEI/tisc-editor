@@ -5,7 +5,7 @@ export async function POST(req: Request) {
     const { id, content, fileTree } = await req.json();
     
     await prisma.project.update({
-        where: { id: parseInt(id) },
+        where: { id: id },
         data: { content, fileTree }
     });
 

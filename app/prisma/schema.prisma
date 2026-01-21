@@ -7,26 +7,26 @@ datasource db {
 }
 
 model User {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique @db.VarChar(60)
+  id             String   @id @default(uuid()) @db.Uuid
+  email          String   @unique @db.VarChar(60)
   password       String
   projects       Project[]
 
-  sharedProjects Int[]     @map("shared_projects")
+  sharedProjects String[] @map("shared_projects") @db.Uuid
 
   @@map("users")
 }
 
 model Project {
-  id           Int     @id @default(autoincrement())
-  userId       Int     @map("user_id")
-  title        String  @db.VarChar(60)
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  title        String   @db.VarChar(60)
   content      String?
-  fileTree     Json    @map("file_tree")
+  fileTree     Json     @map("file_tree")
 
-  sharedUsers  Int[]   @map("shared_users")
+  sharedUsers  String[] @map("shared_users") @db.Uuid
 
-  user         User    @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("projects")

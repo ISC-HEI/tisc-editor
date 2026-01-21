@@ -1,21 +1,21 @@
 -- CreateTable
 CREATE TABLE "users" (
-    "id" SERIAL NOT NULL,
+    "id" UUID NOT NULL,
     "email" VARCHAR(60) NOT NULL,
     "password" TEXT NOT NULL,
-    "shared_projects" INTEGER[],
+    "shared_projects" UUID[],
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "projects" (
-    "id" SERIAL NOT NULL,
-    "user_id" INTEGER NOT NULL,
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
     "title" VARCHAR(60) NOT NULL,
     "content" TEXT,
     "file_tree" JSONB NOT NULL,
-    "shared_users" INTEGER[],
+    "shared_users" UUID[],
 
     CONSTRAINT "projects_pkey" PRIMARY KEY ("id")
 );

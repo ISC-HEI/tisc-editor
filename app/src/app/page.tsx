@@ -38,18 +38,18 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
   }
 
   let projectData: {
-    id: number;
+    id: string;
     title: string;
     content: string;
     fileTree: FileTree;
   } = {
-    id: -1,
+    id: "",
     title: "",
     content: "",
     fileTree: { type: "folder", name: "root", children: {} },
   };
 
-  const project = await loadProject(parseInt(projectId));
+  const project = await loadProject(projectId);
 
   if (!project) {
     redirect("/dashboard");
