@@ -104,8 +104,13 @@ async function applyFormatting(type) {
 
 export async function fetchCompile() {
     refs.page.innerHTML = `
-        <div class="loading-wrapper">
-            <div class="spinner"></div>
+        <div class="flex items-center justify-center min-h-screen w-full bg-gray-100">
+            
+            <div class="relative">
+                <div class="w-12 h-12 border-4 border-gray-200 rounded-full"></div>
+                <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+            </div>
+
         </div>
     `;
     const svg = await fetchSvg(refs.editor.getValue(), { children: fileTree.children });
