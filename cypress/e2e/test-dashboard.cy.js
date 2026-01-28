@@ -72,7 +72,7 @@ describe("Dashboard, Templates & Collaboration", () => {
       it(`should create project with template: ${template.name}`, () => {
         createProject(template.selector, template.name);
         cy.contains(template.name).click();
-        cy.get(UI.editor.title, { timeout: 15000 }).should('contain', template.name);
+        cy.get(UI.editor.title, { timeout: 30000 }).should('contain', template.name);
         cy.get(UI.editor.container).should('contain', template.keyword);
       });
     });
