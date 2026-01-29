@@ -50,7 +50,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://typst_user:qaywsxedc@db:5432/typst_db
       - NEXT_PUBLIC_COMPILER_URL=http://127.0.0.1:3001
-      - GITHUB_TOKEN=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
+      - GITHUB_TOKEN=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
     command: sh -c "bun install && bun x auth secret && bun x prisma generate && bun x prisma migrate deploy && bun dev"
 
   test:
