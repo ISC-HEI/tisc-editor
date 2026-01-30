@@ -44,7 +44,7 @@ Create a `.env` file in the `app/` directory:
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/tisc_db"
 
-# GitHub API (Optional but recommended)
+# GitHub API
 # Needed to avoid rate limits when fetching templates
 GITHUB_TOKEN="your_personal_access_token"
 
@@ -56,6 +56,7 @@ NEXT_PUBLIC_COMPILER_URL="http://localhost:5000"
 ```bash
 bun install
 
+bun x auth secret
 bun x prisma migrate dev
 bun x prisma generate
 
