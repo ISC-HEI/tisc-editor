@@ -1,6 +1,6 @@
 <div align="center">
-  <img alt="Typst" src="https://user-images.githubusercontent.com/17899797/226108480-722b770e-6313-40d7-84f2-26bebb55a281.png">
-  <h1>Typst Editor — Client App</h1>
+  <img alt="Tisc" src="../img/banner.jpg">
+  <h1>TISC Editor — Client App</h1>
   <p>The Next.js frontend for the Typst Online ecosystem.</p>
 </div>
 
@@ -36,13 +36,13 @@ src/
 ### Prerequisites
 - **Node.js** (v20+) **or Bun**
 - **Postgresql** instance
-- **Compilation server**: Ensure the [Typst Server](../server/README.md) is running
+- **Compilation server**: Ensure the [TISC Server](../server/README.md) is running
 
 ### Environment Setup
 Create a `.env` file in the `app/` directory:
 ```bash
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/typst_db"
+DATABASE_URL="postgresql://user:password@localhost:5432/tisc_db"
 
 # GitHub API (Optional but recommended)
 # Needed to avoid rate limits when fetching templates
@@ -73,3 +73,6 @@ bun dev
 
 ## License
 Licensed under the Apache License 2.0. See the [LICENSE](/LICENSE) file for more details.
+
+## Disclaimer
+This project is an independent work and is not affiliated with, endorsed by, or supported by the official Typst organization.

@@ -1,12 +1,12 @@
 <div align="center">
-  <img alt="Typst" src="https://user-images.githubusercontent.com/17899797/226108480-722b770e-6313-40d7-84f2-26bebb55a281.png">
-  <h1>Typst Compilation API</h1>
+  <img alt="TISC" src="../img/banner.jpg">
+  <h1>TISC Compilation API</h1>
   <p>A Node.js microservice for on-the-fly Typst rendering.</p>
 </div>
 
 ## Overview
 
-The **Typst API** is a dedicated service that compile and convert typst document. It is designed to be **stateless** and **secure**, receiving all project assets (code, images, modules) via Base64 to produce professional PDF or SVG outputs instantly.
+The **TISC API** is a dedicated service that compile and convert typst document. It is designed to be **stateless** and **secure**, receiving all project assets (code, images, modules) via Base64 to produce professional PDF or SVG outputs instantly.
 
 
 
@@ -47,7 +47,7 @@ The API exposes two main endpoints for document generation.
 The API expects a JSON body with the following format:
 ```json
 {
-  "source": "= Hello Typst\n#image(\"/assets/logo.png\")",
+  "source": "= Hello TISC\n#image(\"/assets/logo.png\")",
   "imgPaths": {
     "/assets/logo.png": "data:image/png;base64,iVBORw0KGgoAAA..."
   }
@@ -72,3 +72,6 @@ To ensure high performance and zero-clutter, the API follows a strict lifecycle 
   
 ## License
 This service is licensed under the Apache License 2.0. See the [LICENSE](../LICENSE) file for details.
+
+## Disclaimer
+This project is an independent work and is not affiliated with, endorsed by, or supported by the official Typst organization.

@@ -1,36 +1,36 @@
 services:
   db:
     image: postgres:15
-    container_name: typst-db
+    container_name: tisc-db
     environment:
-      POSTGRES_USER: typst_user
+      POSTGRES_USER: tisc_user
       POSTGRES_PASSWORD: qaywsxedc
-      POSTGRES_DB: typst_db
+      POSTGRES_DB: tisc_db
     ports:
       - "5433:5432"
     networks:
-      - typst-network
+      - tisc-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U typst_user -d typst_db"]
+      test: ["CMD-SHELL", "pg_isready -U tisc_user -d tisc_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   server:
     build: ./server
-    container_name: typst-api
+    container_name: tisc-api
     ports:
       - "3001:3001"
     volumes:
       - ./server:/app
       - /app/node_modules
     networks:
-      - typst-network
+      - tisc-network
     command: sh -c "npm install && npm run dev"
 
   app:
     build: ./app
-    container_name: typst-app
+    container_name: tisc-app
     depends_on:
       db:
         condition: service_healthy
@@ -46,16 +46,16 @@ services:
       - ./app:/app
       - /app/node_modules
     networks:
-      - typst-network
+      - tisc-network
     environment:
-      - DATABASE_URL=postgresql://typst_user:qaywsxedc@db:5432/typst_db
+      - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
       - NEXT_PUBLIC_COMPILER_URL=http://127.0.0.1:3001
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     command: sh -c "bun install && bun x auth secret && bun x prisma generate && bun x prisma migrate deploy && bun dev"
 
   test:
     image: cypress/included:13.15.0
-    container_name: typst_test
+    container_name: tisc_test
     depends_on:
       app:
         condition: service_healthy
@@ -63,10 +63,10 @@ services:
       - ./:/opt/app
     working_dir: /opt/app
     networks:
-      - typst-network
+      - tisc-network
     environment:
       - CYPRESS_baseUrl=http://app:3000
 
 networks:
-  typst-network:
+  tisc-network:
     driver: bridge

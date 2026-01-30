@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Typst Editor",
+  title: "TISC Editor",
   description: "An online editor for typst document. Support export (pdf/svg) and projects sharing.",
 };
 

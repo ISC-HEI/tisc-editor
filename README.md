@@ -1,7 +1,7 @@
 <div align="center">
     <h1>
-        <img alt="Typst" src="https://user-images.githubusercontent.com/17899797/226108480-722b770e-6313-40d7-84f2-26bebb55a281.png">
-        Typst Online Editor
+        <img alt="Tisc logo" src="./img/banner.jpg">
+        TISC Editor
     </h1>
   
   <p><strong>A professional, full-stack solution for cloud-based Typst authoring.</strong></p>
@@ -63,7 +63,7 @@ To launch the entire stack (App, API, Database) for development and see the test
 > Please do the [Configuration](#configuration--environment) before.
 ```bash
 git clone https://github.com/ISC-HEI/typst-editor.git
-cd typst-editor
+cd tisc-editor
 docker compose up -d --build
 ```
 > Note: The test container will launch, execute the suite, and exit. The App, API, and Database will remain running in the background for you to work on.
@@ -100,3 +100,9 @@ GITHUB_TOKEN=your_github_token_here
 ├── docker-compose.yml
 └── LICENSE
 ```
+
+## License
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+This project is an independent work and is not affiliated with, endorsed by, or supported by the official Typst organization.

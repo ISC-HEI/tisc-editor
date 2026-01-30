@@ -16,7 +16,7 @@ interface FileNode {
 const fetchOptions = {
     headers: {
         'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
-        'User-Agent': 'Typst-Editor-App'
+        'User-Agent': 'TISC-Editor-App'
     },
     next: { revalidate: 3600 }
 };
