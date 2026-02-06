@@ -26,6 +26,8 @@ services:
       - /app/node_modules
     networks:
       - tisc-network
+    environment:
+      - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
     command: sh -c "npm install && npm run dev"
 
   app:

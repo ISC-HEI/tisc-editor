@@ -2,9 +2,10 @@ import { useRef, useEffect } from "react";
 import * as monaco from "monaco-editor";
 import { typstSyntax, typstConfig } from "../../assets/typst-definition";
 
-export const MonacoEditor = ({ content, onInstanceReady }) => {
+export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
   const editorRef = useRef(null);
   const monacoInstance = useRef(null);
+  const isRemoteChange = useRef(false);
 
   useEffect(() => {
     if (editorRef.current && !monacoInstance.current) {
@@ -18,7 +19,7 @@ export const MonacoEditor = ({ content, onInstanceReady }) => {
         monaco.languages.setMonarchTokensProvider(langId, typstSyntax);
       }
 
-      monacoInstance.current = monaco.editor.create(editorRef.current, {
+      const editor = monaco.editor.create(editorRef.current, {
         value: content || "",
         language: langId,
         theme: "vs-light",
@@ -33,8 +34,17 @@ export const MonacoEditor = ({ content, onInstanceReady }) => {
         lineNumbersMinChars: 3
       });
 
+      monacoInstance.current = editor;
+
+      editor.onDidChangeModelContent(() => {
+        if (!isRemoteChange.current && onChange) {
+          const value = editor.getValue();
+          onChange(value);
+        }
+      });
+
       if (onInstanceReady) {
-        onInstanceReady(monacoInstance.current);
+        onInstanceReady(editor);
       }
     }
 
@@ -45,6 +55,28 @@ export const MonacoEditor = ({ content, onInstanceReady }) => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const editor = monacoInstance.current;
+    if (editor) {
+      const model = editor.getModel();
+      const currentValue = editor.getValue();
+
+      if (model && content !== currentValue) {
+        isRemoteChange.current = true;
+        
+        editor.executeEdits("remote-update", [
+          {
+            range: model.getFullModelRange(),
+            text: content || "",
+            forceMoveMarkers: true,
+          },
+        ]);
+
+        isRemoteChange.current = false;
+      }
+    }
+  }, [content]);
 
   return <div ref={editorRef} className="h-full w-full" />;
 };

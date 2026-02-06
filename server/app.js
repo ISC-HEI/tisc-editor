@@ -2,11 +2,24 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const { NodeCompiler } = require('@myriaddreamin/typst-ts-node-compiler');
+const http = require('http');
+const { Server } = require('socket.io');
+const { Pool } = require('pg');
+require('dotenv').config();
+const { NodeCompiler } = require('@myriaddreamin/typst-ts-node-compiler');;
 
 const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
 const app = express();
 const PORT = 3001;
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 app.use(cors());
 app.use(express.text({ limit: '50mb', type: '*/*' }));
@@ -50,6 +63,23 @@ function cleanupTemp(createdFiles, createdDirs) {
   }
 }
 
+// Check if a user can have access to a document
+async function canEditProject(userId, projectId) {
+  try {
+    const query = `
+      SELECT id FROM "projects" 
+      WHERE id = $1 
+      AND (user_id = $2 OR $2 = ANY(shared_users))
+      LIMIT 1;
+    `;
+    
+    const res = await pool.query(query, [projectId, userId]);
+    return res.rowCount > 0;
+  } catch (err) {
+    console.error("Erreur SQL Permission:", err);
+    return false;
+  }
+}
 // ---------- Routes ----------
 
 // Render Typst source to SVG
@@ -106,4 +136,50 @@ app.post('/export/pdf', (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Typst API server running on http://localhost:${PORT}`));
+// -------- WEBSOCKET --------
+io.on('connection', (socket) => {
+  console.log(`New user connected: ${socket.id}`);
+  
+  let session = { userId: null, docId: null, authorized: false };
+
+  socket.on('join-document', async ({ docId, userId }) => {
+    if (!docId || !userId) {
+      return socket.emit('error', 'Document Id and User Id required');
+    }
+
+    try {
+      const authorized = await canEditProject(userId, docId);
+
+      if (authorized) {
+        socket.join(docId);
+        
+        session.userId = userId;
+        session.docId = docId;
+        session.authorized = true;
+        
+        console.log(`User ${userId} joined room ${docId}`);
+      } else {
+        socket.emit('error', 'You cannot access this document');
+      }
+    } catch (err) {
+      console.error("Join error:", err);
+      socket.emit('error', 'Internal server error');
+    }
+  });
+
+  socket.on('update-content', ({ docId, userId, content }) => {
+    if (session.authorized && session.docId === docId && session.userId === userId) {
+      socket.to(docId).emit('content-updated', content);
+    } else {
+      socket.emit('error', 'Unauthorized update');
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`Typst API & WebSocket server running on http://localhost:${PORT}`);
+});

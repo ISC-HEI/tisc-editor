@@ -1,5 +1,5 @@
 "use client";
-import {useRef, useState } from "react";
+import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { EditorHeader } from "./EditorHeader";
@@ -9,34 +9,37 @@ import { PreviewPane } from "./PreviewPane";
 import { PromptModal } from "./PromptModal";
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs } from "@/hooks/refs";
 import { useEditorWatcher } from "@/hooks/useEditor";
-
+import { useTypstCollaboration } from "@/hooks/useTypstCollaboration";
 
 const MonacoEditor = dynamic(
   () => import("./MonacoEditor").then((mod) => mod.MonacoEditor),
   { ssr: false }
 );
 
-export default function Editor({ projectId, title, content, fileTree }) {
+export default function Editor({ projectId, title, content: initialContent, fileTree, userId }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: "", callback: null });
   const [inputValue, setInputValue] = useState("");
-  const separatorRef=useRef(null)
-  useEditorWatcher()
+  const separatorRef = useRef(null);
+  
+  const { content, updateContent } = useTypstCollaboration(projectId, userId, initialContent);
+
+  useEditorWatcher();
 
   const handleEditorReady = async (instance) => {
     if (instance && separatorRef.current) {
       initPreviewRefs({
         editor: instance,
         separator: separatorRef.current
-      })
+      });
     }
     initPreviewInfos({
       currentProjectId: projectId,
       defaultFileTree: fileTree
-    })
+    });
     initPreviewFunctions({
       openCustomPrompt: openCustomPrompt
-    })
+    });
   };
 
   const openCustomPrompt = (title, callback) => {
@@ -64,6 +67,7 @@ export default function Editor({ projectId, title, content, fileTree }) {
             <FileExplorer />
             <MonacoEditor 
               content={content} 
+              onChange={updateContent} 
               onInstanceReady={handleEditorReady} 
             />
           </div>
