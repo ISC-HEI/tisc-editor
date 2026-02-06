@@ -16,13 +16,13 @@ const MonacoEditor = dynamic(
   { ssr: false }
 );
 
-export default function Editor({ projectId, title, content: initialContent, fileTree }) {
+export default function Editor({ projectId, title, content: initialContent, fileTree, userId }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: "", callback: null });
   const [inputValue, setInputValue] = useState("");
   const separatorRef = useRef(null);
   
-  const { content, updateContent } = useTypstCollaboration(projectId, initialContent);
+  const { content, updateContent } = useTypstCollaboration(projectId, userId, initialContent);
 
   useEditorWatcher();
 

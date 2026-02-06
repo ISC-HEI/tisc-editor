@@ -1,6 +1,7 @@
 import { loadProject } from "@/app/dashboard/actions"
 import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
+import { auth } from "@/lib/auth"
 
 const Editor = dynamic(() => import("../components/Editor/Editor"), {
   loading: () => <h2>The editor is loading</h2>
@@ -13,7 +14,23 @@ type FileTree = {
 };
 
 export default async function Page({ searchParams, }: { searchParams: Promise<{ projectId?: string }> }) {
+  const session = await auth();
+  
+  if (!session?.user?.id) {
+    redirect("/login"); 
+  }
+
   const { projectId } = await searchParams;
+
+  if (!projectId) {
+    redirect("/dashboard");
+  }
+
+  const project = await loadProject(projectId);
+
+  if (!project) {
+    redirect("/dashboard");
+  }
 
   function normalizeFileTree(value: any): FileTree {
     if (
@@ -33,28 +50,7 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
     return { type: "folder", name: "root", children: {} };
   }
 
-  if (!projectId) {
-    redirect("/dashboard");
-  }
-
-  let projectData: {
-    id: string;
-    title: string;
-    content: string;
-    fileTree: FileTree;
-  } = {
-    id: "",
-    title: "",
-    content: "",
-    fileTree: { type: "folder", name: "root", children: {} },
-  };
-
-  const project = await loadProject(projectId);
-
-  if (!project) {
-    redirect("/dashboard");
-  }
-  projectData = {
+  const projectData = {
     id: project.id,
     title: project.title,
     content: project.content || "",
@@ -67,6 +63,7 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
       title={projectData.title}
       content={projectData.content}
       fileTree={projectData.fileTree}
+      userId={session.user.id}
     />
   );
 }
