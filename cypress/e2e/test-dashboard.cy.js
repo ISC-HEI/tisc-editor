@@ -114,14 +114,14 @@ describe("Dashboard, Templates & Collaboration", () => {
       cy.get(UI.shareModal.input).clear().type(colleagueEmail);
       cy.get(UI.shareModal.addButton).click();
 
-      cy.get(UI.shareModal.errorMessage).should('be.visible').contains("This user already have access to this project.");
+      cy.get(UI.shareModal.errorMessage).should('be.visible').contains("User already has access");
     });
 
     it("should not allow sharing with oneself", () => {
       cy.get(UI.shareModal.input).type(testUser.email);
       cy.get(UI.shareModal.addButton).click();
 
-      cy.get(UI.shareModal.errorMessage).should('be.visible').contains("This user already have access to this project.");
+      cy.get(UI.shareModal.errorMessage).should('be.visible').contains("User already has access");
       cy.get(UI.shareModal.userList).should('not.contain', testUser.email);
     });
 
@@ -130,7 +130,7 @@ describe("Dashboard, Templates & Collaboration", () => {
       cy.get(UI.shareModal.input).type(unknown);
       cy.get(UI.shareModal.addButton).click();
 
-      cy.contains("This user didn't exist.").should('be.visible');
+      cy.contains("User not found").should('be.visible');
     });
 
     afterEach(() => {

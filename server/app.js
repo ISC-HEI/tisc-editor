@@ -6,7 +6,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { Pool } = require('pg');
 require('dotenv').config();
-const { NodeCompiler } = require('@myriaddreamin/typst-ts-node-compiler');;
+const { NodeCompiler } = require('@myriaddreamin/typst-ts-node-compiler');const { PassThrough } = require('stream');
+;
 
 const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
 const app = express();
@@ -27,22 +28,38 @@ app.use(express.text({ limit: '50mb', type: '*/*' }));
 // ---------- Helper functions ----------
 
 // Write all images from imgPaths and return sets of created files and directories
-function writeImages(imgPaths = {}) {
+function writeImages(children = {}) {
   const createdFiles = new Set();
   const createdDirs = new Set();
 
-  for (const p in imgPaths) {
-    const base64Img = imgPaths[p].split(',')[1];
-    const filePath = p;
-    const dir = path.dirname(filePath);
+  for (const fileName in children) {
+    const node = children[fileName];
 
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-      createdDirs.add(dir);
+    if (fileName === "main.typ" || node.type === 'folder') continue;
+
+    if (!node.data) {
+      console.warn(`Skipping ${fileName}: No data found`);
+      continue;
     }
 
-    fs.writeFileSync(filePath, Buffer.from(base64Img, 'base64'));
-    createdFiles.add(filePath);
+    try {
+      const base64Data = node.data.includes(',') 
+        ? node.data.split(',')[1] 
+        : node.data;
+
+      const filePath = node.fullPath || fileName;
+      const dir = path.dirname(filePath);
+      
+      if (dir !== '.' && !fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        createdDirs.add(dir);
+      }
+      
+      fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+      createdFiles.add(filePath);
+    } catch (err) {
+      console.error(`Error writing image ${fileName}:`, err);
+    }
   }
 
   return { createdFiles, createdDirs };
@@ -80,10 +97,18 @@ async function canEditProject(userId, projectId) {
     return false;
   }
 }
+
+// Decode the main content
+function decodeContent(data) {
+  if (data.startsWith('data:text/plain;base64,')) {
+    return Buffer.from(data.split(',')[1], 'base64').toString('utf-8');
+  }
+  return data;
+}
 // ---------- Routes ----------
 
 // Render Typst source to SVG
-app.post('/render', (req, res) => {
+app.post('/render', async (req, res) => {
   let body;
   try {
     body = JSON.parse(req.body);
@@ -91,25 +116,28 @@ app.post('/render', (req, res) => {
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 
-  const { source, images: imgPaths } = body;
-  if (!source) return res.status(400).json({ error: 'Missing source' });
+  const { fileTree } = body;
+  const mainFile = fileTree?.children?.["main.typ"];
+  if (!mainFile) return res.status(400).json({ error: 'Missing main.typ in fileTree' });
 
-  const { createdFiles, createdDirs } = writeImages(imgPaths);
+  const { createdFiles, createdDirs } = writeImages(fileTree.children);
 
   try {
-    const svg = $typst.svg({ inputs: { 'Y': 'v' }, mainFileContent: source });
+    const sourceCode = decodeContent(mainFile.data);
+    
+    const svg = $typst.svg({ mainFileContent: sourceCode });
     res.setHeader('Content-Type', 'image/svg+xml');
     res.send(svg);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Compilation failed', details: err.code });
+    res.status(500).json({ error: 'Compilation failed' });
   } finally {
     cleanupTemp(createdFiles, createdDirs);
   }
 });
 
 // Export Typst source to PDF
-app.post('/export/pdf', (req, res) => {
+app.post('/export/pdf', async (req, res) => {
   let body;
   try {
     body = JSON.parse(req.body);
@@ -117,19 +145,20 @@ app.post('/export/pdf', (req, res) => {
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 
-  const { source, images: imgPaths } = body;
-  if (!source) return res.status(400).json({ error: 'Missing source' });
+  const { fileTree } = body;
+  const mainFile = fileTree?.children?.["main.typ"];
+  
+  if (!mainFile) return res.status(400).json({ error: 'Missing main.typ' });
 
-  const { createdFiles, createdDirs } = writeImages(imgPaths);
+  const { createdFiles, createdDirs } = writeImages(fileTree.children);
 
   try {
-    const pdfBuffer = $typst.pdf({ mainFileContent: source });
+    const sourceCode = decodeContent(mainFile.data);
+    const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
     res.send(pdfBuffer);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Failed to generate PDF' });
   } finally {
     cleanupTemp(createdFiles, createdDirs);

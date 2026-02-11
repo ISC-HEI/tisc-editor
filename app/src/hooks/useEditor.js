@@ -6,8 +6,13 @@ import { fetchSvg, exportPdf, exportSvg } from "./useApi"
 export let currentProjectId;
 export let fileTree = { type: "folder", name: "root", children: {} };
 export let currentFolderPath = "root";
+export let currentFilePath = "root/main.typ"
+export let isLoadingFile = false;
 
 const debounceFetchCompile = debounce(async () => {
+    if (isLoadingFile) return; 
+
+    syncFileTreeWithEditor();
     await fetchCompile();
     await autoSave();
 });
@@ -30,19 +35,29 @@ function initEditor() {
     refs.btnOpen.addEventListener('click', () => refs.fileInputOpen.click());
     refs.fileInputOpen.addEventListener('change', openAndShowFile);
 
-    refs.btnExportPdf.addEventListener('click', () => {exportPdf(refs.editor.getValue(), { children: fileTree.children })})
-    refs.btnExportSvg.addEventListener('click', async () => {exportSvg(await fetchSvg(refs.editor.getValue(), { children: fileTree.children }))})
+    refs.btnExportPdf.addEventListener('click', () => {
+        // Sécurité pour l'export PDF : on synchronise le contenu actuel
+        const mainNode = fileTree.children["main.typ"];
+        if (mainNode) {
+            mainNode.data = refs.editor.getValue();
+        }
+        exportPdf(fileTree);
+    });
+
+    refs.btnExportSvg.addEventListener('click', async () => {
+        exportSvg(await fetchSvg({ children: fileTree.children }));
+    });
 
     setupResizable();
 
     if (!infos.currentProjectId || !infos.defaultFileTree) {
         return
     }
-    currentProjectId=infos.currentProjectId
-    fileTree=infos.defaultFileTree
+    currentProjectId = infos.currentProjectId;
+    fileTree = infos.defaultFileTree;
     fetchCompile();
 
-    return true
+    return true;
 }
 
 export function useEditorWatcher() {
@@ -65,8 +80,8 @@ export function useEditorWatcher() {
             if (refs.btnItalic) refs.btnItalic.onclick = null;
             if (refs.btnUnderline) refs.btnUnderline.onclick = null;
             if (refs.btnSave) refs.btnSave.onclick = null;
-            if (refs.btnExportPdf) refs.btnExportPdf = null
-            if (refs.btnExportSvg) refs.btnExportSvg = null
+            if (refs.btnExportPdf) refs.btnExportPdf = null;
+            if (refs.btnExportSvg) refs.btnExportSvg = null;
         };
     }, []);
 }
@@ -105,40 +120,35 @@ async function applyFormatting(type) {
 export async function fetchCompile() {
     refs.page.innerHTML = `
         <div class="flex items-center justify-center min-h-screen w-full bg-gray-100">
-            
             <div class="relative">
                 <div class="w-12 h-12 border-4 border-gray-200 rounded-full"></div>
                 <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
             </div>
-
         </div>
     `;
-    const svg = await fetchSvg(refs.editor.getValue(), { children: fileTree.children });
+    const svg = await fetchSvg({ children: fileTree.children });
     if (svg.startsWith("{")) {
-        let error = JSON.parse(svg)
-        let errorDetails = error.details ? error.details.split(": ")[1] : ""
-        let message = ""
+        let error = JSON.parse(svg);
+        let errorDetails = error.details ? error.details.split(": ")[1] : "";
+        let message = "";
 
         if (errorDetails.includes("file not found")) {
-
             const messageDetails = errorDetails.split(" (")[0];
-            
-            let errorSuppDetail = ""
+            let errorSuppDetail = "";
             if (messageDetails.includes("file not found")) {
                 const match = errorDetails.match(/\(([^)]+)\)/);
                 const insideParentheses = match ? match[1] : "";
-                
                 errorSuppDetail = insideParentheses.split("/app")[1] || "unknown path";
             } else {
-                errorSuppDetail=errorDetails
+                errorSuppDetail = errorDetails;
             }   
-            message = `${error.error}, ${messageDetails} (${errorSuppDetail})`
+            message = `${error.error}, ${messageDetails} (${errorSuppDetail})`;
         } else {
-            message = `${error.error}, ${error.details}`
+            message = `${error.error}`;
         }
-        refs.page.innerText = message
+        refs.page.innerText = message;
     } else {
-        refs.page.innerHTML = svg
+        refs.page.innerHTML = svg;
     }
 }
 
@@ -165,7 +175,10 @@ async function openAndShowFile() {
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (e) => { refs.editor.setValue(e.target.result);; fetchCompile(); };
+    reader.onload = (e) => { 
+        refs.editor.setValue(e.target.result);
+        fetchCompile(); 
+    };
     reader.readAsText(file);
     await autoSave();
 }
@@ -175,19 +188,17 @@ async function openAndShowFile() {
 async function autoSave() {
     if (!currentProjectId) return;
 
-    const content = refs.editor.getValue();
-    const currentFileTree = fileTree;
+    syncFileTreeWithEditor();
 
     try {
         await fetch('/api/projects/save', {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 id: currentProjectId,
-                content: content,
-                fileTree: currentFileTree
+                fileTree: fileTree
             })
         });
-        console.log("Projet sauvegardé...");
     } catch (err) {
         console.error("Erreur sauvegarde:", err);
     }
@@ -227,4 +238,69 @@ function setupResizable() {
             document.body.style.userSelect = 'auto';
         }
     });
+}
+
+// ----------------------------------------------------
+
+export function openFile(path) {
+    if (!path || !refs.editor) return;
+    
+    const parts = path.replace("root/", "").split("/");
+    let node = fileTree;
+    for (const part of parts) {
+        if (node && node.children) node = node.children[part];
+    }
+
+    if (!node || node.type === "folder") return;
+    
+    isLoadingFile = true; 
+    currentFilePath = path;
+
+    let content = node.data || "";
+
+    if (node.name !== "main.typ" && content.startsWith('data:')) {
+        try {
+            const base64 = content.split(',')[1];
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            content = new TextDecoder().decode(bytes);
+        } catch (e) {
+            console.error("Erreur décodage fichier secondaire:", e);
+        }
+    }
+
+    refs.editor.setValue(content);
+
+    setTimeout(() => {
+        isLoadingFile = false;
+    }, 150);
+}
+
+// ----------------------------------------------------
+
+export function syncFileTreeWithEditor() {
+    if (!refs.editor || !currentFilePath || isLoadingFile) return;
+    
+    const content = refs.editor.getValue();
+    const parts = currentFilePath.replace("root/", "").split("/");
+    let node = fileTree;
+
+    for (const part of parts) {
+        if (node && node.children && node.children[part]) {
+            node = node.children[part];
+        } else {
+            return;
+        }
+    }
+
+    if (node && node.type === "file") {
+        if (node.name === "main.typ") {
+            node.data = content;
+        } else {
+            const bytes = new TextEncoder().encode(content);
+            const binary = String.fromCharCode(...bytes);
+            node.data = "data:text/plain;base64," + btoa(binary);
+        }
+    }
 }

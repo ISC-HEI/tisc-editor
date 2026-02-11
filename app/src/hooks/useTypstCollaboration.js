@@ -1,11 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { refs } from './refs';
+import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
 
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_COMPILER_URL;
 
-export const useTypstCollaboration = (docId, userId, initialContent) => {
-  const [content, setContent] = useState(initialContent);
+const findNodeByPath = (root, path) => {
+  const parts = path.replace("root/", "").split("/");
+  let current = root;
+  for (const part of parts) {
+    if (current && current.children && current.children[part]) {
+      current = current.children[part];
+    } else {
+      return null;
+    }
+  }
+  return current;
+};
+
+export const useTypstCollaboration = (docId, userId, initialFileTree) => {
+  const [fileTreeState, setFileTreeState] = useState(initialFileTree);
   const socketRef = useRef(null);
+  const isRemoteChange = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !userId || !docId) return;
@@ -20,35 +36,78 @@ export const useTypstCollaboration = (docId, userId, initialContent) => {
       socket.emit('join-document', { docId, userId });
     });
 
-    socket.on('content-updated', (newContent) => {
-      setContent(newContent);
+    socket.on('content-updated', (newFileTree) => {
+      if (newFileTree && newFileTree.children) {
+        Object.assign(globalFileTree.children, newFileTree.children);
+      }
+
+      if (!refs.editor || isLoadingFile) {
+        fetchCompile();
+        return;
+      }
+
+      const model = refs.editor.getModel();
+      const currentVal = model.getValue();
+      
+      const remoteNode = findNodeByPath(newFileTree, currentFilePath);
+      if (!remoteNode) {
+          fetchCompile();
+          return;
+      }
+
+      let newVal = remoteNode.data || "";
+
+      if (newVal.startsWith('data:')) {
+        try {
+          const base64 = newVal.split(',')[1];
+          const binary = atob(base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          newVal = new TextDecoder().decode(bytes);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (currentVal !== newVal) {
+        isRemoteChange.current = true;
+        const currentSelections = refs.editor.getSelections();
+
+        model.pushEditOperations(
+          currentSelections,
+          [{
+            range: model.getFullModelRange(),
+            text: newVal
+          }],
+          () => currentSelections
+        );
+
+        isRemoteChange.current = false;
+      }
+
+      fetchCompile();
     });
 
-    socket.on('error', (msg) => {
-      console.error("Collaboration Error:", msg);
-    });
+    socket.on('error', (msg) => console.error("Collaboration Error:", msg));
 
     return () => {
-      if (socket) {
-        socket.off('content-updated');
-        socket.off('error');
-        socket.disconnect();
-        socketRef.current = null;
-      }
+      socket.disconnect();
     };
   }, [docId, userId]);
 
-  const updateContent = (newContent) => {
-    setContent(newContent);
+  const updateContent = (newTextContent) => {
+    if (isRemoteChange.current || isLoadingFile) return;
+
+    syncFileTreeWithEditor();
     
-    if (socketRef.current && socketRef.current.connected) {
+    if (socketRef.current?.connected) {
       socketRef.current.emit('update-content', { 
         docId: docId, 
         userId: userId, 
-        content: newContent 
+        content: globalFileTree 
       });
     }
   };
 
-  return { content, updateContent };
+  return { content: fileTreeState, updateContent };
 };

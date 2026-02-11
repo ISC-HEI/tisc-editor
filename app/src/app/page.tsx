@@ -53,7 +53,6 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
   const projectData = {
     id: project.id,
     title: project.title,
-    content: project.content || "",
     fileTree: normalizeFileTree(project.fileTree),
   };
 
@@ -61,7 +60,6 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
     <Editor
       projectId={projectData.id}
       title={projectData.title}
-      content={projectData.content}
       fileTree={projectData.fileTree}
       userId={session.user.id}
     />

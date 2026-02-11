@@ -59,23 +59,32 @@ export async function createProject(formData: FormData) {
 
     if (!title || !packageId) return
 
-    let projectData = { content: "", fileTree: {} };
+    let projectData = { 
+        fileTree: {
+            type: "folder" as const,
+            name: "root",
+            children: {} as Record<string, FileNode>
+        }
+    };
 
     if (packageId !== "blank") {
         const imported = await importPackageAsTree(packageId, entryFile);
         if (imported) {
-            projectData = {
-                content: imported.content,
-                fileTree: imported.fileTree
-            };
+            projectData.fileTree = imported.fileTree as any;
         }
+    } else {
+        projectData.fileTree.children["main.typ"] = {
+            type: 'file',
+            name: "main.typ",
+            fullPath: "root/main.typ",
+            data: ""
+        };
     }
 
     await prisma.project.create({
         data: {
             title: title,
             userId: session.user.id,
-            content: projectData.content,
             fileTree: projectData.fileTree as any,
         }
     })
@@ -136,9 +145,17 @@ export const importPackageAsTree = async (packageName: string, templateFile: str
 
         const response = await fetch(`https://raw.githubusercontent.com/typst/packages/main/packages/preview/${packageName}/${templateFile}`, fetchOptions);
         const content = await response.text();
+        
+        const mainFileName = "main.typ";
+
+        treeData[mainFileName] = {
+            type: 'file',
+            name: mainFileName,
+            fullPath: mainFileName,
+            data: content.replace(/\0/g, '')
+        };
 
         return {
-            content: content.replace(/\0/g, ''),
             fileTree: {
                 type: "folder",
                 name: "root",
@@ -146,7 +163,7 @@ export const importPackageAsTree = async (packageName: string, templateFile: str
             }
         };
     } catch (error) {
-        console.error("Erreur lors de la récupération du template:", error);
+        console.error(error);
         return null;
     }
 };
@@ -179,7 +196,6 @@ export async function saveProjectData(projectId: string, content: string, fileTr
             userId: session.user.id
         },
         data: {
-            content: content,
             fileTree: fileTree
         }
     })
@@ -189,9 +205,7 @@ export async function saveProjectData(projectId: string, content: string, fileTr
 export async function loadProject(id: string) {
     const session = await auth()
     if (!session?.user?.id) throw new Error("Non autorisé")
-
-    const project = await getProjectById(id, session.user.id)
-    return project
+    return await getProjectById(id, session.user.id)
 }
 
 async function getProjectById(projectId: string, userId: string) {
@@ -201,13 +215,9 @@ async function getProjectById(projectId: string, userId: string) {
 
     if (!project) return null;
 
-    if (project.userId === userId) {
+    if (project.userId === userId || project.sharedUsers.includes(userId)) {
         return project;
     }
-    if (project.sharedUsers.includes(userId)) {
-        return project;
-    }
-
 
     return null;
 }
@@ -224,10 +234,10 @@ export async function shareProject(projectId: string, sharedUserEmail: string) {
     if (!project) throw new Error("Projet introuvable");
 
     const sharedUser = await prisma.user.findUnique({ where: { email: sharedUserEmail } });
-    if (!sharedUser) throw new Error("This user didn't exist.");
+    if (!sharedUser) throw new Error("User not found");
 
     if (project.sharedUsers.includes(sharedUser.id) || project.userId === sharedUser.id) {
-        throw new Error("This user already have access to this project.");
+        throw new Error("User already has access");
     }
 
     const [updatedProject, updatedUser] = await prisma.$transaction([
@@ -260,11 +270,10 @@ export async function removeSharedUser(projectId: string, sharedUserEmail: strin
         })
     ]);
 
-    if (!project) throw new Error("Project not found");
-    if (!userToRemove) throw new Error("User not found");
+    if (!project || !userToRemove) throw new Error("Not found");
 
     if (project.userId !== session.user.id) {
-        throw new Error("Only the owner can remove collaborators");
+        throw new Error("Only owner can remove");
     }
 
     const newSharedUsers = project.sharedUsers.filter(id => id !== userToRemove.id);
@@ -286,19 +295,10 @@ export async function removeSharedUser(projectId: string, sharedUserEmail: strin
 }
 
 export async function getUsersEmailFromId(usersId: string[]) {
-    const users = await prisma.user.findMany({
-        where: {
-            id: {
-                in: usersId
-            }
-        },
-        select: {
-            id: true,
-            email: true
-        }
+    return await prisma.user.findMany({
+        where: { id: { in: usersId } },
+        select: { id: true, email: true }
     });
-
-    return users;
 }
 
 export async function handleSignOut() {

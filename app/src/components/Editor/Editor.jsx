@@ -8,7 +8,7 @@ import { FileExplorer } from "./FileExplorer";
 import { PreviewPane } from "./PreviewPane";
 import { PromptModal } from "./PromptModal";
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs } from "@/hooks/refs";
-import { useEditorWatcher } from "@/hooks/useEditor";
+import { isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
 import { useTypstCollaboration } from "@/hooks/useTypstCollaboration";
 
 const MonacoEditor = dynamic(
@@ -16,13 +16,13 @@ const MonacoEditor = dynamic(
   { ssr: false }
 );
 
-export default function Editor({ projectId, title, content: initialContent, fileTree, userId }) {
+export default function Editor({ projectId, title, fileTree, userId }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: "", callback: null });
   const [inputValue, setInputValue] = useState("");
   const separatorRef = useRef(null);
   
-  const { content, updateContent } = useTypstCollaboration(projectId, userId, initialContent);
+  const { content, updateContent } = useTypstCollaboration(projectId, userId, fileTree);
 
   useEditorWatcher();
 
@@ -65,11 +65,15 @@ export default function Editor({ projectId, title, content: initialContent, file
           
           <div className="flex-1 relative min-w-0 overflow-hidden">
             <FileExplorer />
-            <MonacoEditor 
-              content={content} 
-              onChange={updateContent} 
-              onInstanceReady={handleEditorReady} 
-            />
+          <MonacoEditor
+            content={fileTree?.children?.["main.typ"]?.data || ""} 
+            onChange={(newContent) => {
+              if (!isLoadingFile) {
+                updateContent(newContent); 
+              }
+            }} 
+            onInstanceReady={handleEditorReady} 
+          />
           </div>
         </div>
 

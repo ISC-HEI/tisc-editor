@@ -39,15 +39,12 @@ export let functions = {
 
 export const initPreviewRefs = (elements) => {
   refs = { ...refs, ...elements };
-  console.log("Refs initialized", refs);
 };
 
 export const initPreviewInfos = (elements) => {
   infos = { ...infos, ...elements };
-  console.log("Info initialized", infos);
 }
 
 export const initPreviewFunctions = (elements) => {
   functions = { ...functions, ...elements };
-  console.log("Functions initialized", functions)
 }

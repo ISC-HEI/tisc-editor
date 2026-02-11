@@ -21,7 +21,6 @@ model Project {
   id           String   @id @default(uuid()) @db.Uuid
   userId       String   @map("user_id") @db.Uuid
   title        String   @db.VarChar(60)
-  content      String?
   fileTree     Json     @map("file_tree")
 
   sharedUsers  String[] @map("shared_users") @db.Uuid

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { createElement, FileJson, Book, FileCode, Image, FileQuestion, Folder, Terminal, Notebook } from 'lucide';
 import { refs, functions } from "@/hooks/refs"
-import { currentProjectId, fetchCompile, fileTree } from "./useEditor";
+import { currentProjectId, fetchCompile, fileTree, openFile } from "./useEditor";
 
 let selectedFolderPath = "root"
 
@@ -15,7 +15,6 @@ function initFileManager() {
     });
     
     refs.btnCloseImages.addEventListener("click", () => {
-        console.log("CLICKL")
         refs.imageExplorer.style.display = "none";        
     })
 
@@ -147,7 +146,7 @@ function renderTreeRecursive(folder, container, path) {
     Object.values(folder.children).forEach(item => {
         const li = document.createElement("li");
         li.style.listStyle = "none";
-        
+
         li.draggable = true;
 
         const itemRow = document.createElement("div");
@@ -207,6 +206,10 @@ function renderTreeRecursive(folder, container, path) {
         } else {
             const iconHTML = getIcon(item.name);
             itemRow.innerHTML = `${iconHTML} <span>${item.name}</span>`;
+            itemRow.addEventListener("click", (e) => {
+                e.stopPropagation();
+                openFile(fullPath);
+            });
             li.appendChild(itemRow);
         }
 
@@ -279,7 +282,6 @@ async function deleteItem(path, fileTree) {
 // ----------------------------------------------------
 
 async function saveFileTree() {
-    console.log("SAVE")
     if (!currentProjectId) return;
 
     const currentFileTree = fileTree;

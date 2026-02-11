@@ -21,13 +21,13 @@ function collectImages(folder) {
 
 // ----------------------------------------------------
 
-export async function fetchSvg(source, fileTree) {
-    if (!source && Object.keys(fileTree.children).length === 0) return "";
+export async function fetchSvg(fileTree) {
+    if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
     try {
         const response = await fetch(`${NEXT_PUBLIC_COMPILER_URL}/render`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ source, images: collectImages(fileTree) })
+            body: JSON.stringify({ fileTree: fileTree }) 
         });
         return await response.text();
     } catch (e) {
@@ -38,25 +38,18 @@ export async function fetchSvg(source, fileTree) {
 
 // ----------------------------------------------------
 
-export async function exportPdf(source, fileTree) {
-    if (!source) return;
-
-    const payload = { source, images: collectImages(fileTree) };
+export async function exportPdf(fileTree) {
     try {
         const response = await fetch(`${NEXT_PUBLIC_COMPILER_URL}/export/pdf`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ fileTree: fileTree })
         });
 
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
         const blob = await response.blob();
-        const filename = `${formatDateNow()}_typstDocument.pdf`;
-        downloadBlob(blob, filename);
-
+        downloadBlob(blob, `${formatDateNow()}_typstDocument.pdf`);
     } catch (e) {
         console.error("PDF export error:", e);
     }
