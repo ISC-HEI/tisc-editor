@@ -269,6 +269,13 @@ export function openFile(path) {
         if (!confirmForce) return;
     }
 
+    const lang = getEditorLanguage(ext);
+    const model = refs.editor.getModel();
+
+    if (model) {
+        refs.monaco.editor.setModelLanguage(model, lang)
+    }
+
     isLoadingFile = true; 
     currentFilePath = path;
 
@@ -318,5 +325,55 @@ export function syncFileTreeWithEditor() {
             const binary = String.fromCharCode(...bytes);
             node.data = "data:text/plain;base64," + btoa(binary);
         }
+    }
+}
+
+// ----------------------------------------------------
+
+function getEditorLanguage(extension) {
+    if (!extension) return "plaintext";
+    const ext = extension.toLowerCase();
+
+    switch(ext) {
+        case "typ":
+            return "typst";
+        case "json":
+            return "json";
+        case "yml":
+        case "yaml":
+            return "yaml";
+        case "py":
+            return "python";
+        case "js":
+        case "mjs":
+        case "cjs":
+            return "javascript";
+        case "ts":
+            return "typescript";
+        case "html":
+        case "htm":
+            return "html";
+        case "css":
+            return "css";
+        case "md":
+        case "markdown":
+            return "markdown";
+        case "sh":
+        case "bash":
+            return "shell";
+        case "sql":
+            return "sql";
+        case "cpp":
+        case "cc":
+        case "cxx":
+            return "cpp";
+        case "c":
+            return "c";
+        case "rs":
+            return "rust";
+        case "go":
+            return "go";
+        default:
+            return "plaintext";
     }
 }

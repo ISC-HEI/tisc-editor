@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
 import * as monaco from "monaco-editor";
 import { typstSyntax, typstConfig } from "../../assets/typst-definition";
+import { refs } from "@/hooks/refs";
 
 export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
   const editorRef = useRef(null);
@@ -35,6 +36,7 @@ export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
       });
 
       monacoInstance.current = editor;
+      refs.monaco = monaco;
 
       editor.onDidChangeModelContent(() => {
         if (!isRemoteChange.current && onChange) {
