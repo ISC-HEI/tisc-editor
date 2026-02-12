@@ -221,7 +221,6 @@ function renderTreeRecursive(folder, container, path) {
                 lastClickedPath = fullPath;
                 document.querySelectorAll('.tree-item-row').forEach(el => el.classList.remove('selected-item'));
                 itemRow.classList.add('selected-item');
-                itemRow.classList.add('selected-item');
                 selectedFolderPath = fullPath;
             });
 
@@ -277,6 +276,7 @@ async function moveItem(sourcePath, destFolderPath, fileTree) {
     await saveFileTree();
     renderFileExplorer(fileTree);
     fetchCompile();
+    if (functions.syncCollaboration) functions.syncCollaboration();
 }
 
 function updatePaths(item, newFolderPath) {
@@ -301,6 +301,7 @@ export async function deleteItem(path, fileTree) {
     renderFileExplorer(fileTree);
     fetchCompile();
     selectedFolderPath = "root";
+    if (functions.syncCollaboration) functions.syncCollaboration();
 }
 
 // ----------------------------------------------------
@@ -390,6 +391,7 @@ async function createFile() {
         await saveFileTree();
 
         openFile(newFilePath);
+        if (functions.syncCollaboration) functions.syncCollaboration();
     });
 }
 
@@ -431,5 +433,6 @@ export async function renameItem(oldPath) {
         await saveFileTree();
         renderFileExplorer(fileTree);
         makeToast("Item renamed successfully", "success");
+        if (functions.syncCollaboration) functions.syncCollaboration();
     });
 }

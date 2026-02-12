@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import { refs } from './refs';
+import { functions, refs } from './refs';
 import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
 import { debounce, makeToast } from './useUtils';
 
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_COMPILER_URL;
 
 const findNodeByPath = (root, path) => {
+  if (!root || !path) return null;
   const parts = path.replace("root/", "").split("/");
   let current = root;
   for (const part of parts) {
@@ -19,9 +20,8 @@ const findNodeByPath = (root, path) => {
   return current;
 };
 
-export const useTypstCollaboration = (docId, userId, initialFileTree) => {
+export const useTypstCollaboration = (docId, userId) => {
   const prevUsersRef = useRef([]);
-  const [fileTreeState, setFileTreeState] = useState(initialFileTree);
   const socketRef = useRef(null);
   const isRemoteChange = useRef(false);
 
@@ -34,6 +34,20 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
       }, 1000),
     []
   );
+
+  const updateContent = useCallback(() => {
+    if (isRemoteChange.current || isLoadingFile) return;
+
+    syncFileTreeWithEditor();
+    
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('update-content', { 
+        docId: docId, 
+        userId: userId, 
+        content: globalFileTree 
+      });
+    }
+  }, [docId, userId]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !userId || !docId) return;
@@ -50,7 +64,11 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
 
     socket.on('content-updated', (newFileTree) => {
       if (newFileTree && newFileTree.children) {
-        Object.assign(globalFileTree.children, newFileTree.children);
+        globalFileTree.children = newFileTree.children;
+
+        import("./useFileManager").then(m => {
+            m.renderFileExplorer(globalFileTree);
+        });
       }
 
       if (!refs.editor || isLoadingFile) {
@@ -100,62 +118,51 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
       debouncedRefresh();
     });
 
-  socket.on('active-users-list', (emails) => {
-      if (refs.userCount) {
-          refs.userCount.innerText = emails.length;
-      }
-
-      if (refs.userListContainer) {
-        refs.userListContainer.innerHTML = "";
-        emails.forEach(email => {
-            const div = document.createElement("div");
-            div.className = "px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-2";
-            div.innerHTML = `
-                <div class="h-4 w-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold uppercase" style="font-size: 0.5rem">
-                    ${email.charAt(0)}
-                </div>
-                ${email}
-            `;
-            refs.userListContainer.appendChild(div);
-        });
-    }
-
-      const prevUsers = prevUsersRef.current;
-      const joined = emails.filter(email => !prevUsers.includes(email));
-      const left = prevUsers.filter(email => !emails.includes(email));
-
-      if (prevUsers.length > 0) {
-          joined.forEach(email => {
-              makeToast(`${email} joined the document`, "info");
+    socket.on('active-users-list', (emails) => {
+        if (refs.userCount) {
+            refs.userCount.innerText = emails.length;
+        }
+        if (refs.userListContainer) {
+          refs.userListContainer.innerHTML = "";
+          emails.forEach(email => {
+              const div = document.createElement("div");
+              div.className = "px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-3";
+              div.innerHTML = `
+                  <div class="relative flex-shrink-0">
+                      <div class="h-7 w-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px] uppercase border border-blue-200">
+                          ${email.charAt(0)}
+                      </div>
+                      <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
+                  <span class="truncate font-medium">${email}</span>
+              `;
+              refs.userListContainer.appendChild(div);
           });
-          left.forEach(email => {
-              makeToast(`${email} left the document`, "warning");
-          });
-      }
+        }
 
-      prevUsersRef.current = emails;
-  });
+        const prevUsers = prevUsersRef.current;
+        const joined = emails.filter(email => !prevUsers.includes(email));
+        const left = prevUsers.filter(email => !emails.includes(email));
+
+        if (prevUsers.length > 0) {
+            joined.forEach(email => makeToast(`${email} joined`, "info"));
+            left.forEach(email => makeToast(`${email} left`, "warning"));
+        }
+
+        prevUsersRef.current = emails;
+    });
 
     socket.on('error', (msg) => console.error("Collaboration Error:", msg));
 
+    functions.syncCollaboration = () => {
+        updateContent();
+    };
+
     return () => {
       socket.disconnect();
+      functions.syncCollaboration = null;
     };
-  }, [docId, userId, debouncedRefresh]);
+  }, [docId, userId, debouncedRefresh, updateContent]);
 
-  const updateContent = (newTextContent) => {
-    if (isRemoteChange.current || isLoadingFile) return;
-
-    syncFileTreeWithEditor();
-    
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('update-content', { 
-        docId: docId, 
-        userId: userId, 
-        content: globalFileTree 
-      });
-    }
-  };
-
-  return { content: fileTreeState, updateContent };
+  return { updateContent };
 };

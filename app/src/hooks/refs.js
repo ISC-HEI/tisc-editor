@@ -39,7 +39,8 @@ export let infos = {
 }
 
 export let functions = {
-  openCustomPrompt: null
+  openCustomPrompt: null,
+  syncCollaboration: null
 }
 
 export const initPreviewRefs = (elements) => {
