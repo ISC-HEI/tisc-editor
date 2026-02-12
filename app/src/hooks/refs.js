@@ -13,6 +13,7 @@ export let refs = {
   btnUnderline: null,
   btnExportPdf: null,
   btnExportSvg: null,
+  btnCreateFile: null,
 
   fileInputOpen: null,
 

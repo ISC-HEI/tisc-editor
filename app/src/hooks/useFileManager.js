@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { createElement, FileJson, Book, FileCode, Image, FileQuestion, Folder, Terminal, Notebook } from 'lucide';
 import { refs, functions } from "@/hooks/refs"
 import { currentProjectId, fetchCompile, fileTree, openFile } from "./useEditor";
+import { makeToast } from "./useUtils";
 
 let selectedFolderPath = "root"
 
 function initFileManager() {
-    if (!refs.imageList || !refs.btnShowImages || !refs.imageExplorer || !refs.btnCloseImages || !functions.openCustomPrompt || !refs.btnUploadImages || !refs.imageFilesInput || !refs.rootDropZone) {
+    if (!refs.imageList || !refs.btnShowImages || !refs.imageExplorer || !refs.btnCloseImages || !functions.openCustomPrompt || !refs.btnUploadImages || !refs.imageFilesInput || !refs.rootDropZone || !refs.btnCreateFile) {
         return false;
     }
     refs.btnShowImages.addEventListener("click", () => {
@@ -91,6 +92,8 @@ function initFileManager() {
         const sourcePath = e.dataTransfer.getData("path");
         moveItem(sourcePath, "root", fileTree);
     });
+
+    refs.btnCreateFile.addEventListener("click", createFile)
 
     renderFileExplorer(fileTree);
 
@@ -248,6 +251,10 @@ async function moveItem(sourcePath, destFolderPath, fileTree) {
     delete sourceParent.children[name];
     
     updatePaths(item, destFolderPath);
+    if (destFolder.children[name]) {
+        makeToast("A file with this name already exist in this folder", "error")
+        return;
+    }
     destFolder.children[name] = item;
 
     await saveFileTree();
@@ -326,4 +333,45 @@ export function getIcon(filename) {
     svgElement.style.verticalAlign = "middle";
 
     return svgElement.outerHTML; 
+}
+
+// ----------------------------------------------------
+
+async function createFile() {
+    functions.openCustomPrompt("Enter new file name", async (fileName) => {
+        if (!fileName || fileName.trim() === "") return;
+
+        if (!fileName.includes('.')) {
+            fileName += '.typ';
+        }
+
+        const targetFolder = getFolder(fileTree, selectedFolderPath);
+        
+        if (!targetFolder) {
+            console.error("Target folder not found");
+            return;
+        }
+
+        if (targetFolder.children[fileName]) {
+            makeToast(`The name "${fileName}" is already taken in this folder.`, "error")
+            return;
+        }
+
+        const newFilePath = selectedFolderPath === "root" 
+            ? fileName 
+            : `${selectedFolderPath}/${fileName}`;
+
+        targetFolder.children[fileName] = {
+            type: "file",
+            name: fileName,
+            fullPath: newFilePath,
+            data: ""
+        };
+
+        renderFileExplorer(fileTree);
+
+        await saveFileTree();
+
+        openFile(newFilePath);
+    });
 }
