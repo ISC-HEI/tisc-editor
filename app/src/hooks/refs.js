@@ -25,6 +25,7 @@ export let refs = {
   btnUploadImages: null,
   imageFilesInput: null,
   rootDropZone: null,
+  userCount: null,
 
   separator: null,
 

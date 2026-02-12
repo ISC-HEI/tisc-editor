@@ -106,6 +106,17 @@ function decodeContent(data) {
   }
   return data;
 }
+
+// get the email of a user
+async function getUserEmail(userId) {
+  try {
+    const res = await pool.query('SELECT email FROM "users" WHERE id = $1', [userId]);
+    return res.rows[0]?.email || "Unknown User";
+  } catch (err) {
+    console.error("Error fetching email:", err);
+    return "Error User";
+  }
+}
 // ---------- Routes ----------
 
 // Render Typst source to SVG
@@ -167,10 +178,18 @@ app.post('/export/pdf', async (req, res) => {
 });
 
 // -------- WEBSOCKET --------
+const activeUsers = {};
+
+// -------- LOGIQUE WEBSOCKET --------
 io.on('connection', (socket) => {
   console.log(`New user connected: ${socket.id}`);
   
-  let session = { userId: null, docId: null, authorized: false };
+  let session = { 
+    userId: null, 
+    docId: null, 
+    authorized: false, 
+    email: null 
+  };
 
   socket.on('join-document', async ({ docId, userId }) => {
     if (!docId || !userId) {
@@ -181,13 +200,22 @@ io.on('connection', (socket) => {
       const authorized = await canEditProject(userId, docId);
 
       if (authorized) {
+        const email = await getUserEmail(userId);
+        
         socket.join(docId);
         
         session.userId = userId;
         session.docId = docId;
         session.authorized = true;
+        session.email = email;
+
+        if (!activeUsers[docId]) activeUsers[docId] = {};
+        activeUsers[docId][socket.id] = email;
+
+        const currentUsers = Object.values(activeUsers[docId]);
+        io.to(docId).emit('active-users-list', currentUsers);
         
-        console.log(`User ${userId} joined room ${docId}`);
+        console.log(`User ${email} joined room ${docId}. Active: ${currentUsers.length}`);
       } else {
         socket.emit('error', 'You cannot access this document');
       }
@@ -201,12 +229,26 @@ io.on('connection', (socket) => {
     if (session.authorized && session.docId === docId && session.userId === userId) {
       socket.to(docId).emit('content-updated', content);
     } else {
-      socket.emit('error', 'Unauthorized update');
+      socket.emit('error', 'Unauthorized update attempt');
     }
   });
 
   socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
+    const { docId, email } = session;
+
+    if (docId && activeUsers[docId]) {
+      delete activeUsers[docId][socket.id];
+
+      const remainingUsers = Object.values(activeUsers[docId]);
+
+      if (remainingUsers.length === 0) {
+        delete activeUsers[docId];
+      } else {
+        io.to(docId).emit('active-users-list', remainingUsers);
+      }
+      
+      console.log(`User ${email || socket.id} left room ${docId}`);
+    }
   });
 });
 

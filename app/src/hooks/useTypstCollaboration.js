@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { refs } from './refs';
 import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
-import { debounce } from './useUtils';
+import { debounce, makeToast } from './useUtils';
 
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_COMPILER_URL;
 
@@ -20,6 +20,7 @@ const findNodeByPath = (root, path) => {
 };
 
 export const useTypstCollaboration = (docId, userId, initialFileTree) => {
+  const prevUsersRef = useRef([]);
   const [fileTreeState, setFileTreeState] = useState(initialFileTree);
   const socketRef = useRef(null);
   const isRemoteChange = useRef(false);
@@ -98,6 +99,27 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
 
       debouncedRefresh();
     });
+
+  socket.on('active-users-list', (emails) => {
+      if (refs.userCount) {
+          refs.userCount.innerText = emails.length;
+      }
+
+      const prevUsers = prevUsersRef.current;
+      const joined = emails.filter(email => !prevUsers.includes(email));
+      const left = prevUsers.filter(email => !emails.includes(email));
+
+      if (prevUsers.length > 0) {
+          joined.forEach(email => {
+              makeToast(`${email} joined the document`, "info");
+          });
+          left.forEach(email => {
+              makeToast(`${email} left the document`, "warning");
+          });
+      }
+
+      prevUsersRef.current = emails;
+  });
 
     socket.on('error', (msg) => console.error("Collaboration Error:", msg));
 
