@@ -6,6 +6,7 @@ import { currentProjectId, fetchCompile, fileTree, openFile } from "./useEditor"
 import { makeToast } from "./useUtils";
 
 let selectedFolderPath = "root"
+let lastClickedPath = null;
 
 function initFileManager() {
     if (!refs.imageList || !refs.btnShowImages || !refs.imageExplorer || !refs.btnCloseImages || !functions.openCustomPrompt || !refs.btnUploadImages || !refs.imageFilesInput || !refs.rootDropZone || !refs.btnCreateFile) {
@@ -113,12 +114,25 @@ export function useFileManagerWatcher() {
                     clearInterval(interval);
                 }
             }, 100);
-            return () => clearInterval(interval);
         }
 
-        return () => {
+        const handleGlobalKeyDown = (e) => {
+            if (e.key === "F2") {
+                const pathToRename = lastClickedPath || (typeof currentFilePath !== 'undefined' ? currentFilePath : null);
+                
+                if (pathToRename) {
+                    e.preventDefault();
+                    renameItem(pathToRename);
+                }
+            }
         };
-    }, []);
+
+        window.addEventListener("keydown", handleGlobalKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleGlobalKeyDown);
+        };
+    }, [initialized]);
 }
 
 // ----------------------------------------------------
@@ -161,6 +175,11 @@ function renderTreeRecursive(folder, container, path) {
 
         itemRow.addEventListener("contextmenu", (e) => {
             e.preventDefault();
+
+            document.querySelectorAll('.tree-item-row').forEach(el => el.classList.remove('selected-item'));
+            itemRow.classList.add('selected-item');
+            lastClickedPath = fullPath;
+            
             showContextMenu(e, fullPath, item.type); 
         });
 
@@ -199,7 +218,9 @@ function renderTreeRecursive(folder, container, path) {
 
             itemRow.addEventListener("click", (e) => {
                 e.stopPropagation();
+                lastClickedPath = fullPath;
                 document.querySelectorAll('.tree-item-row').forEach(el => el.classList.remove('selected-item'));
+                itemRow.classList.add('selected-item');
                 itemRow.classList.add('selected-item');
                 selectedFolderPath = fullPath;
             });
@@ -216,6 +237,9 @@ function renderTreeRecursive(folder, container, path) {
             itemRow.innerHTML = `${iconHTML} <span>${item.name}</span>`;
             itemRow.addEventListener("click", (e) => {
                 e.stopPropagation();
+                lastClickedPath = fullPath;
+                document.querySelectorAll('.tree-item-row').forEach(el => el.classList.remove('selected-item'));
+                itemRow.classList.add('selected-item');
                 openFile(fullPath);
             });
             li.appendChild(itemRow);
