@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { refs, infos } from "./refs"
-import { debounce } from "./useUtils"
+import { debounce, makeToast } from "./useUtils"
 import { fetchSvg, exportPdf, exportSvg } from "./useApi"
 
 export let currentProjectId;
@@ -8,6 +8,9 @@ export let fileTree = { type: "folder", name: "root", children: {} };
 export let currentFolderPath = "root";
 export let currentFilePath = "root/main.typ"
 export let isLoadingFile = false;
+
+const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
+const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh'];
 
 const debounceFetchCompile = debounce(async () => {
     if (isLoadingFile) return; 
@@ -36,7 +39,6 @@ function initEditor() {
     refs.fileInputOpen.addEventListener('change', openAndShowFile);
 
     refs.btnExportPdf.addEventListener('click', () => {
-        // Sécurité pour l'export PDF : on synchronise le contenu actuel
         const mainNode = fileTree.children["main.typ"];
         if (mainNode) {
             mainNode.data = refs.editor.getValue();
@@ -253,6 +255,20 @@ export function openFile(path) {
 
     if (!node || node.type === "folder") return;
     
+    const ext = node.name.split(".").pop().toLowerCase();
+    
+    if (BANNED_EXTENSIONS.includes(ext)) {
+        makeToast(`Interrupted: .${ext} is a binary file.`, "error")
+        return;
+    }
+
+    if (!ALWAYS_ALLOWED.includes(ext)) {
+        const confirmForce = window.confirm(
+            `Unknown extension .${ext}. \n\nOpening this as text might corrupt the file if it's not a plain text format. Do you want to proceed?`
+        );
+        if (!confirmForce) return;
+    }
+
     isLoadingFile = true; 
     currentFilePath = path;
 
