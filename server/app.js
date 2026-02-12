@@ -28,41 +28,42 @@ app.use(express.text({ limit: '50mb', type: '*/*' }));
 // ---------- Helper functions ----------
 
 // Write all images from imgPaths and return sets of created files and directories
-function writeImages(children = {}) {
-  const createdFiles = new Set();
-  const createdDirs = new Set();
-
+function writeImages(children = {}, baseDir = ".", accumulator = { files: new Set(), dirs: new Set() }) {
   for (const fileName in children) {
     const node = children[fileName];
+    
+    const currentPath = path.join(baseDir, node.name || fileName);
 
-    if (fileName === "main.typ" || node.type === 'folder') continue;
-
-    if (!node.data) {
-      console.warn(`Skipping ${fileName}: No data found`);
-      continue;
-    }
-
-    try {
-      const base64Data = node.data.includes(',') 
-        ? node.data.split(',')[1] 
-        : node.data;
-
-      const filePath = node.fullPath || fileName;
-      const dir = path.dirname(filePath);
-      
-      if (dir !== '.' && !fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-        createdDirs.add(dir);
+    if (node.type === 'folder') {
+      if (!fs.existsSync(currentPath)) {
+        fs.mkdirSync(currentPath, { recursive: true });
+        accumulator.dirs.add(currentPath);
       }
+      writeImages(node.children, currentPath, accumulator);
       
-      fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-      createdFiles.add(filePath);
-    } catch (err) {
-      console.error(`Error writing image ${fileName}:`, err);
+    } else if (node.type === 'file' && fileName !== "main.typ") {
+      if (!node.data) continue;
+
+      try {
+        const dir = path.dirname(currentPath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+          accumulator.dirs.add(dir);
+        }
+
+        const base64Data = node.data.includes(',') 
+          ? node.data.split(',')[1] 
+          : node.data;
+
+        fs.writeFileSync(currentPath, Buffer.from(base64Data, 'base64'));
+        accumulator.files.add(currentPath);
+      } catch (err) {
+        console.error(`Error writing ${currentPath}:`, err);
+      }
     }
   }
 
-  return { createdFiles, createdDirs };
+  return { createdFiles: accumulator.files, createdDirs: accumulator.dirs };
 }
 
 // Delete temporary files and empty directories
