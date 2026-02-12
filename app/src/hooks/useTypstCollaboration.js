@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { refs } from './refs';
 import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
+import { debounce } from './useUtils';
 
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_COMPILER_URL;
 
@@ -23,6 +24,16 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
   const socketRef = useRef(null);
   const isRemoteChange = useRef(false);
 
+  const debouncedRefresh = useMemo(
+    () =>
+      debounce(async () => {
+        if (isLoadingFile) return;
+        syncFileTreeWithEditor();
+        await fetchCompile();
+      }, 1000),
+    []
+  );
+
   useEffect(() => {
     if (typeof window === 'undefined' || !userId || !docId) return;
 
@@ -42,7 +53,7 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
       }
 
       if (!refs.editor || isLoadingFile) {
-        fetchCompile();
+        debouncedRefresh();
         return;
       }
 
@@ -51,7 +62,7 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
       
       const remoteNode = findNodeByPath(newFileTree, currentFilePath);
       if (!remoteNode) {
-          fetchCompile();
+          debouncedRefresh();
           return;
       }
 
@@ -85,7 +96,7 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
         isRemoteChange.current = false;
       }
 
-      fetchCompile();
+      debouncedRefresh();
     });
 
     socket.on('error', (msg) => console.error("Collaboration Error:", msg));
@@ -93,7 +104,7 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
     return () => {
       socket.disconnect();
     };
-  }, [docId, userId]);
+  }, [docId, userId, debouncedRefresh]);
 
   const updateContent = (newTextContent) => {
     if (isRemoteChange.current || isLoadingFile) return;
