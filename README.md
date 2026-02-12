@@ -11,6 +11,7 @@
     <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
     <img src="https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white" />
     <img src="https://img.shields.io/badge/Cypress-69D3A7?logo=cypress&logoColor=fff&style=for-the-badge" />
+    <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white" />
   </div>
 
   <br />
@@ -32,8 +33,8 @@ TISC Editor is a **Dockerized monorepo** providing a professional environment fo
 
 | Layer       | Technology |
 |------------|------------|
-| Frontend   | Next.js 16, TailwindCSS, Lucide Icons |
-| Backend    | Node.js API with Typst binary integration |
+| Frontend   | Next.js 16, TailwindCSS, Lucide Icons, Socket.io-client |
+| Backend    | Node.js API with Typst binary integration, Socket.io-server |
 | Database   | PostgreSQL, Prisma ORM |
 | DevOps     | Docker Compose, GitHub Actions |
 | Testing    | Cypress E2E |
@@ -43,11 +44,19 @@ TISC Editor is a **Dockerized monorepo** providing a professional environment fo
 
 | Component | Highlights |
 | :--- | :--- |
-| **Web Editor** | Real-time preview, VSCode-like editor, template gallery, multi-user project sharing |
+| **Web Editor** | Multi-user editing with content synchronization, active users presence, and live notifications (Toasts). |
 | **Compilation API** | Typst to PDF/SVG rendering, isolated environments, Base64 image processing |
 | **Architecture** | Dockerized monorepo, Prisma ORM, Next.js Server Actions |
 | **Testing** | Automated End-to-End testing with Cypress integrated into Docker |
 
+
+## Real-time Collaboration & Sync
+
+TISC Editor uses a WebSocket layer (Socket.io) to enable seamless collaboration:
+
+- **State Sync:** Automatic synchronization of the file tree and document content across all connected clients.
+- **User Presence:** Real-time indicator of active collaborators on a project with a detailed hover-list of participant emails.
+- **Smart Feedback:** Integrated notification system (Toasts) for user join/leave events and file system actions.
 
 ## Configuration & Environment
 ### GitHub API Rate Limiting (Template Gallery)
