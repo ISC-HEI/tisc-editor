@@ -1,7 +1,9 @@
 import { X, FolderPlus, Plus, FilePlus } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { useFileManagerWatcher } from "@/hooks/useFileManager";
+import { useEffect, useRef, useState } from "react";
+import { deleteItem, renameItem, useFileManagerWatcher } from "@/hooks/useFileManager";
 import { initPreviewRefs } from "@/hooks/refs";
+import ContextMenu from "./ContextMenu"
+import { fileTree } from "@/hooks/useEditor";
 
 export function FileExplorer() {
   const imageListRef = useRef(null);
@@ -12,6 +14,9 @@ export function FileExplorer() {
   const btnUploadImagesRef = useRef(null);
   const imageFilesInputRef = useRef(null);
   const rootDropZoneRef = useRef(null);
+
+  const [menuConfig, setMenuConfig] = useState({ x: 0, y: 0, path: "", type: "  " });
+  const closeMenu = () => setMenuConfig({ x: 0, y: 0, path: "", type: "" });
 
   useFileManagerWatcher();
 
@@ -37,6 +42,10 @@ export function FileExplorer() {
         rootDropZone: rootDropZoneRef.current
       });
     }
+
+    window.showContextMenu = (e, path, type) => {
+      setMenuConfig({ x: e.clientX, y: e.clientY, path, type });
+    };
   }, []);
 
   return (
@@ -45,6 +54,13 @@ export function FileExplorer() {
       className="absolute left-0 top-0 bottom-0 w-72 bg-white border-r border-slate-200 shadow-xl z-20 flex flex-col transition-transform duration-300 transform" 
       style={{ display: "none" }}
     >
+    <ContextMenu 
+        {...menuConfig} 
+        targetPath={menuConfig.path}
+        onClose={closeMenu}
+        onRename={(path) => renameItem(path)} 
+        onDelete={(path) => deleteItem(path, fileTree)}
+      />
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500 italic">Explorer</h3>
         <div className="flex items-center gap-1">

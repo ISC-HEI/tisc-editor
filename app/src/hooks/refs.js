@@ -27,6 +27,8 @@ export let refs = {
   rootDropZone: null,
 
   separator: null,
+
+  contextMenu: null
 };
 
 export let infos = {

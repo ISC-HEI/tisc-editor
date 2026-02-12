@@ -72,7 +72,7 @@ function initFileManager() {
     });
 
     refs.rootDropZone.addEventListener("click", () => {
-        document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('selected-folder'));
+        document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('selected-item'));
         selectedFolderPath = "root";
     });
     
@@ -159,6 +159,11 @@ function renderTreeRecursive(folder, container, path) {
         itemRow.style.cursor = "grab";
         itemRow.classList.add("tree-item-row");
 
+        itemRow.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            showContextMenu(e, fullPath, item.type); 
+        });
+
         const fullPath = path ? `${path}/${item.name}` : item.name;
 
         li.addEventListener('dragstart', e => {
@@ -194,8 +199,8 @@ function renderTreeRecursive(folder, container, path) {
 
             itemRow.addEventListener("click", (e) => {
                 e.stopPropagation();
-                document.querySelectorAll('.tree-item-row').forEach(el => el.classList.remove('selected-folder'));
-                itemRow.classList.add('selected-folder');
+                document.querySelectorAll('.tree-item-row').forEach(el => el.classList.remove('selected-item'));
+                itemRow.classList.add('selected-item');
                 selectedFolderPath = fullPath;
             });
 
@@ -216,18 +221,6 @@ function renderTreeRecursive(folder, container, path) {
             li.appendChild(itemRow);
         }
 
-        const btnDelete = document.createElement("button");
-        btnDelete.textContent = "x";
-        btnDelete.classList.add("btn-delete");
-        btnDelete.style.marginLeft = "auto";
-        btnDelete.setAttribute("draggable", "false"); 
-        
-        btnDelete.onclick = (e) => {
-            e.stopPropagation();
-            deleteItem(fullPath, fileTree);
-        };
-
-        itemRow.appendChild(btnDelete);
         container.appendChild(li);
     });
 }
@@ -270,8 +263,8 @@ function updatePaths(item, newFolderPath) {
     }
 }
 
-async function deleteItem(path, fileTree) {
-    document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('selected-folder'));
+export async function deleteItem(path, fileTree) {
+    document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('selected-item'));
     const parts = path.split("/").filter(x=>x);
     const name = parts[parts.length-1];
     const parentPath = parts.slice(0,-1).join("/") || "root";
@@ -373,5 +366,46 @@ async function createFile() {
         await saveFileTree();
 
         openFile(newFilePath);
+    });
+}
+
+// ----------------------------------------------------
+
+function showContextMenu(e, path, type) {
+    if (window.showContextMenu) {
+        window.showContextMenu(e, path, type);
+    } else {
+        console.warn("React ContextMenu is not yet initialized.");
+    }
+}
+
+export async function renameItem(oldPath) {
+    const parts = oldPath.split("/").filter(x => x);
+    const oldName = parts[parts.length - 1];
+    
+    functions.openCustomPrompt(`Rename "${oldName}" to:`, async (newName) => {
+        if (!newName || newName === oldName) return;
+
+        const parentPath = parts.slice(0, -1).join("/") || "root";
+        const parent = getFolder(fileTree, parentPath);
+
+        if (!parent || parent.children[newName]) {
+            makeToast("A file or folder with this name already exists", "error");
+            return;
+        }
+
+        const item = parent.children[oldName];
+        
+        delete parent.children[oldName];
+
+        item.name = newName;
+        const newFolderPath = parentPath === "root" ? "" : parentPath;
+        updatePaths(item, newFolderPath);
+
+        parent.children[newName] = item;
+
+        await saveFileTree();
+        renderFileExplorer(fileTree);
+        makeToast("Item renamed successfully", "success");
     });
 }
