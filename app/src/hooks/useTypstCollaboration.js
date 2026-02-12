@@ -105,6 +105,21 @@ export const useTypstCollaboration = (docId, userId, initialFileTree) => {
           refs.userCount.innerText = emails.length;
       }
 
+      if (refs.userListContainer) {
+        refs.userListContainer.innerHTML = "";
+        emails.forEach(email => {
+            const div = document.createElement("div");
+            div.className = "px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-2";
+            div.innerHTML = `
+                <div class="h-4 w-4 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold uppercase" style="font-size: 0.5rem">
+                    ${email.charAt(0)}
+                </div>
+                ${email}
+            `;
+            refs.userListContainer.appendChild(div);
+        });
+    }
+
       const prevUsers = prevUsersRef.current;
       const joined = emails.filter(email => !prevUsers.includes(email));
       const left = prevUsers.filter(email => !emails.includes(email));

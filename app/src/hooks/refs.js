@@ -26,6 +26,7 @@ export let refs = {
   imageFilesInput: null,
   rootDropZone: null,
   userCount: null,
+  userListContainer: null,
 
   separator: null,
 
