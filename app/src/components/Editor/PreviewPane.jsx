@@ -9,15 +9,17 @@ export const PreviewPane = () => {
   const pageRef = useRef(null);
   const displayRef = useRef(null);
 
+  const btnExportZip = useRef(null);
   const btnExportPdfRef = useRef(null);
   const btnExportSvgRef = useRef(null);
   useZoomWatcher();
 
   useEffect(() => {
-    if (btnInRef.current && btnOutRef.current && pageRef.current && displayRef.current && btnExportPdfRef.current && btnExportSvgRef.current) {
+    if (btnInRef.current && btnOutRef.current && pageRef.current && displayRef.current && btnExportPdfRef.current && btnExportSvgRef.current && btnExportZip.current) {
       initPreviewRefs({
         page: pageRef.current,
 
+        btnExportZip: btnExportZip.current,
         btnExportPdf: btnExportPdfRef.current,
         btnExportSvg: btnExportSvgRef.current,
 
@@ -55,6 +57,9 @@ export const PreviewPane = () => {
         </div>
         
         <div className="flex gap-2">
+          <button ref={btnExportZip} className="flex items-center gap-2 text-[12px] font-semibold py-1.5 px-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
+            <Download size={14} /> ZIP
+          </button>
           <button ref={btnExportPdfRef} className="flex items-center gap-2 text-[12px] font-semibold py-1.5 px-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">
             <Download size={14} /> PDF
           </button>

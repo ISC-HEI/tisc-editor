@@ -38,7 +38,8 @@ export default function Editor({ projectId, title, fileTree, userId }) {
     }
     initPreviewInfos({
       currentProjectId: projectId,
-      defaultFileTree: fileTree
+      defaultFileTree: fileTree,
+      title: title
     });
     initPreviewFunctions({
       openCustomPrompt: openCustomPrompt
@@ -58,8 +59,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
     setIsModalOpen(false);
   };
 
-
-useEffect(() => {
+  useEffect(() => {
     const onDragOver = (e) => {
       const isFile = e.dataTransfer.types.includes("Files");
       

@@ -15,6 +15,7 @@
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
+    "jszip": "^3.10.1",
     "lucide": "^0.562.0",
     "lucide-react": "^0.562.0",
     "monaco-editor": "^0.55.1",

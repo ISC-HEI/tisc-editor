@@ -11,6 +11,7 @@ export let refs = {
   btnBold: null,
   btnItalic: null,
   btnUnderline: null,
+  btnExportZip: null,
   btnExportPdf: null,
   btnExportSvg: null,
   btnCreateFile: null,
@@ -35,7 +36,8 @@ export let refs = {
 
 export let infos = {
     currentProjectId: null,
-    defaultFileTree: null
+    defaultFileTree: null,
+    title: null
 }
 
 export let functions = {

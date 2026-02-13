@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 
 import { createElement, FileJson, Book, FileCode, Image, FileQuestion, Folder, Terminal, Notebook } from 'lucide';
-import { refs, functions } from "@/hooks/refs"
+import { refs, functions, infos } from "@/hooks/refs"
 import { currentProjectId, fetchCompile, fileTree, openFile } from "./useEditor";
 import { makeToast } from "./useUtils";
+import JSZip from "jszip";
 
 let selectedFolderPath = "root"
 let lastClickedPath = null;
 
 function initFileManager() {
-    if (!refs.imageList || !refs.btnShowImages || !refs.imageExplorer || !refs.btnCloseImages || !functions.openCustomPrompt || !refs.btnUploadImages || !refs.imageFilesInput || !refs.rootDropZone || !refs.btnCreateFile) {
+    if (!refs.imageList || !refs.btnShowImages || !refs.imageExplorer || !refs.btnCloseImages || !functions.openCustomPrompt || !refs.btnUploadImages || !refs.imageFilesInput || !refs.rootDropZone || !refs.btnCreateFile || !refs.btnExportZip) {
         return false;
     }
     refs.btnShowImages.addEventListener("click", () => {
@@ -95,6 +96,10 @@ function initFileManager() {
     });
 
     refs.btnCreateFile.addEventListener("click", createFile)
+
+    refs.btnExportZip.addEventListener("click", () => {
+        exportZip(fileTree, infos.title || "unknow_project")
+    })
 
     renderFileExplorer(fileTree);
 
@@ -477,5 +482,52 @@ export async function renameItem(oldPath) {
         renderFileExplorer(fileTree);
         makeToast("Item renamed successfully", "success");
         if (functions.syncCollaboration) functions.syncCollaboration();
+    });
+}
+
+// ----------------------------------------------------
+let isExporting = false;
+
+export async function exportZip(fileTree, projectName = "project") {
+    if (isExporting) {
+        return;
+    }
+    isExporting = true;
+    const zip = new JSZip();
+    
+    zipContent(zip, fileTree);
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${projectName || "project"}.zip`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    makeToast("Project exported as ZIP", "success");
+    isExporting = false;
+}
+
+function zipContent(zip, folder) {
+    Object.values(folder.children).forEach(item => {
+        if (item.type === "folder") {
+            const folderZip = zip.folder(item.name);
+            zipContent(folderZip, item);
+        } else {
+            let fileData = item.data;
+
+            if (typeof fileData === "string" && fileData.startsWith("data:")) {
+                const base64Content = fileData.split(",")[1];
+                zip.file(item.name, base64Content, { base64: true });
+            } else {
+                zip.file(item.name, fileData || "");
+            }
+        }
     });
 }
