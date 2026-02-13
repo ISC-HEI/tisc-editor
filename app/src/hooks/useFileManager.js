@@ -96,7 +96,6 @@ function initFileManager() {
                     renderFileExplorer(fileTree);
                     await saveFileTree();
                     
-                    // COLLAB: Notification
                     if (refs.socket?.connected) {
                         const socketPath = selectedFolderPath === "root" ? `root/${folderName}` : `root/${selectedFolderPath}/${folderName}`;
                         refs.socket.emit('create-node', { docId: currentProjectId, path: socketPath, type: 'folder' });
