@@ -174,6 +174,24 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('create-node', ({ docId, path, type }) => {
+    if (session.authorized && session.docId === docId) {
+      socket.to(docId).emit('node-created', { path, type });
+    }
+  });
+
+  socket.on('rename-node', ({ docId, oldPath, newPath }) => {
+    if (session.authorized && session.docId === docId) {
+      socket.to(docId).emit('node-renamed', { oldPath, newPath });
+    }
+  });
+
+  socket.on('delete-node', ({ docId, path }) => {
+    if (session.authorized && session.docId === docId) {
+      socket.to(docId).emit('node-deleted', { path });
+    }
+  });
+
   socket.on('disconnect', () => {
     if (session.docId && activeUsers[session.docId]) {
       delete activeUsers[session.docId][socket.id];

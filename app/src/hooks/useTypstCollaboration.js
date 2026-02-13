@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { refs } from './refs';
-import { currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
+import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
 import { debounce, makeToast } from './useUtils';
 
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_COMPILER_URL;
@@ -38,6 +38,7 @@ export const useTypstCollaboration = (docId, userId) => {
 
         const socket = io(WEBSOCKET_URL, { transports: ['websocket'] });
         socketRef.current = socket;
+        refs.socket = socket;
 
         socket.on('connect', () => {
             socket.emit('join-document', { docId, userId });
@@ -72,6 +73,29 @@ export const useTypstCollaboration = (docId, userId) => {
             
             isRemoteChange.current = false;
             debouncedRefresh();
+        });
+
+        socket.on('node-created', ({ path, type }) => {
+            import("./useFileManager").then(m => {
+                m.addNodeToLocalTree(globalFileTree, path, type);
+                m.renderFileExplorer(globalFileTree);
+            });
+            makeToast(`New ${type} created: ${path}`, "info");
+        });
+
+        socket.on('node-renamed', ({ oldPath, newPath }) => {
+            import("./useFileManager").then(m => {
+                m.renameNodeInLocalTree(globalFileTree, oldPath, newPath);
+                m.renderFileExplorer(globalFileTree);
+            });
+        });
+
+        socket.on('node-deleted', ({ path }) => {
+            import("./useFileManager").then(m => {
+                m.deleteNodeFromLocalTree(globalFileTree, path);
+                m.renderFileExplorer(globalFileTree);
+            });
+            makeToast(`File deleted: ${path}`, "warning");
         });
 
         socket.on('active-users-list', (emails) => {
