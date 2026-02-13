@@ -234,6 +234,49 @@ function renderTreeRecursive(folder, container, path) {
         } else {
             const iconHTML = getIcon(item.name);
             itemRow.innerHTML = `${iconHTML} <span>${item.name}</span>`;
+
+            const ext = item.name.split('.').pop().toLowerCase();
+            const isStandardImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+
+            if (isStandardImage && item.data) {
+                itemRow.addEventListener("mouseenter", (e) => {
+                    const preview = document.createElement("div");
+                    preview.id = "image-hover-preview";
+                    
+                    Object.assign(preview.style, {
+                        position: 'fixed',
+                        left: `${e.clientX + 20}px`,
+                        top: `${e.clientY - 20}px`,
+                        zIndex: '1000',
+                        padding: '4px',
+                        background: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+                        pointerEvents: 'none'
+                    });
+
+                    preview.innerHTML = `
+                        <img src="${item.data}" 
+                            style="max-width: 200px; max-height: 200px; display: block; border-radius: 4px;" 
+                        />`;
+                    document.body.appendChild(preview);
+                });
+
+                itemRow.addEventListener("mousemove", (e) => {
+                    const preview = document.getElementById("image-hover-preview");
+                    if (preview) {
+                        preview.style.left = `${e.clientX + 20}px`;
+                        preview.style.top = `${e.clientY - 20}px`;
+                    }
+                });
+
+                itemRow.addEventListener("mouseleave", () => {
+                    const preview = document.getElementById("image-hover-preview");
+                    if (preview) preview.remove();
+                });
+            }
+
             itemRow.addEventListener("click", (e) => {
                 e.stopPropagation();
                 lastClickedPath = fullPath;

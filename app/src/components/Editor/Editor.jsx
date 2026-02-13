@@ -9,7 +9,7 @@ import { PreviewPane } from "./PreviewPane";
 import { PromptModal } from "./PromptModal";
 import Breadcrumbs from "./Breadcrumbs";
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from "@/hooks/refs";
-import { currentFilePath, isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
+import { isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
 import { useTypstCollaboration } from "@/hooks/useTypstCollaboration";
 
 const MonacoEditor = dynamic(
