@@ -8,6 +8,7 @@ export let fileTree = { type: "folder", name: "root", children: {} };
 export let currentFolderPath = "root";
 export let currentFilePath = "root/main.typ"
 export let isLoadingFile = false;
+let onPathChangeCallback = null;
 
 const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
 const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh'];
@@ -279,6 +280,10 @@ export function openFile(path) {
     isLoadingFile = true;
     currentFilePath = path;
 
+    if (onPathChangeCallback) {
+        onPathChangeCallback(path);
+    }
+
     let content = node.data || "";
 
     if (node.name !== "main.typ" && content.startsWith('data:')) {
@@ -298,6 +303,10 @@ export function openFile(path) {
     setTimeout(() => {
         isLoadingFile = false;
     }, 150);
+}
+
+export function setOnPathChange(cb) {
+    onPathChangeCallback = cb;
 }
 
 // ----------------------------------------------------

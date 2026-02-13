@@ -7,8 +7,9 @@ import { Toolbar } from "./Toolbar.jsx";
 import { FileExplorer } from "./FileExplorer";
 import { PreviewPane } from "./PreviewPane";
 import { PromptModal } from "./PromptModal";
+import Breadcrumbs from "./Breadcrumbs";
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from "@/hooks/refs";
-import { isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
+import { currentFilePath, isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
 import { useTypstCollaboration } from "@/hooks/useTypstCollaboration";
 
 const MonacoEditor = dynamic(
@@ -22,6 +23,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
   const [inputValue, setInputValue] = useState("");
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const separatorRef = useRef(null);
+  const [activePath, setActivePath] = useState("root/main.typ");
   
   const { content, updateContent } = useTypstCollaboration(projectId, userId, fileTree);
 
@@ -101,6 +103,12 @@ useEffect(() => {
     window.addEventListener("dragleave", onDragLeave);
     window.addEventListener("drop", onDrop);
 
+    import("../../hooks/useEditor").then(mod => {
+      mod.setOnPathChange((newPath) => {
+        setActivePath("root/" + newPath);
+      });
+    });
+
     return () => {
       window.removeEventListener("dragover", onDragOver);
       window.removeEventListener("dragleave", onDragLeave);
@@ -129,16 +137,17 @@ useEffect(() => {
           <Toolbar />
           
           <div className="flex-1 relative min-w-0 overflow-hidden">
+            <Breadcrumbs path={activePath} />
             <FileExplorer />
-          <MonacoEditor
-            content={fileTree?.children?.["main.typ"]?.data || ""} 
-            onChange={(newContent) => {
-              if (!isLoadingFile) {
-                updateContent(newContent); 
-              }
-            }} 
-            onInstanceReady={handleEditorReady} 
-          />
+            <MonacoEditor
+              content={fileTree?.children?.["main.typ"]?.data || ""} 
+              onChange={(newContent) => {
+                if (!isLoadingFile) {
+                  updateContent(newContent); 
+                }
+              }} 
+              onInstanceReady={handleEditorReady} 
+            />
           </div>
         </div>
 
