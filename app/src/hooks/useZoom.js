@@ -20,7 +20,7 @@ function initZoom() {
         zoom = Math.max(0.1, zoom - zoomStep);
         updateZoom(refs.page, refs.zoomLevelDisplay);
     };
-    
+
     return true;
 }
 
@@ -29,7 +29,7 @@ export function useZoomWatcher() {
 
     useEffect(() => {
         const success = initZoom();
-        
+
         if (!success && !initialized) {
             const interval = setInterval(() => {
                 if (initZoom()) {

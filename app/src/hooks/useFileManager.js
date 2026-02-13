@@ -15,23 +15,23 @@ function initFileManager() {
     refs.btnShowImages.addEventListener("click", () => {
         refs.imageExplorer.style.display = "block"
     });
-    
+
     refs.btnCloseImages.addEventListener("click", () => {
-        refs.imageExplorer.style.display = "none";        
+        refs.imageExplorer.style.display = "none";
     })
 
     refs.btnCreateFolder.addEventListener("click", () => {
         functions.openCustomPrompt(`Create new folder in ${selectedFolderPath}`, async (folderName) => {
-            
+
             if (!folderName) return;
 
             const targetFolder = getFolder(fileTree, selectedFolderPath);
             if (targetFolder) {
                 if (!targetFolder.children[folderName]) {
-                    targetFolder.children[folderName] = { 
-                        type: "folder", 
-                        name: folderName, 
-                        children: {} 
+                    targetFolder.children[folderName] = {
+                        type: "folder",
+                        name: folderName,
+                        children: {}
                     };
                     renderFileExplorer(fileTree);
                     await saveFileTree();
@@ -49,7 +49,7 @@ function initFileManager() {
     refs.imageFilesInput.addEventListener("change", (event) => {
         const files = Array.from(event.target.files);
         const targetFolder = getFolder(fileTree, selectedFolderPath);
-        
+
         if (!targetFolder) {
             alert("Invalid target folder");
             return;
@@ -76,7 +76,7 @@ function initFileManager() {
         document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('selected-item'));
         selectedFolderPath = "root";
     });
-    
+
     refs.rootDropZone.addEventListener("dragover", (e) => {
         e.preventDefault();
         refs.rootDropZone.style.background = "#eef";
@@ -106,7 +106,7 @@ export function useFileManagerWatcher() {
 
     useEffect(() => {
         const success = initFileManager();
-        
+
         if (!success && !initialized) {
             const interval = setInterval(() => {
                 if (initFileManager()) {
@@ -119,7 +119,7 @@ export function useFileManagerWatcher() {
         const handleGlobalKeyDown = (e) => {
             if (e.key === "F2") {
                 const pathToRename = lastClickedPath || (typeof currentFilePath !== 'undefined' ? currentFilePath : null);
-                
+
                 if (pathToRename) {
                     e.preventDefault();
                     renameItem(pathToRename);
@@ -142,7 +142,7 @@ export function getFolder(fileTree, path) {
 
     const parts = path.split("/");
     let curr = fileTree;
-    
+
     for (const part of parts) {
         if (!curr.children[part] || curr.children[part].type !== "folder") {
             return null;
@@ -154,7 +154,7 @@ export function getFolder(fileTree, path) {
 
 // ----------------------------------------------------
 
-export function renderFileExplorer(folder, container = refs.imageList, path="") {
+export function renderFileExplorer(folder, container = refs.imageList, path = "") {
     container.innerHTML = "";
     renderTreeRecursive(folder, container, path);
 }
@@ -179,8 +179,8 @@ function renderTreeRecursive(folder, container, path) {
             document.querySelectorAll('.tree-item-row').forEach(el => el.classList.remove('selected-item'));
             itemRow.classList.add('selected-item');
             lastClickedPath = fullPath;
-            
-            showContextMenu(e, fullPath, item.type); 
+
+            showContextMenu(e, fullPath, item.type);
         });
 
         const fullPath = path ? `${path}/${item.name}` : item.name;
@@ -201,7 +201,7 @@ function renderTreeRecursive(folder, container, path) {
             folderIcon.setAttribute('height', '18');
 
             itemRow.innerHTML = `${folderIcon.outerHTML} <strong>${item.name}</strong>`;
-            
+
             li.addEventListener('dragover', e => {
                 e.preventDefault();
                 itemRow.style.background = "#eef";
@@ -253,9 +253,9 @@ function renderTreeRecursive(folder, container, path) {
 async function moveItem(sourcePath, destFolderPath, fileTree) {
     if (destFolderPath.startsWith(sourcePath)) return;
 
-    const srcParts = sourcePath.split("/").filter(x=>x);
-    const name = srcParts[srcParts.length-1];
-    const sourceParentPath = srcParts.slice(0,-1).join("/") || "root";
+    const srcParts = sourcePath.split("/").filter(x => x);
+    const name = srcParts[srcParts.length - 1];
+    const sourceParentPath = srcParts.slice(0, -1).join("/") || "root";
     const sourceParent = getFolder(fileTree, sourceParentPath);
     const destFolder = getFolder(fileTree, destFolderPath);
 
@@ -265,7 +265,7 @@ async function moveItem(sourcePath, destFolderPath, fileTree) {
     if (!item) return;
 
     delete sourceParent.children[name];
-    
+
     updatePaths(item, destFolderPath);
     if (destFolder.children[name]) {
         makeToast("A file with this name already exist in this folder", "error")
@@ -289,9 +289,9 @@ function updatePaths(item, newFolderPath) {
 
 export async function deleteItem(path, fileTree) {
     document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('selected-item'));
-    const parts = path.split("/").filter(x=>x);
-    const name = parts[parts.length-1];
-    const parentPath = parts.slice(0,-1).join("/") || "root";
+    const parts = path.split("/").filter(x => x);
+    const name = parts[parts.length - 1];
+    const parentPath = parts.slice(0, -1).join("/") || "root";
     const parent = getFolder(fileTree, parentPath);
 
     if (!parent) return;
@@ -329,7 +329,7 @@ async function saveFileTree() {
 
 export function getIcon(filename) {
     const ext = filename.split(".").pop().toLowerCase();
-    
+
     const iconMap = {
         json: FileJson,
         typ: Book,
@@ -344,13 +344,13 @@ export function getIcon(filename) {
     const IconData = iconMap[ext] || FileQuestion;
 
     const svgElement = createElement(IconData);
-    
+
     svgElement.setAttribute('width', '18');
     svgElement.setAttribute('height', '18');
     svgElement.setAttribute('class', 'inline-block mr-2');
     svgElement.style.verticalAlign = "middle";
 
-    return svgElement.outerHTML; 
+    return svgElement.outerHTML;
 }
 
 // ----------------------------------------------------
@@ -364,7 +364,7 @@ async function createFile() {
         }
 
         const targetFolder = getFolder(fileTree, selectedFolderPath);
-        
+
         if (!targetFolder) {
             console.error("Target folder not found");
             return;
@@ -375,8 +375,8 @@ async function createFile() {
             return;
         }
 
-        const newFilePath = selectedFolderPath === "root" 
-            ? fileName 
+        const newFilePath = selectedFolderPath === "root"
+            ? fileName
             : `${selectedFolderPath}/${fileName}`;
 
         targetFolder.children[fileName] = {
@@ -408,7 +408,7 @@ function showContextMenu(e, path, type) {
 export async function renameItem(oldPath) {
     const parts = oldPath.split("/").filter(x => x);
     const oldName = parts[parts.length - 1];
-    
+
     functions.openCustomPrompt(`Rename "${oldName}" to:`, async (newName) => {
         if (!newName || newName === oldName) return;
 
@@ -421,7 +421,7 @@ export async function renameItem(oldPath) {
         }
 
         const item = parent.children[oldName];
-        
+
         delete parent.children[oldName];
 
         item.name = newName;

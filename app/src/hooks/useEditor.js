@@ -13,7 +13,7 @@ const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zi
 const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh'];
 
 const debounceFetchCompile = debounce(async () => {
-    if (isLoadingFile) return; 
+    if (isLoadingFile) return;
 
     syncFileTreeWithEditor();
     await fetchCompile();
@@ -27,8 +27,8 @@ function initEditor() {
         return
     }
 
-    refs.editor.onDidChangeModelContent(() => { 
-        debounceFetchCompile(); 
+    refs.editor.onDidChangeModelContent(() => {
+        debounceFetchCompile();
     });
 
     refs.btnBold.addEventListener('click', () => applyFormatting('bold'));
@@ -66,7 +66,7 @@ export function useEditorWatcher() {
     const [initialized, setInitialized] = useState(false);
     useEffect(() => {
         const success = initEditor();
-        
+
         if (!success && !initialized) {
             const interval = setInterval(() => {
                 if (initEditor()) {
@@ -143,7 +143,7 @@ export async function fetchCompile() {
                 errorSuppDetail = insideParentheses.split("/app")[1] || "unknown path";
             } else {
                 errorSuppDetail = errorDetails;
-            }   
+            }
             message = `${error.error}, ${messageDetails} (${errorSuppDetail})`;
         } else {
             message = `${error.error}`;
@@ -161,7 +161,7 @@ export function downloadDocument() {
     if (!content) return;
 
     const blob = new Blob([content], { type: "text/plain" });
-    const filename = `${new Date().toISOString().replace(/[-:.]/g,'')}_typstDocument.typ`;
+    const filename = `${new Date().toISOString().replace(/[-:.]/g, '')}_typstDocument.typ`;
     const link = document.createElement("a");
 
     link.href = URL.createObjectURL(blob);
@@ -175,11 +175,11 @@ export function downloadDocument() {
 async function openAndShowFile() {
     const file = refs.fileInputOpen.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
-    reader.onload = (e) => { 
+    reader.onload = (e) => {
         refs.editor.setValue(e.target.result);
-        fetchCompile(); 
+        fetchCompile();
     };
     reader.readAsText(file);
     await autoSave();
@@ -246,7 +246,7 @@ function setupResizable() {
 
 export function openFile(path) {
     if (!path || !refs.editor) return;
-    
+
     const parts = path.replace("root/", "").split("/");
     let node = fileTree;
     for (const part of parts) {
@@ -254,9 +254,9 @@ export function openFile(path) {
     }
 
     if (!node || node.type === "folder") return;
-    
+
     const ext = node.name.split(".").pop().toLowerCase();
-    
+
     if (BANNED_EXTENSIONS.includes(ext)) {
         makeToast(`Interrupted: .${ext} is a binary file.`, "error")
         return;
@@ -276,7 +276,7 @@ export function openFile(path) {
         refs.monaco.editor.setModelLanguage(model, lang)
     }
 
-    isLoadingFile = true; 
+    isLoadingFile = true;
     currentFilePath = path;
 
     let content = node.data || "";
@@ -304,7 +304,7 @@ export function openFile(path) {
 
 export function syncFileTreeWithEditor() {
     if (!refs.editor || !currentFilePath || isLoadingFile) return;
-    
+
     const content = refs.editor.getValue();
     const parts = currentFilePath.replace("root/", "").split("/");
     let node = fileTree;
@@ -334,7 +334,7 @@ function getEditorLanguage(extension) {
     if (!extension) return "plaintext";
     const ext = extension.toLowerCase();
 
-    switch(ext) {
+    switch (ext) {
         case "typ":
             return "typst";
         case "json":
