@@ -6,8 +6,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { Pool } = require('pg');
 require('dotenv').config();
-const { NodeCompiler } = require('@myriaddreamin/typst-ts-node-compiler');const { PassThrough } = require('stream');
-;
+const { NodeCompiler } = require('@myriaddreamin/typst-ts-node-compiler');
 
 const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
 const app = express();
@@ -27,11 +26,9 @@ app.use(express.text({ limit: '50mb', type: '*/*' }));
 
 // ---------- Helper functions ----------
 
-// Write all images from imgPaths and return sets of created files and directories
 function writeImages(children = {}, baseDir = ".", accumulator = { files: new Set(), dirs: new Set() }) {
   for (const fileName in children) {
     const node = children[fileName];
-    
     const currentPath = path.join(baseDir, node.name || fileName);
 
     if (node.type === 'folder') {
@@ -40,21 +37,15 @@ function writeImages(children = {}, baseDir = ".", accumulator = { files: new Se
         accumulator.dirs.add(currentPath);
       }
       writeImages(node.children, currentPath, accumulator);
-      
     } else if (node.type === 'file' && fileName !== "main.typ") {
       if (!node.data) continue;
-
       try {
         const dir = path.dirname(currentPath);
         if (!fs.existsSync(dir)) {
           fs.mkdirSync(dir, { recursive: true });
           accumulator.dirs.add(dir);
         }
-
-        const base64Data = node.data.includes(',') 
-          ? node.data.split(',')[1] 
-          : node.data;
-
+        const base64Data = node.data.includes(',') ? node.data.split(',')[1] : node.data;
         fs.writeFileSync(currentPath, Buffer.from(base64Data, 'base64'));
         accumulator.files.add(currentPath);
       } catch (err) {
@@ -62,17 +53,13 @@ function writeImages(children = {}, baseDir = ".", accumulator = { files: new Se
       }
     }
   }
-
   return { createdFiles: accumulator.files, createdDirs: accumulator.dirs };
 }
 
-// Delete temporary files and empty directories
 function cleanupTemp(createdFiles, createdDirs) {
   for (const file of createdFiles) {
     if (fs.existsSync(file)) fs.unlinkSync(file);
   }
-
-  // Remove directories from longest path to shortest
   const sortedDirs = Array.from(createdDirs).sort((a, b) => b.length - a.length);
   for (const dir of sortedDirs) {
     if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) {
@@ -81,25 +68,16 @@ function cleanupTemp(createdFiles, createdDirs) {
   }
 }
 
-// Check if a user can have access to a document
 async function canEditProject(userId, projectId) {
   try {
-    const query = `
-      SELECT id FROM "projects" 
-      WHERE id = $1 
-      AND (user_id = $2 OR $2 = ANY(shared_users))
-      LIMIT 1;
-    `;
-    
+    const query = `SELECT id FROM "projects" WHERE id = $1 AND (user_id = $2 OR $2 = ANY(shared_users)) LIMIT 1;`;
     const res = await pool.query(query, [projectId, userId]);
     return res.rowCount > 0;
   } catch (err) {
-    console.error("Erreur SQL Permission:", err);
     return false;
   }
 }
 
-// Decode the main content
 function decodeContent(data) {
   if (data.startsWith('data:text/plain;base64,')) {
     return Buffer.from(data.split(',')[1], 'base64').toString('utf-8');
@@ -107,147 +85,104 @@ function decodeContent(data) {
   return data;
 }
 
-// get the email of a user
 async function getUserEmail(userId) {
   try {
     const res = await pool.query('SELECT email FROM "users" WHERE id = $1', [userId]);
     return res.rows[0]?.email || "Unknown User";
   } catch (err) {
-    console.error("Error fetching email:", err);
     return "Error User";
   }
 }
+
 // ---------- Routes ----------
 
-// Render Typst source to SVG
 app.post('/render', async (req, res) => {
   let body;
-  try {
-    body = JSON.parse(req.body);
-  } catch {
-    return res.status(400).json({ error: 'Invalid JSON' });
-  }
+  try { body = JSON.parse(req.body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
 
   const { fileTree } = body;
   const mainFile = fileTree?.children?.["main.typ"];
-  if (!mainFile) return res.status(400).json({ error: 'Missing main.typ in fileTree' });
+  if (!mainFile) return res.status(400).json({ error: 'Missing main.typ' });
 
   const { createdFiles, createdDirs } = writeImages(fileTree.children);
-
   try {
     const sourceCode = decodeContent(mainFile.data);
-    
     const svg = $typst.svg({ mainFileContent: sourceCode });
     res.setHeader('Content-Type', 'image/svg+xml');
     res.send(svg);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Compilation failed' });
   } finally {
     cleanupTemp(createdFiles, createdDirs);
   }
 });
 
-// Export Typst source to PDF
 app.post('/export/pdf', async (req, res) => {
   let body;
-  try {
-    body = JSON.parse(req.body);
-  } catch {
-    return res.status(400).json({ error: 'Invalid JSON' });
-  }
+  try { body = JSON.parse(req.body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
 
   const { fileTree } = body;
   const mainFile = fileTree?.children?.["main.typ"];
-  
   if (!mainFile) return res.status(400).json({ error: 'Missing main.typ' });
 
   const { createdFiles, createdDirs } = writeImages(fileTree.children);
-
   try {
     const sourceCode = decodeContent(mainFile.data);
     const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });
-
     res.setHeader('Content-Type', 'application/pdf');
     res.send(pdfBuffer);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to generate PDF' });
+    res.status(500).json({ error: 'PDF failed' });
   } finally {
     cleanupTemp(createdFiles, createdDirs);
   }
 });
 
-// -------- WEBSOCKET --------
+// ---------- WebSocket Logic ----------
+
 const activeUsers = {};
 
-// -------- LOGIQUE WEBSOCKET --------
 io.on('connection', (socket) => {
-  console.log(`New user connected: ${socket.id}`);
-  
-  let session = { 
-    userId: null, 
-    docId: null, 
-    authorized: false, 
-    email: null 
-  };
+  let session = { userId: null, docId: null, authorized: false, email: null };
 
   socket.on('join-document', async ({ docId, userId }) => {
-    if (!docId || !userId) {
-      return socket.emit('error', 'Document Id and User Id required');
-    }
-
+    if (!docId || !userId) return;
     try {
       const authorized = await canEditProject(userId, docId);
-
       if (authorized) {
         const email = await getUserEmail(userId);
-        
         socket.join(docId);
-        
-        session.userId = userId;
-        session.docId = docId;
-        session.authorized = true;
-        session.email = email;
+        session = { userId, docId, authorized: true, email };
 
         if (!activeUsers[docId]) activeUsers[docId] = {};
         activeUsers[docId][socket.id] = email;
 
-        const currentUsers = Object.values(activeUsers[docId]);
-        io.to(docId).emit('active-users-list', currentUsers);
-        
-        console.log(`User ${email} joined room ${docId}. Active: ${currentUsers.length}`);
-      } else {
-        socket.emit('error', 'You cannot access this document');
+        io.to(docId).emit('active-users-list', Object.values(activeUsers[docId]));
       }
     } catch (err) {
-      console.error("Join error:", err);
-      socket.emit('error', 'Internal server error');
+      socket.emit('error', 'Auth error');
     }
   });
 
-  socket.on('update-content', ({ docId, userId, content }) => {
-    if (session.authorized && session.docId === docId && session.userId === userId) {
-      socket.to(docId).emit('content-updated', content);
-    } else {
-      socket.emit('error', 'Unauthorized update attempt');
+  socket.on('edit-file', ({ docId, filename, changes }) => {
+    if (session.authorized && session.docId === docId) {
+      socket.to(docId).emit('remote-edit', {
+        filename,
+        changes,
+        userId: session.userId
+      });
     }
   });
 
   socket.on('disconnect', () => {
-    const { docId, email } = session;
-
-    if (docId && activeUsers[docId]) {
-      delete activeUsers[docId][socket.id];
-
-      const remainingUsers = Object.values(activeUsers[docId]);
-
-      if (remainingUsers.length === 0) {
-        delete activeUsers[docId];
+    if (session.docId && activeUsers[session.docId]) {
+      delete activeUsers[session.docId][socket.id];
+      const remaining = Object.values(activeUsers[session.docId]);
+      if (remaining.length === 0) {
+        delete activeUsers[session.docId];
       } else {
-        io.to(docId).emit('active-users-list', remainingUsers);
+        io.to(session.docId).emit('active-users-list', remaining);
       }
-      
-      console.log(`User ${email || socket.id} left room ${docId}`);
     }
   });
 });

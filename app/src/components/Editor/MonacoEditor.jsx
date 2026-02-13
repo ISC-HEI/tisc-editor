@@ -2,6 +2,7 @@ import { useRef, useEffect } from "react";
 import * as monaco from "monaco-editor";
 import { typstSyntax, typstConfig } from "../../assets/typst-definition";
 import { refs } from "@/hooks/refs";
+import { currentFilePath } from "@/hooks/useEditor";
 
 export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
   const editorRef = useRef(null);
@@ -10,7 +11,6 @@ export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
 
   useEffect(() => {
     if (editorRef.current && !monacoInstance.current) {
-      
       const langId = "typst";
       const isRegistered = monaco.languages.getLanguages().some(l => l.id === langId);
       
@@ -38,10 +38,12 @@ export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
       monacoInstance.current = editor;
       refs.monaco = monaco;
 
-      editor.onDidChangeModelContent(() => {
+      editor.onDidChangeModelContent((event) => {
         if (!isRemoteChange.current && onChange) {
-          const value = editor.getValue();
-          onChange(value);
+          onChange({
+            filename: currentFilePath,
+            changes: event.changes 
+          });
         }
       });
 
@@ -58,27 +60,5 @@ export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
     };
   }, []);
 
-  useEffect(() => {
-    const editor = monacoInstance.current;
-    if (editor) {
-      const model = editor.getModel();
-      const currentValue = editor.getValue();
-
-      if (model && content !== currentValue) {
-        isRemoteChange.current = true;
-        
-        editor.executeEdits("remote-update", [
-          {
-            range: model.getFullModelRange(),
-            text: content || "",
-            forceMoveMarkers: true,
-          },
-        ]);
-
-        isRemoteChange.current = false;
-      }
-    }
-  }, [content]);
-
   return <div ref={editorRef} className="h-full w-full" />;
-};
+}
