@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import { createElement, FileJson, Book, FileCode, Image, FileQuestion, Folder, Terminal, Notebook } from 'lucide';
 import { refs, functions, infos } from "@/hooks/refs"
 import { currentProjectId, fetchCompile, fileTree, openFile } from "./useEditor";
@@ -8,6 +7,66 @@ import JSZip from "jszip";
 
 let selectedFolderPath = "root"
 let lastClickedPath = null;
+
+export const addNodeToLocalTree = (root, path, type, data = "") => {
+    const cleanPath = path.replace(/^root\//, "");
+    const parts = cleanPath.split("/").filter(x => x);
+    const fileName = parts.pop();
+    let current = root;
+
+    for (const part of parts) {
+        if (!current.children[part]) {
+            current.children[part] = { name: part, type: 'folder', children: {} };
+        }
+        current = current.children[part];
+    }
+
+    current.children[fileName] = {
+        name: fileName,
+        type: type,
+        fullPath: path.replace(/^root\//, ""),
+        data: type === 'file' ? data : null,
+        children: type === 'folder' ? {} : null
+    };
+};
+
+export const deleteNodeFromLocalTree = (root, path) => {
+    const cleanPath = path.replace(/^root\//, "");
+    const parts = cleanPath.split("/").filter(x => x);
+    const fileName = parts.pop();
+    let current = root;
+
+    for (const part of parts) {
+        if (current && current.children) {
+            current = current.children[part];
+        }
+    }
+
+    if (current && current.children) {
+        delete current.children[fileName];
+    }
+};
+
+export const renameNodeInLocalTree = (root, oldPath, newPath) => {
+    const findNode = (p) => {
+        const cleanP = p.replace(/^root\//, "");
+        const parts = cleanP.split("/").filter(x => x);
+        let curr = root;
+        for (const part of parts) {
+            if (curr && curr.children) curr = curr.children[part];
+        }
+        return curr;
+    };
+
+    const nodeToMove = findNode(oldPath);
+    if (nodeToMove) {
+        const dataCopy = JSON.parse(JSON.stringify(nodeToMove));
+        deleteNodeFromLocalTree(root, oldPath);
+        addNodeToLocalTree(root, newPath, dataCopy.type, dataCopy.data);
+        const newNode = findNode(newPath);
+        if (dataCopy.type === 'folder') newNode.children = dataCopy.children;
+    }
+};
 
 function initFileManager() {
     if (!refs.imageList || !refs.btnShowImages || !refs.imageExplorer || !refs.btnCloseImages || !functions.openCustomPrompt || !refs.btnUploadImages || !refs.imageFilesInput || !refs.rootDropZone || !refs.btnCreateFile || !refs.btnExportZip) {
@@ -36,6 +95,12 @@ function initFileManager() {
                     };
                     renderFileExplorer(fileTree);
                     await saveFileTree();
+                    
+                    if (refs.socket?.connected) {
+                        const socketPath = selectedFolderPath === "root" ? `root/${folderName}` : `root/${selectedFolderPath}/${folderName}`;
+                        refs.socket.emit('create-node', { docId: currentProjectId, path: socketPath, type: 'folder' });
+                    }
+                    
                     selectedFolderPath = "root";
                 }
             }
@@ -68,6 +133,11 @@ function initFileManager() {
                 await saveFileTree();
                 renderFileExplorer(fileTree);
                 fetchCompile();
+
+                if (refs.socket?.connected) {
+                    const socketPath = selectedFolderPath === "root" ? `root/${file.name}` : `root/${selectedFolderPath}/${file.name}`;
+                    refs.socket.emit('create-node', { docId: currentProjectId, path: socketPath, type: 'file' });
+                }
             };
             reader.readAsDataURL(file);
         });
@@ -160,6 +230,7 @@ export function getFolder(fileTree, path) {
 // ----------------------------------------------------
 
 export function renderFileExplorer(folder, container = refs.imageList, path = "") {
+    if (!container) return;
     container.innerHTML = "";
     renderTreeRecursive(folder, container, path);
 }
@@ -178,6 +249,8 @@ function renderTreeRecursive(folder, container, path) {
         itemRow.style.cursor = "grab";
         itemRow.classList.add("tree-item-row");
 
+        const fullPath = path ? `${path}/${item.name}` : item.name;
+
         itemRow.addEventListener("contextmenu", (e) => {
             e.preventDefault();
 
@@ -187,8 +260,6 @@ function renderTreeRecursive(folder, container, path) {
 
             showContextMenu(e, fullPath, item.type);
         });
-
-        const fullPath = path ? `${path}/${item.name}` : item.name;
 
         li.addEventListener('dragstart', e => {
             e.dataTransfer.setData("path", fullPath);
@@ -207,13 +278,8 @@ function renderTreeRecursive(folder, container, path) {
 
             itemRow.innerHTML = `${folderIcon.outerHTML} <strong>${item.name}</strong>`;
 
-            li.addEventListener('dragover', e => {
-                e.preventDefault();
-                itemRow.style.background = "#eef";
-            });
-            li.addEventListener('dragleave', () => {
-                itemRow.style.background = "transparent";
-            });
+            li.addEventListener('dragover', e => { e.preventDefault(); itemRow.style.background = "#eef"; });
+            li.addEventListener('dragleave', () => itemRow.style.background = "transparent");
             li.addEventListener('drop', e => {
                 e.preventDefault();
                 itemRow.style.background = "transparent";
@@ -312,26 +378,31 @@ async function moveItem(sourcePath, destFolderPath, fileTree) {
     const item = sourceParent.children[name];
     if (!item) return;
 
-    delete sourceParent.children[name];
-
-    updatePaths(item, destFolderPath);
     if (destFolder.children[name]) {
         makeToast("A file with this name already exist in this folder", "error")
         return;
     }
+
+    delete sourceParent.children[name];
+    updatePaths(item, destFolderPath);
     destFolder.children[name] = item;
 
     await saveFileTree();
     renderFileExplorer(fileTree);
     fetchCompile();
-    if (functions.syncCollaboration) functions.syncCollaboration();
+
+    if (refs.socket?.connected) {
+        const oldSocketPath = `root/${sourcePath}`;
+        const newSocketPath = `root/${destFolderPath === "root" ? "" : destFolderPath + "/"}${name}`;
+        refs.socket.emit('rename-node', { docId: currentProjectId, oldPath: oldSocketPath, newPath: newSocketPath });
+    }
 }
 
 function updatePaths(item, newFolderPath) {
     if (item.type === "file") {
-        item.fullPath = `${newFolderPath}/${item.name}`;
+        item.fullPath = newFolderPath === "root" ? item.name : `${newFolderPath}/${item.name}`;
     } else if (item.type === "folder") {
-        Object.values(item.children).forEach(child => updatePaths(child, `${newFolderPath}/${item.name}`));
+        Object.values(item.children).forEach(child => updatePaths(child, newFolderPath === "root" ? item.name : `${newFolderPath}/${item.name}`));
     }
 }
 
@@ -349,25 +420,21 @@ export async function deleteItem(path, fileTree) {
     renderFileExplorer(fileTree);
     fetchCompile();
     selectedFolderPath = "root";
-    if (functions.syncCollaboration) functions.syncCollaboration();
+
+    if (refs.socket?.connected) {
+        refs.socket.emit('delete-node', { docId: currentProjectId, path: `root/${path}` });
+    }
 }
 
 // ----------------------------------------------------
 
 async function saveFileTree() {
     if (!currentProjectId) return;
-
-    const currentFileTree = fileTree;
-
     try {
         await fetch('/api/projects/save', {
             method: 'POST',
-            body: JSON.stringify({
-                id: currentProjectId,
-                fileTree: currentFileTree
-            })
+            body: JSON.stringify({ id: currentProjectId, fileTree: fileTree })
         });
-        console.log("Projet sauvegardé...");
     } catch (err) {
         console.error("Erreur sauvegarde:", err);
     }
@@ -377,18 +444,7 @@ async function saveFileTree() {
 
 export function getIcon(filename) {
     const ext = filename.split(".").pop().toLowerCase();
-
-    const iconMap = {
-        json: FileJson,
-        typ: Book,
-        tmtheme: Notebook,
-        py: Terminal,
-        js: FileCode,
-        jpg: Image,
-        png: Image,
-        svg: Image
-    };
-
+    const iconMap = { json: FileJson, typ: Book, tmtheme: Notebook, py: Terminal, js: FileCode, jpg: Image, png: Image, svg: Image };
     const IconData = iconMap[ext] || FileQuestion;
 
     const svgElement = createElement(IconData);
@@ -412,45 +468,31 @@ async function createFile() {
         }
 
         const targetFolder = getFolder(fileTree, selectedFolderPath);
-
-        if (!targetFolder) {
-            console.error("Target folder not found");
+        if (!targetFolder || targetFolder.children[fileName]) {
+            makeToast(`Error creating file`, "error")
             return;
         }
 
-        if (targetFolder.children[fileName]) {
-            makeToast(`The name "${fileName}" is already taken in this folder.`, "error")
-            return;
-        }
-
-        const newFilePath = selectedFolderPath === "root"
-            ? fileName
-            : `${selectedFolderPath}/${fileName}`;
-
-        targetFolder.children[fileName] = {
-            type: "file",
-            name: fileName,
-            fullPath: newFilePath,
-            data: ""
-        };
+        const newFilePath = selectedFolderPath === "root" ? fileName : `${selectedFolderPath}/${fileName}`;
+        targetFolder.children[fileName] = { type: "file", name: fileName, fullPath: newFilePath, data: "" };
 
         renderFileExplorer(fileTree);
 
         await saveFileTree();
 
         openFile(newFilePath);
-        if (functions.syncCollaboration) functions.syncCollaboration();
+
+        if (refs.socket?.connected) {
+            const socketPath = selectedFolderPath === "root" ? `root/${fileName}` : `root/${selectedFolderPath}/${fileName}`;
+            refs.socket.emit('create-node', { docId: currentProjectId, path: socketPath, type: 'file' });
+        }
     });
 }
 
 // ----------------------------------------------------
 
 function showContextMenu(e, path, type) {
-    if (window.showContextMenu) {
-        window.showContextMenu(e, path, type);
-    } else {
-        console.warn("React ContextMenu is not yet initialized.");
-    }
+    if (window.showContextMenu) window.showContextMenu(e, path, type);
 }
 
 export async function renameItem(oldPath) {
@@ -464,7 +506,7 @@ export async function renameItem(oldPath) {
         const parent = getFolder(fileTree, parentPath);
 
         if (!parent || parent.children[newName]) {
-            makeToast("A file or folder with this name already exists", "error");
+            makeToast("Error renaming", "error");
             return;
         }
 
@@ -473,60 +515,45 @@ export async function renameItem(oldPath) {
         delete parent.children[oldName];
 
         item.name = newName;
-        const newFolderPath = parentPath === "root" ? "" : parentPath;
-        updatePaths(item, newFolderPath);
-
+        updatePaths(item, parentPath);
         parent.children[newName] = item;
 
         await saveFileTree();
         renderFileExplorer(fileTree);
-        makeToast("Item renamed successfully", "success");
-        if (functions.syncCollaboration) functions.syncCollaboration();
+        
+        if (refs.socket?.connected) {
+            const oldSocketPath = `root/${oldPath}`;
+            const newSocketPath = `root/${parentPath === "root" ? "" : parentPath + "/"}${newName}`;
+            refs.socket.emit('rename-node', { docId: currentProjectId, oldPath: oldSocketPath, newPath: newSocketPath });
+        }
     });
 }
 
-// ----------------------------------------------------
-let isExporting = false;
-
 export async function exportZip(fileTree, projectName = "project") {
-    if (isExporting) {
-        return;
-    }
-    isExporting = true;
     const zip = new JSZip();
-    
     zipContent(zip, fileTree);
-
     const blob = await zip.generateAsync({ type: "blob" });
-    
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${projectName || "project"}.zip`;
-    
+    link.download = `${projectName}.zip`;
     document.body.appendChild(link);
     link.click();
-    
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
-    makeToast("Project exported as ZIP", "success");
-    isExporting = false;
+    makeToast("Project exported", "success");
 }
 
 function zipContent(zip, folder) {
     Object.values(folder.children).forEach(item => {
         if (item.type === "folder") {
-            const folderZip = zip.folder(item.name);
-            zipContent(folderZip, item);
+            zipContent(zip.folder(item.name), item);
         } else {
-            let fileData = item.data;
-
-            if (typeof fileData === "string" && fileData.startsWith("data:")) {
-                const base64Content = fileData.split(",")[1];
-                zip.file(item.name, base64Content, { base64: true });
+            let data = item.data;
+            if (typeof data === "string" && data.startsWith("data:")) {
+                zip.file(item.name, data.split(",")[1], { base64: true });
             } else {
-                zip.file(item.name, fileData || "");
+                zip.file(item.name, data || "");
             }
         }
     });
