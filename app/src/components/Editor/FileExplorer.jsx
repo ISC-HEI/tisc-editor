@@ -104,7 +104,7 @@ export function FileExplorer() {
         ref={rootDropZoneRef} 
         className="mx-3 p-2 text-[10px] font-bold uppercase bg-slate-100 rounded text-slate-400 mb-2 flex items-center gap-2 border border-dashed border-slate-200"
       >
-        <span className="text-sm">🏠</span> Root Project
+        Root Project
       </div>
 
       <ul 

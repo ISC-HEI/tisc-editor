@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { EditorHeader } from "./EditorHeader";
@@ -7,7 +7,7 @@ import { Toolbar } from "./Toolbar.jsx";
 import { FileExplorer } from "./FileExplorer";
 import { PreviewPane } from "./PreviewPane";
 import { PromptModal } from "./PromptModal";
-import { initPreviewFunctions, initPreviewInfos, initPreviewRefs } from "@/hooks/refs";
+import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from "@/hooks/refs";
 import { isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
 import { useTypstCollaboration } from "@/hooks/useTypstCollaboration";
 
@@ -20,6 +20,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: "", callback: null });
   const [inputValue, setInputValue] = useState("");
+  const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const separatorRef = useRef(null);
   
   const { content, updateContent } = useTypstCollaboration(projectId, userId, fileTree);
@@ -55,8 +56,72 @@ export default function Editor({ projectId, title, fileTree, userId }) {
     setIsModalOpen(false);
   };
 
+
+useEffect(() => {
+    const onDragOver = (e) => {
+      const isFile = e.dataTransfer.types.includes("Files");
+      
+      if (isFile) {
+        e.preventDefault();
+        setIsDraggingGlobal(true);
+      }
+    };
+
+    const onDragLeave = (e) => {
+      if (e.relatedTarget === null) {
+        setIsDraggingGlobal(false);
+      }
+    };
+
+    const onDrop = (e) => {
+      const isFile = e.dataTransfer.types.includes("Files");
+      
+      if (isFile) {
+        e.preventDefault();
+        setIsDraggingGlobal(false);
+        
+        const droppedFiles = e.dataTransfer.files;
+        
+        if (droppedFiles.length > 0 && refs.imageFilesInput) {
+          const dataTransfer = new DataTransfer();
+          Array.from(droppedFiles).forEach(file => {
+            dataTransfer.items.add(file);
+          });
+
+          refs.imageFilesInput.files = dataTransfer.files;
+          const event = new Event('change', { bubbles: true });
+          refs.imageFilesInput.dispatchEvent(event);
+        }
+      } else {
+        setIsDraggingGlobal(false);
+      }
+    };
+
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("drop", onDrop);
+
+    return () => {
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden text-slate-900">
+    {isDraggingGlobal && (
+      <div className="absolute inset-0 z-[100] p-8 pointer-events-none animate-in fade-in duration-200">
+        <div className="w-full h-full border-4 border-dashed border-blue-500/50 rounded-[2rem] bg-blue-50/80 backdrop-blur-[2px] flex flex-col items-center justify-center">
+          <h2 className="text-3xl font-bold text-blue-700 tracking-tight">
+            Drop to upload
+          </h2>
+          <p className="text-blue-600/70 font-medium mt-2">
+            Your files will be added to the project root
+          </p>
+        </div>
+      </div>
+    )}
       <EditorHeader title={title} />
 
       <div className="flex flex-1 overflow-hidden relative">
