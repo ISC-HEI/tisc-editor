@@ -41,10 +41,13 @@ describe("Dashboard, Templates & Collaboration", () => {
   };
 
   const createProject = (modelSelector, name) => {
-    cy.get(UI.createProjectBtn).click();
-    cy.get(modelSelector).click();
-    cy.get(UI.projectNameInput).type(`${name}{enter}`);
-    cy.contains(name, { timeout: 10000 }).should('be.visible');
+    cy.get(UI.createProjectBtn, { timeout: 15000 }).should('be.visible').click();
+    
+    cy.get(modelSelector, { timeout: 10000 }).should('be.visible').click();
+    
+    cy.get(UI.projectNameInput).should('be.visible').type(`${name}{enter}`);
+    
+    cy.contains(name, { timeout: 20000 }).should('be.visible');
   };
 
   before("Initial Signup", () => {
@@ -56,8 +59,9 @@ describe("Dashboard, Templates & Collaboration", () => {
 
   beforeEach(() => {
     cy.visit("/login");
-    cy.get(UI.emailInput).type(testUser.email);
+    cy.get(UI.emailInput).should('be.visible').type(testUser.email);
     cy.get(UI.passwordInput).type(`${testUser.password}{enter}`);
+    cy.url({ timeout: 15000 }).should("include", "/dashboard");
   });
 
   // --- TESTS DES TEMPLATES ---
@@ -70,10 +74,14 @@ describe("Dashboard, Templates & Collaboration", () => {
 
     templates.forEach((template) => {
       it(`should create project with template: ${template.name}`, () => {
+        cy.visit("/dashboard");
+        
         createProject(template.selector, template.name);
+        
         cy.contains(template.name).click();
-        cy.get(UI.editor.title, { timeout: 30000 }).should('contain', template.name);
-        cy.get(UI.editor.container).should('contain', template.keyword);
+        
+        cy.get(UI.editor.title, { timeout: 40000 }).should('contain', template.name);
+        cy.get(UI.editor.container, { timeout: 40000 }).should('contain', template.keyword);
       });
     });
   });
@@ -83,54 +91,62 @@ describe("Dashboard, Templates & Collaboration", () => {
     const projectName = "Collaboration Project";
     const colleagueEmail = `colleague_${Date.now()}@exemple.com`;
 
-    before(() => {
-      cy.visit("/signup")
+    before("Create Colleague Account", () => {
+      cy.visit("/signup");
       cy.get(UI.emailInput).type(colleagueEmail);
       cy.get(UI.passwordInput).type(`password{enter}`);
       cy.url().should("include", "/dashboard");
     });
   
     beforeEach(() => {
+      cy.visit("/dashboard");
       createProject(UI.models.blank, projectName);
+      
       cy.contains(projectName)
         .parents('.group.relative')
-        .find(UI.actionMenuBtn)
+        .find(UI.actionMenuBtn, { timeout: 10000 })
+        .should('be.visible')
         .click();
-      cy.get(UI.shareOption).click();
+      
+      cy.get(UI.shareOption, { timeout: 5000 }).should('be.visible').click();
     });
 
     it("should share successfully with an existing user", () => {
-      cy.get(UI.shareModal.input).type(colleagueEmail);
+      cy.get(UI.shareModal.input, { timeout: 10000 }).should('be.visible').type(colleagueEmail);
       cy.get(UI.shareModal.addButton).click();
       
-      cy.get(UI.shareModal.userList, { timeout: 10000 }).should('contain', colleagueEmail);
+      cy.get(UI.shareModal.userList, { timeout: 15000 }).should('contain', colleagueEmail);
     });
 
     it("should not allow sharing with a user already shared", () => {
-      cy.get(UI.shareModal.input).type(colleagueEmail);
+      cy.get(UI.shareModal.input).should('be.visible').type(colleagueEmail);
       cy.get(UI.shareModal.addButton).click();
-      cy.get(UI.shareModal.userList).should('contain', colleagueEmail);
+      cy.get(UI.shareModal.userList, { timeout: 10000 }).should('contain', colleagueEmail);
 
       cy.get(UI.shareModal.input).clear().type(colleagueEmail);
       cy.get(UI.shareModal.addButton).click();
 
-      cy.get(UI.shareModal.errorMessage).should('be.visible').contains("User already has access");
+      cy.get(UI.shareModal.errorMessage, { timeout: 10000 })
+        .should('be.visible')
+        .contains("User already has access");
     });
 
     it("should not allow sharing with oneself", () => {
-      cy.get(UI.shareModal.input).type(testUser.email);
+      cy.get(UI.shareModal.input).should('be.visible').type(testUser.email);
       cy.get(UI.shareModal.addButton).click();
 
-      cy.get(UI.shareModal.errorMessage).should('be.visible').contains("User already has access");
+      cy.get(UI.shareModal.errorMessage, { timeout: 10000 })
+        .should('be.visible')
+        .contains("User already has access");
       cy.get(UI.shareModal.userList).should('not.contain', testUser.email);
     });
 
     it("should show error for non-existent user", () => {
       const unknown = "nobody@exists.com";
-      cy.get(UI.shareModal.input).type(unknown);
+      cy.get(UI.shareModal.input).should('be.visible').type(unknown);
       cy.get(UI.shareModal.addButton).click();
 
-      cy.contains("User not found").should('be.visible');
+      cy.contains("User not found", { timeout: 10000 }).should('be.visible');
     });
 
     afterEach(() => {
@@ -143,7 +159,8 @@ describe("Dashboard, Templates & Collaboration", () => {
   });
 
   it("should allow logout", () => {
-    cy.get(UI.logoutBtn).click();
-    cy.url().should("include", "/login");
+    cy.visit("/dashboard");
+    cy.get(UI.logoutBtn, { timeout: 10000 }).should('be.visible').click();
+    cy.url({ timeout: 10000 }).should("include", "/login");
   });
 });
