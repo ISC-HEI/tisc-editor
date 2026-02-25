@@ -38,7 +38,14 @@ services:
     environment:
       - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-    command: sh -c "bun install && bun x auth secret && bun x prisma generate && bun x prisma db push && bun dev"
+      - AUTH_SECRET=${AUTH_SECRET}
+    command: >
+      sh -c "
+      bun install &&
+      bun x prisma generate &&
+      bun x prisma db push &&
+      bun dev
+      "
 
   test:
     image: cypress/included:13.15.0

@@ -91,6 +91,16 @@ GITHUB_TOKEN=your_github_token_here
 ```
 > **Note**: Using a token increases the rate limit to **5,000 requests** per hour. If you plan to use the API concurrently with multiple users, you may need to request a higher-tier token. See the details [here](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api).
 
+### Next.js Auth Secret
+
+1. **Create a random secret**
+2. **Update your `.env`:** Add the secret to the app environment file
+   (or directly in `docker-compose.yml`):
+
+```env
+AUTH_SECRET=your_github_token_here
+```
+
 ## Getting Started
 
 ### Prerequisites

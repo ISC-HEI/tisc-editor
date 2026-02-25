@@ -20,6 +20,7 @@ jobs:
       - name: Build and start Docker Compose
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: |
           echo "Token present? ${GITHUB_TOKEN:0:8}****"
           docker compose up -d --build
@@ -29,6 +30,7 @@ jobs:
       - name: Run Cypress tests
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: docker compose run --rm test
 
       - name: Tear down Docker Compose
