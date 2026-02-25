@@ -16,20 +16,6 @@ services:
       timeout: 5s
       retries: 5
 
-  server:
-    build: ./server
-    container_name: tisc-api
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./server:/app
-      - /app/node_modules
-    networks:
-      - tisc-network
-    environment:
-      - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
-    command: sh -c "npm install && npm run dev"
-
   app:
     build: ./app
     container_name: tisc-app
@@ -51,7 +37,6 @@ services:
       - tisc-network
     environment:
       - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
-      - NEXT_PUBLIC_COMPILER_URL=http://127.0.0.1:3001
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     command: sh -c "bun install && bun x auth secret && bun x prisma generate && bun x prisma db push && bun dev"
 

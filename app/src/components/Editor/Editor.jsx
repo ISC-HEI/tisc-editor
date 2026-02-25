@@ -109,6 +109,8 @@ export default function Editor({ projectId, title, fileTree, userId }) {
       });
     });
 
+    fetch("/api/ws");
+
     return () => {
       window.removeEventListener("dragover", onDragOver);
       window.removeEventListener("dragleave", onDragLeave);

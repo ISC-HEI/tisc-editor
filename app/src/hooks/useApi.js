@@ -1,16 +1,24 @@
 import { downloadBlob, formatDateNow } from "./useUtils";
 
-const NEXT_PUBLIC_COMPILER_URL = process.env.NEXT_PUBLIC_COMPILER_URL
-
-
 export async function fetchSvg(fileTree) {
     if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
+
     try {
-        const response = await fetch(`${NEXT_PUBLIC_COMPILER_URL}/render`, {
+        const response = await fetch("/api/projects/compile", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileTree: fileTree })
+            headers: { 
+                "Content-Type": "application/json" 
+            },
+            body: JSON.stringify({ 
+                fileTree: fileTree,
+                format: "svg" 
+            })
         });
+
+        if (!response.ok) {
+            throw new Error(`Erreur compilation: ${response.statusText}`);
+        }
+
         return await response.text();
     } catch (e) {
         console.error("SVG fetch error:", e);
@@ -21,17 +29,29 @@ export async function fetchSvg(fileTree) {
 // ----------------------------------------------------
 
 export async function exportPdf(fileTree) {
+    if (!fileTree || !fileTree.children) return;
+
     try {
-        const response = await fetch(`${NEXT_PUBLIC_COMPILER_URL}/export/pdf`, {
+        const response = await fetch("/api/projects/compile", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileTree: fileTree })
+            headers: { 
+                "Content-Type": "application/json" 
+            },
+            body: JSON.stringify({ 
+                fileTree: fileTree,
+                format: "pdf"
+            })
         });
 
-        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Server error: ${response.status}`);
+        }
 
         const blob = await response.blob();
+        
         downloadBlob(blob, `${formatDateNow()}_typstDocument.pdf`);
+        
     } catch (e) {
         console.error("PDF export error:", e);
     }
