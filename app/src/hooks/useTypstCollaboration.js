@@ -4,8 +4,6 @@ import { refs } from './refs';
 import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
 import { debounce, makeToast } from './useUtils';
 
-const WEBSOCKET_URL = process.env.NEXT_PUBLIC_COMPILER_URL;
-
 export const useTypstCollaboration = (docId, userId) => {
     const prevUsersRef = useRef([]);
     const socketRef = useRef(null);
@@ -36,7 +34,12 @@ export const useTypstCollaboration = (docId, userId) => {
     useEffect(() => {
         if (typeof window === 'undefined' || !userId || !docId) return;
 
-        const socket = io(WEBSOCKET_URL, { transports: ['websocket'] });
+        const socket = io(window.location.origin, {
+            path: '/api/ws',
+            transports: ['websocket'],
+            upgrade: false,
+            reconnectionAttempts: 5
+        });
         socketRef.current = socket;
         refs.socket = socket;
 

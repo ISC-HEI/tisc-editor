@@ -22,13 +22,20 @@ The editor provides a full IDE-like experience in the browser:
 
 ```bash
 src/
-├── app/
-│   ├── api/                # API use for auto saving
-│   ├── dashboard/          # Dashboard with the projects
-│   ├── login/ & signup/    # Authentication pages
-├── components/             # Reusable UI (Editor, Modals, ProjectCards)
-├── lib/                    # Shared logic (Prisma client, Auth.js config)
-└── assets/                 # Global styles and static scripts
+├── app
+│   ├── api
+│   │   └── projects        # API use for auto saving, compiling and exporting.
+│   ├── dashboard           # Dashboard with the projects
+│   ├── login               # Authentication pages
+│   └── signup
+├── assets                  # Authentication pages
+├── components
+│   ├── Dashboard           # Components usefull for the Dashboard
+│   └── Editor              # Components usefull for the Editor
+├── hooks                   # Usefull javascript functions
+├── lib                     # libs for prisma, authentification and socket server
+└── pages
+    └── api                 # default route for websocket
 ```
 
 ## Getting Started
@@ -36,7 +43,6 @@ src/
 ### Prerequisites
 - **Node.js** (v20+) **or Bun**
 - **Postgresql** instance
-- **Compilation server**: Ensure the [TISC Server](../server/README.md) is running
 
 ### Environment Setup
 Create a `.env` file in the `app/` directory:
@@ -47,9 +53,6 @@ DATABASE_URL="postgresql://user:password@localhost:5432/tisc_db"
 # GitHub API
 # Needed to avoid rate limits when fetching templates
 GITHUB_TOKEN="your_personal_access_token"
-
-# Compilation API
-NEXT_PUBLIC_COMPILER_URL="http://localhost:5000"
 ```
 
 ### Installation

@@ -21,7 +21,7 @@
 
 ## Overview
 
-TISC Editor is a **Dockerized monorepo** providing a professional environment for cloud-based Typst editing:
+TISC Editor is a **Dockerized repo** providing a professional environment for cloud-based Typst editing:
 
 - **Web Editor:** VSCode-like interface, live preview, template gallery, collaboration.
 - **Compilation API:** Stateless Typst to PDF/SVG rendering, Base64 asset handling.
@@ -107,8 +107,7 @@ docker compose up -d --build
 ```
 > Note: The test container will launch, execute the suite, and exit. The App, API, and Database will remain running in the background for you to work on.
 
-* Editor UI: http://localhost:3000  
-* Compilation API: http://localhost:3001
+* Editor UI: http://localhost:3000
 
 ### Development Workflow
 <details>
@@ -127,11 +126,8 @@ docker compose up --build
 #### Database
 First you need to start a PostgreSQL instance, with docker or on your device.
 
-#### API
-Then to start the API, see [here](server/README.md)
-
-#### App
-To start the App, see [here](app/README.md).
+#### App With API
+To start the App and the API, see [here](app/README.md).
 
 
 </details>
