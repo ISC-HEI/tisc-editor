@@ -1,8 +1,17 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { prisma } from './prisma';
 
+/** * In-memory storage for active users per document.
+ * Structure: { [docId]: { [socketId]: email } }
+ * @type {Record<string, Record<string, string>>} 
+ */
 const activeUsers: Record<string, Record<string, string>> = {};
 
+/**
+ * Initializes the Socket.IO server with CORS and custom path.
+ * @param {any} httpServer - The underlying Node.js HTTP server.
+ * @returns {SocketIOServer} The initialized IO server instance.
+ */
 export const initSocket = (httpServer: any) => {
   const io = new SocketIOServer(httpServer, {
     path: '/api/ws',
@@ -21,6 +30,10 @@ export const initSocket = (httpServer: any) => {
       email: string | null 
     } = { userId: null, docId: null, authorized: false, email: null };
 
+    /**
+     * Handles the 'join-document' event. 
+     * Verifies project ownership or shared access via Prisma before allowing the join.
+     */
     socket.on('join-document', async ({ docId, userId }: { docId: string, userId: string }) => {
       if (!docId || !userId) return;
 
@@ -66,6 +79,10 @@ export const initSocket = (httpServer: any) => {
       }
     });
 
+    /**
+     * Broadcasts file edits, node operations (CRUD), and cursor movements.
+     * Only relays data if the session is authorized for the specific docId.
+     */
     socket.on('edit-file', ({ docId, filename, changes }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('remote-edit', {
@@ -75,25 +92,21 @@ export const initSocket = (httpServer: any) => {
         });
       }
     });
-
     socket.on('create-node', ({ docId, path, type }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('node-created', { path, type });
       }
     });
-
     socket.on('rename-node', ({ docId, oldPath, newPath }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('node-renamed', { oldPath, newPath });
       }
     });
-
     socket.on('delete-node', ({ docId, path }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('node-deleted', { path });
       }
     });
-
     socket.on('cursor-change', ({ docId, filename, selection }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('remote-cursor', {

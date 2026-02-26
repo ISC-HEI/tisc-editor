@@ -3,16 +3,33 @@ import { refs, infos } from "./refs"
 import { debounce, makeToast } from "./useUtils"
 import { fetchSvg, exportPdf, exportSvg } from "./useApi"
 
+/** * State variables for project management and file tracking  */
+
+/** @type {string|null} The current project ID from the database */
 export let currentProjectId;
+
+/** @type {Object} The hierarchical structure of the project files */
 export let fileTree = { type: "folder", name: "root", children: {} };
+
+/** @type {string} Path of the folder currently being explored */
 export let currentFolderPath = "root";
+
+/** @type {string} Path of the file currently loaded in the editor */
 export let currentFilePath = "root/main.typ"
+
+/** @type {boolean} Flag to prevent sync conflicts during file switching */
 export let isLoadingFile = false;
+
 let onPathChangeCallback = null;
 
+/** Extension lists for file access control */
 const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
-const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh'];
+const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh', 'scala'];
 
+/**
+ * Debounced function to sync content, compile the Typst document, 
+ * and trigger an auto-save to the database.
+ */
 const debounceFetchCompile = debounce(async () => {
     if (isLoadingFile) return;
 
@@ -23,6 +40,11 @@ const debounceFetchCompile = debounce(async () => {
 
 // ----------------------------------------------------
 
+/**
+ * Attaches event listeners to UI components (buttons, inputs) 
+ * and initializes the Monaco editor content.
+ * @returns {boolean|undefined} True if initialization was successful.
+ */
 function initEditor() {
     if (!refs.editor || !refs.btnBold || !refs.btnItalic || !refs.btnUnderline || !refs.page || !refs.btnSave || !refs.btnOpen || !refs.fileInputOpen || !refs.btnExportPdf || !refs.btnExportSvg || !refs.separator) {
         return
@@ -63,6 +85,10 @@ function initEditor() {
     return true;
 }
 
+/**
+ * React hook that monitors the availability of DOM refs and 
+ * initializes the editor once all elements are ready.
+ */
 export function useEditorWatcher() {
     const [initialized, setInitialized] = useState(false);
     useEffect(() => {
@@ -91,6 +117,10 @@ export function useEditorWatcher() {
 
 // ----------------------------------------------------
 
+/**
+ * Wraps selected text with specific Typst syntax (bold, italic, underline).
+ * @param {('bold'|'italic'|'underline')} type - The type of formatting to apply.
+ */
 async function applyFormatting(type) {
     const delimiters = {
         bold: ["*", "*"],
@@ -120,6 +150,10 @@ async function applyFormatting(type) {
 
 // ----------------------------------------------------
 
+/**
+ * Sends the current file tree to the compilation API and 
+ * updates the preview pane with the resulting SVG or error messages.
+ */
 export async function fetchCompile() {
     refs.page.innerHTML = `
         <div class="flex items-center justify-center min-h-screen w-full bg-gray-100">
@@ -157,6 +191,10 @@ export async function fetchCompile() {
 
 // ----------------------------------------------------
 
+/**
+ * Generates a local .typ file and triggers a browser download 
+ * of the current editor content.
+ */
 export function downloadDocument() {
     const content = refs.editor.getValue();
     if (!content) return;
@@ -173,6 +211,10 @@ export function downloadDocument() {
 
 // ----------------------------------------------------
 
+/**
+ * Handles local file uploads: reads the file content as text 
+ * and loads it into the editor.
+ */
 async function openAndShowFile() {
     const file = refs.fileInputOpen.files[0];
     if (!file) return;
@@ -188,6 +230,10 @@ async function openAndShowFile() {
 
 // ----------------------------------------------------
 
+/**
+ * Synchronizes the local file tree and sends it to the server 
+ * for persistent storage.
+ */
 async function autoSave() {
     if (!currentProjectId) return;
 
@@ -211,6 +257,10 @@ async function autoSave() {
 let isDragging = false;
 let container;
 
+/**
+ * Sets up mouse event listeners for the draggable separator 
+ * to resize the editor and preview panes.
+ */
 function setupResizable() {
     if (!refs.separator) return;
 
@@ -245,6 +295,11 @@ function setupResizable() {
 
 // ----------------------------------------------------
 
+/**
+ * Loads a file into the editor based on its path. 
+ * Handles binary file restrictions and language detection.
+ * @param {string} path - The full path of the file to open (e.g., "root/main.typ").
+ */
 export function openFile(path) {
     if (!path || !refs.editor) return;
 
@@ -305,12 +360,20 @@ export function openFile(path) {
     }, 150);
 }
 
+/**
+ * Registers a callback function to be executed when the active file path changes.
+ * @param {Function} cb - The callback function.
+ */
 export function setOnPathChange(cb) {
     onPathChangeCallback = cb;
 }
 
 // ----------------------------------------------------
 
+/**
+ * Updates the 'fileTree' object with the current value of the Monaco editor.
+ * Converts content to Base64 for non-main files.
+ */
 export function syncFileTreeWithEditor() {
     if (!refs.editor || !currentFilePath || isLoadingFile) return;
 
@@ -339,6 +402,11 @@ export function syncFileTreeWithEditor() {
 
 // ----------------------------------------------------
 
+/**
+ * Maps a file extension to a Monaco-compatible language ID.
+ * @param {string} extension - The file extension (e.g., "js", "typ").
+ * @returns {string} The corresponding language identifier.
+ */
 function getEditorLanguage(extension) {
     if (!extension) return "plaintext";
     const ext = extension.toLowerCase();
@@ -382,6 +450,8 @@ function getEditorLanguage(extension) {
             return "rust";
         case "go":
             return "go";
+        case "scala":
+            return "scala"
         default:
             return "plaintext";
     }

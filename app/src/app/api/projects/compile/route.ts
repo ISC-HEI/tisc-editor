@@ -7,6 +7,14 @@ const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
 
 // ---------- Helper functions ---------- 
 
+/**
+ * Recursively writes files and folders from the JSON file tree to the server's local storage.
+ * This allows the Typst compiler to access local assets (images, other .typ files).
+ * @param {Object} children - The current level of the file tree.
+ * @param {string} [baseDir="."] - The base directory for writing files.
+ * @param {Object} accumulator - Tracks created paths for later cleanup.
+ * @returns {Object} Sets of created files and directories.
+ */
 function writeImages(children: any = {}, baseDir = ".", accumulator = { files: new Set<string>(), dirs: new Set<string>() }) {
   for (const fileName in children) {
     const node = children[fileName];
@@ -37,6 +45,12 @@ function writeImages(children: any = {}, baseDir = ".", accumulator = { files: n
   return { createdFiles: accumulator.files, createdDirs: accumulator.dirs };
 }
 
+/**
+ * Deletes all temporary files and empty directories created during the compilation process.
+ * Prevents memory leaks and storage clogging on the server.
+ * @param {Set<string>} createdFiles - Set of file paths to delete.
+ * @param {Set<string>} createdDirs - Set of directory paths to remove.
+ */
 function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>) {
   for (const file of createdFiles) {
     if (fs.existsSync(file)) fs.unlinkSync(file);
@@ -49,6 +63,12 @@ function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>) {
   }
 }
 
+/**
+ * Decodes the content of a file. 
+ * Converts Base64 encoded strings back to UTF-8 text if necessary.
+ * @param {string} data - The raw data string from the file tree.
+ * @returns {string} The decoded plain text content.
+ */
 function decodeContent(data: string) {
   if (data.startsWith('data:text/plain;base64,')) {
     return Buffer.from(data.split(',')[1], 'base64').toString('utf-8');
@@ -58,6 +78,13 @@ function decodeContent(data: string) {
 
 // ---------- Route POST ----------
 
+/**
+ * API Route Handler for document compilation.
+ * 1. Receives the file tree and target format.
+ * 2. Prepares the local environment (writeImages).
+ * 3. Compiles using the @myriaddreamin/typst-ts-node-compiler.
+ * 4. Cleans up temp files and returns the binary result.
+ */
 export async function POST(req: Request) {
   try {
     const body = await req.json();

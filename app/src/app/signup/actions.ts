@@ -6,6 +6,16 @@ import bcrypt from "bcryptjs"
 
 type ActionResponse = string | null | undefined;
 
+/**
+ * Server Action to handle new user registration.
+ * 1. Checks if the email is already registered.
+ * 2. Hashes the password using bcrypt for secure storage.
+ * 3. Creates the user in the database.
+ * 4. Automatically signs the user in upon successful creation.
+ * * @param {ActionResponse} prevState - The previous state (error message or null).
+ * @param {FormData} formData - The registration form data (email, password).
+ * @returns {Promise<ActionResponse>} Error message if registration fails, otherwise triggers a redirect.
+ */
 export async function signUpAction(prevState: ActionResponse, formData: FormData): Promise<ActionResponse> {
   try {
     const email = formData.get("email") as string

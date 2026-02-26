@@ -4,6 +4,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from 'bcrypt';
 
+/**
+ * Main NextAuth configuration and initialization.
+ * This file handles the database adapter, credential validation, 
+ * and session augmentation (JWT/Session callbacks).
+ */
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   pages: {

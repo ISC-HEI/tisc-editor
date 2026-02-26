@@ -4,12 +4,29 @@ import { refs } from './refs';
 import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
 import { debounce, makeToast, stringToColor } from './useUtils';
 
+/**
+ * React hook that manages real-time collaboration using Socket.IO.
+ * Handles document synchronization, remote cursor rendering, and file tree updates.
+ * * @param {string} docId - The unique identifier of the document/project.
+ * @param {string} userId - The current user's email or unique ID.
+ * @returns {Object} Functions to emit local changes and cursor movements.
+ */
 export const useTypstCollaboration = (docId, userId) => {
+    /** @type {Object} Keeps track of connected users to detect join/leave events */
     const prevUsersRef = useRef([]);
+
+    /** @type {Object} Reference to the Socket.IO instance */
     const socketRef = useRef(null);
+
+    /** @type {Object} Flag to prevent local change emission when applying remote edits */
     const isRemoteChange = useRef(false);
+
+    /** @type {Object} Map of Monaco decoration IDs for each remote user's cursor */
     const remoteCursorsRef = useRef({});
 
+    /**
+     * Debounced function to re-compile the document after remote or local edits.
+    */
     const debouncedRefresh = useMemo(
         () =>
             debounce(async () => {
@@ -20,6 +37,10 @@ export const useTypstCollaboration = (docId, userId) => {
         []
     );
 
+    /**
+     * Sends local editor changes to the server.
+     * @param {Object} changeData - The Monaco change event data.
+     */
     const updateContent = useCallback((changeData) => {
         if (isRemoteChange.current || isLoadingFile) return;
 
@@ -32,6 +53,10 @@ export const useTypstCollaboration = (docId, userId) => {
         }
     }, [docId, userId]);
 
+    /**
+     * Broadcasts the current user's cursor position or text selection.
+     * @param {Object} cursorData - Position and selection range data.
+     */
     const updateCursor = useCallback((cursorData) => {
         if (socketRef.current?.connected) {
             socketRef.current.emit('cursor-change', {
@@ -57,6 +82,10 @@ export const useTypstCollaboration = (docId, userId) => {
             socket.emit('join-document', { docId, userId });
         });
 
+        /**
+         * Triggered when a remote user edits the current file.
+         * Injects changes into the Monaco model without breaking the undo stack.
+         */
         socket.on('remote-edit', ({ filename, changes }) => {
             if (!refs.editor || filename !== currentFilePath) return;
 
@@ -88,6 +117,10 @@ export const useTypstCollaboration = (docId, userId) => {
             debouncedRefresh();
         });
 
+        /**
+         * Real-time File System Sync: 
+         * Listeners for node creation, renaming, and deletion from other peers.
+         */
         socket.on('node-created', ({ path, type }) => {
             import("./useFileManager").then(m => {
                 m.addNodeToLocalTree(globalFileTree, path, type);
@@ -95,14 +128,12 @@ export const useTypstCollaboration = (docId, userId) => {
             });
             makeToast(`New ${type} created: ${path}`, "info");
         });
-
         socket.on('node-renamed', ({ oldPath, newPath }) => {
             import("./useFileManager").then(m => {
                 m.renameNodeInLocalTree(globalFileTree, oldPath, newPath);
                 m.renderFileExplorer(globalFileTree);
             });
         });
-
         socket.on('node-deleted', ({ path }) => {
             import("./useFileManager").then(m => {
                 m.deleteNodeFromLocalTree(globalFileTree, path);
@@ -111,6 +142,11 @@ export const useTypstCollaboration = (docId, userId) => {
             makeToast(`File deleted: ${path}`, "warning");
         });
 
+        /**
+         * Presence Management:
+         * Updates the UI user list and triggers toasts for join/leave events.
+         * Cleans up cursors when a user disconnects.
+         */
         socket.on('active-users-list', (emails) => {
             if (refs.userCount) refs.userCount.innerText = emails.length;
             if (refs.userListContainer) {
@@ -154,6 +190,11 @@ export const useTypstCollaboration = (docId, userId) => {
             prevUsersRef.current = emails;
         });
 
+        /**
+         * Remote Cursor Rendering:
+         * Uses Monaco 'deltaDecorations' to draw other users' cursors and selections.
+         * Dynamically injects CSS for user-specific colors.
+         */
         socket.on('remote-cursor', ({ filename, selection, email, userId: remoteUserId }) => {
             if (!refs.editor || remoteUserId === userId) return;
 

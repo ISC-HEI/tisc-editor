@@ -1,3 +1,8 @@
+/**
+ * Monarch syntax definition for the Typst language.
+ * Defines regex rules for headings, keywords, variables, and math blocks.
+ * Used by Monaco Editor to apply syntax highlighting.
+ */
 export const typstSyntax = {
   tokenizer: {
     root: [
@@ -19,6 +24,10 @@ export const typstSyntax = {
   }
 };
 
+/**
+ * Editor configuration for Typst.
+ * Defines comment toggling logic, bracket matching, and auto-closing pairs.
+ */
 export const typstConfig = {
   comments: { lineComment: "//", blockComment: ["/*", "*/"] },
   brackets: [["[", "]"], ["{", "}"], ["(", ")"]],

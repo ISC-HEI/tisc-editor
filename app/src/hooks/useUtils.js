@@ -1,5 +1,12 @@
 import { showToast } from "nextjs-toast-notify";
 
+/**
+ * Creates a debounced version of a function that delays execution until after 
+ * a specified wait time has elapsed since the last time it was invoked.
+ * @param {Function} func - The function to debounce.
+ * @param {number} [delay=1000] - The delay in milliseconds.
+ * @returns {Function} A new debounced function.
+ */
 export function debounce(func, delay = 1000) {
     let timeout;
     return (...args) => {
@@ -8,6 +15,12 @@ export function debounce(func, delay = 1000) {
     };
 }
 
+/**
+ * Triggers a browser download for a given Blob object.
+ * Creates a temporary URL and an invisible anchor element to initiate the download.
+ * @param {Blob} blob - The data to download.
+ * @param {string} filename - The name to give the downloaded file.
+ */
 export function downloadBlob(blob, filename) {
     if (!blob || !filename) return;
 
@@ -21,6 +34,11 @@ export function downloadBlob(blob, filename) {
     URL.revokeObjectURL(link.href);
 }
 
+/**
+ * Generates a timestamp string based on the current date and time.
+ * Format: YYYYMMDD_HHMMSS (e.g., 20240520_143005).
+ * @returns {string} The formatted timestamp.
+ */
 export function formatDateNow() {
     const now = new Date();
     const pad = (n) => n.toString().padStart(2, "0");
@@ -28,6 +46,12 @@ export function formatDateNow() {
         `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 }
 
+/**
+ * Displays a notification toast on the screen using nextjs-toast-notify.
+ * Supports different styles and icons based on the notification type.
+ * @param {string} text - The message to display in the toast.
+ * @param {'success'|'error'|'info'|'warning'} type - The visual style and severity level.
+ */
 export function makeToast(text, type) {
     let toastParams = {
         duration: 4000,
@@ -54,6 +78,12 @@ export function makeToast(text, type) {
     }
 }
 
+/**
+ * Generates a consistent HSL color palette based on a string (e.g., an email).
+ * Useful for assigning unique but stable colors to different users.
+ * @param {string} str - The input string to hash.
+ * @returns {Object} An object containing 'base' (light), 'dark' (medium), and 'darker' (text) HSL strings.
+ */
 export function stringToColor(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {

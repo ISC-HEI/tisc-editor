@@ -1,5 +1,9 @@
 import type { NextAuthConfig } from "next-auth"
 
+/**
+ * NextAuth shared configuration.
+ * Primarily used by the Middleware to handle route protection and redirects.
+ */
 export const authConfig = {
   pages: {
     signIn: "/login",

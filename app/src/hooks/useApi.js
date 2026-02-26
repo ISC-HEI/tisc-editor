@@ -1,5 +1,10 @@
 import { downloadBlob, formatDateNow } from "./useUtils";
 
+/**
+ * Sends the project file tree to the server to compile it into an SVG string.
+ * * @param {Object} fileTree - The hierarchical structure of the project files.
+ * @returns {Promise<string>} The SVG content as a string, or an empty string if compilation fails.
+ */
 export async function fetchSvg(fileTree) {
     if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
 
@@ -28,6 +33,11 @@ export async function fetchSvg(fileTree) {
 
 // ----------------------------------------------------
 
+/**
+ * Compiles the project and triggers a browser download for the resulting PDF file.
+ * * @param {Object} fileTree - The hierarchical structure of the project files.
+ * @returns {Promise<void>}
+ */
 export async function exportPdf(fileTree) {
     if (!fileTree || !fileTree.children) return;
 
@@ -57,6 +67,10 @@ export async function exportPdf(fileTree) {
     }
 }
 
+/**
+ * Converts a raw SVG string into a Blob and triggers a browser download.
+ * * @param {string} svgContent - The raw SVG XML string to export.
+ */
 export function exportSvg(svgContent) {
     if (!svgContent) return;
 

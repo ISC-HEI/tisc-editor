@@ -5,9 +5,19 @@ import { currentProjectId, fetchCompile, fileTree, openFile } from "./useEditor"
 import { makeToast } from "./useUtils";
 import JSZip from "jszip";
 
+/** @type {string} Path of the folder currently selected for operations like file creation or upload. */
 let selectedFolderPath = "root"
+
+/** @type {string|null} Stores the path of the last item clicked or right-clicked for context actions (rename, delete). */
 let lastClickedPath = null;
 
+/**
+ * Adds a new node (file or folder) to the local file tree structure.
+ * @param {Object} root - The root object of the file tree.
+ * @param {string} path - The full destination path starting with "root/".
+ * @param {'file'|'folder'} type - The type of the node.
+ * @param {string} [data=""] - The content or Base64 data if it's a file.
+ */
 export const addNodeToLocalTree = (root, path, type, data = "") => {
     const cleanPath = path.replace(/^root\//, "");
     const parts = cleanPath.split("/").filter(x => x);
@@ -30,6 +40,11 @@ export const addNodeToLocalTree = (root, path, type, data = "") => {
     };
 };
 
+/**
+ * Removes a node from the local tree based on its path.
+ * @param {Object} root - The root object of the file tree.
+ * @param {string} path - The full path of the item to delete.
+ */
 export const deleteNodeFromLocalTree = (root, path) => {
     const cleanPath = path.replace(/^root\//, "");
     const parts = cleanPath.split("/").filter(x => x);
@@ -47,6 +62,13 @@ export const deleteNodeFromLocalTree = (root, path) => {
     }
 };
 
+/**
+ * Renames or moves a node by copying its data, deleting the old entry, 
+ * and creating a new one at the target path.
+ * @param {Object} root - The root object of the file tree.
+ * @param {string} oldPath - Current path of the node.
+ * @param {string} newPath - New target path for the node.
+ */
 export const renameNodeInLocalTree = (root, oldPath, newPath) => {
     const findNode = (p) => {
         const cleanP = p.replace(/^root\//, "");
@@ -68,6 +90,11 @@ export const renameNodeInLocalTree = (root, oldPath, newPath) => {
     }
 };
 
+/**
+ * Initializes listeners for file management UI components (Upload, Create, Drag & Drop).
+ * Checks if all required DOM references are available before binding events.
+ * @returns {boolean} True if listeners were successfully attached.
+ */
 function initFileManager() {
     if (!refs.imageList || !refs.btnShowImages || !refs.imageExplorer || !refs.btnCloseImages || !functions.openCustomPrompt || !refs.btnUploadImages || !refs.imageFilesInput || !refs.rootDropZone || !refs.btnCreateFile || !refs.btnExportZip) {
         return false;
@@ -176,6 +203,10 @@ function initFileManager() {
     return true;
 }
 
+/**
+ * React hook that ensures the File Manager is initialized and sets up 
+ * global keyboard shortcuts (e.g., F2 for renaming).
+ */
 export function useFileManagerWatcher() {
     const [initialized, setInitialized] = useState(false);
 
@@ -212,6 +243,12 @@ export function useFileManagerWatcher() {
 
 // ----------------------------------------------------
 
+/**
+ * Recursively traverses the tree to find a folder node at a specific path.
+ * @param {Object} fileTree - The root tree to search in.
+ * @param {string} path - The relative path from root.
+ * @returns {Object|null} The folder node object or null if not found.
+ */
 export function getFolder(fileTree, path) {
     if (path === "root") return fileTree;
 
@@ -229,12 +266,25 @@ export function getFolder(fileTree, path) {
 
 // ----------------------------------------------------
 
+/**
+ * Clears and re-renders the file explorer UI based on the current file tree state.
+ * @param {Object} folder - The folder node to render.
+ * @param {HTMLElement} container - The DOM element to inject the list into.
+ * @param {string} [path=""] - Current recursion path for nested items.
+ */
 export function renderFileExplorer(folder, container = refs.imageList, path = "") {
     if (!container) return;
     container.innerHTML = "";
     renderTreeRecursive(folder, container, path);
 }
 
+/**
+ * Core recursive engine that builds the DOM elements for the file tree.
+ * Handles drag events, click listeners, and image hover previews.
+ * @param {Object} folder - Current folder node being rendered.
+ * @param {HTMLElement} container - The UL/DIV where items are appended.
+ * @param {string} path - The accumulated path string for recursion.
+ */
 function renderTreeRecursive(folder, container, path) {
     Object.values(folder.children).forEach(item => {
         const li = document.createElement("li");
@@ -364,6 +414,10 @@ function renderTreeRecursive(folder, container, path) {
 
 // ----------------------------------------------------
 
+/**
+ * Logic for moving an item between folders. Updates internal paths,
+ * triggers a re-render, saves to DB, and broadcasts via Socket.IO.
+ */
 async function moveItem(sourcePath, destFolderPath, fileTree) {
     if (destFolderPath.startsWith(sourcePath)) return;
 
@@ -398,6 +452,12 @@ async function moveItem(sourcePath, destFolderPath, fileTree) {
     }
 }
 
+/**
+ * Recursively updates the 'fullPath' property of a node and all its children.
+ * Necessary after a move or rename operation to maintain tree integrity.
+ * @param {Object} item - The node (file or folder) to update.
+ * @param {string} newFolderPath - The new parent folder path.
+ */
 function updatePaths(item, newFolderPath) {
     if (item.type === "file") {
         item.fullPath = newFolderPath === "root" ? item.name : `${newFolderPath}/${item.name}`;
@@ -406,6 +466,11 @@ function updatePaths(item, newFolderPath) {
     }
 }
 
+/**
+ * Permanently deletes an item, updates the UI, and notifies collaborative peers.
+ * @param {string} path - Path of the item to delete.
+ * @param {Object} fileTree - Reference to the global file tree.
+ */
 export async function deleteItem(path, fileTree) {
     document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('selected-item'));
     const parts = path.split("/").filter(x => x);
@@ -428,6 +493,10 @@ export async function deleteItem(path, fileTree) {
 
 // ----------------------------------------------------
 
+/**
+ * Persists the current state of the file tree to the server database.
+ * @async
+ */
 async function saveFileTree() {
     if (!currentProjectId) return;
     try {
@@ -442,6 +511,11 @@ async function saveFileTree() {
 
 // ----------------------------------------------------
 
+/**
+ * Maps a file extension to a specific Lucide icon and returns its HTML string.
+ * @param {string} filename - The name of the file to determine the icon for.
+ * @returns {string} The HTML string of the rendered SVG icon.
+ */
 export function getIcon(filename) {
     const ext = filename.split(".").pop().toLowerCase();
     const iconMap = { json: FileJson, typ: Book, tmtheme: Notebook, py: Terminal, js: FileCode, jpg: Image, png: Image, svg: Image };
@@ -459,6 +533,11 @@ export function getIcon(filename) {
 
 // ----------------------------------------------------
 
+/**
+ * Triggers a prompt to create a new file in the currently selected folder.
+ * Automatically appends '.typ' if no extension is provided.
+ * @async
+ */
 async function createFile() {
     functions.openCustomPrompt("Enter new file name", async (fileName) => {
         if (!fileName || fileName.trim() === "") return;
@@ -491,10 +570,21 @@ async function createFile() {
 
 // ----------------------------------------------------
 
+/**
+ * Triggers the custom context menu at the mouse position.
+ * @param {MouseEvent} e - The original click event.
+ * @param {string} path - The path of the item targeted by the right-click.
+ * @param {'file'|'folder'} type - The type of the targeted item.
+ */
 function showContextMenu(e, path, type) {
     if (window.showContextMenu) window.showContextMenu(e, path, type);
 }
 
+/**
+ * Opens a prompt to rename an existing file or folder. 
+ * Updates the tree, saves the state, and notifies other users via Socket.IO.
+ * @param {string} oldPath - The current path of the item to be renamed.
+ */
 export async function renameItem(oldPath) {
     const parts = oldPath.split("/").filter(x => x);
     const oldName = parts[parts.length - 1];
@@ -529,6 +619,12 @@ export async function renameItem(oldPath) {
     });
 }
 
+/**
+ * Packages the entire project structure into a .zip file and triggers a download.
+ * Handles both plain text and Base64 encoded (image) data.
+ * @param {Object} fileTree - The project structure to export.
+ * @param {string} projectName - The name of the resulting zip file.
+ */
 export async function exportZip(fileTree, projectName = "project") {
     const zip = new JSZip();
     zipContent(zip, fileTree);
@@ -544,6 +640,11 @@ export async function exportZip(fileTree, projectName = "project") {
     makeToast("Project exported", "success");
 }
 
+/**
+ * Recursively traverses the file tree to populate a JSZip instance.
+ * @param {Object} zip - The current JSZip folder instance.
+ * @param {Object} folder - The local folder node to process.
+ */
 function zipContent(zip, folder) {
     Object.values(folder.children).forEach(item => {
         if (item.type === "folder") {
