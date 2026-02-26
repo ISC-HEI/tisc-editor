@@ -4,7 +4,7 @@ import { typstSyntax, typstConfig } from "../../assets/typst-definition";
 import { refs } from "@/hooks/refs";
 import { currentFilePath } from "@/hooks/useEditor";
 
-export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
+export const MonacoEditor = ({ content, onChange, onCursorChange, onInstanceReady }) => {
   const editorRef = useRef(null);
   const monacoInstance = useRef(null);
   const isRemoteChange = useRef(false);
@@ -43,6 +43,15 @@ export const MonacoEditor = ({ content, onChange, onInstanceReady }) => {
           onChange({
             filename: currentFilePath,
             changes: event.changes 
+          });
+        }
+      });
+
+      editor.onDidChangeCursorSelection((event) => {
+        if (!isRemoteChange.current && onCursorChange) {
+          onCursorChange({
+            filename: currentFilePath,
+            selection: event.selection
           });
         }
       });

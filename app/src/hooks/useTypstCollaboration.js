@@ -2,12 +2,13 @@ import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { refs } from './refs';
 import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
-import { debounce, makeToast } from './useUtils';
+import { debounce, makeToast, stringToColor } from './useUtils';
 
 export const useTypstCollaboration = (docId, userId) => {
     const prevUsersRef = useRef([]);
     const socketRef = useRef(null);
     const isRemoteChange = useRef(false);
+    const remoteCursorsRef = useRef({});
 
     const debouncedRefresh = useMemo(
         () =>
@@ -30,6 +31,15 @@ export const useTypstCollaboration = (docId, userId) => {
             });
         }
     }, [docId, userId]);
+
+    const updateCursor = useCallback((cursorData) => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('cursor-change', {
+                docId,
+                ...cursorData
+            });
+        }
+    }, [docId]);
 
     useEffect(() => {
         if (typeof window === 'undefined' || !userId || !docId) return;
@@ -106,11 +116,15 @@ export const useTypstCollaboration = (docId, userId) => {
             if (refs.userListContainer) {
                 refs.userListContainer.innerHTML = "";
                 emails.forEach(email => {
+                    const colors = stringToColor(email);
                     const div = document.createElement("div");
                     div.className = "px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-3";
                     div.innerHTML = `
                         <div class="relative flex-shrink-0">
-                            <div class="h-7 w-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px] uppercase border border-blue-200">
+                            <div class="h-7 w-7 rounded-full flex items-center justify-center font-bold text-[10px] uppercase border" 
+                                style="background-color: ${colors.base}; 
+                                        color: ${colors.darker}; 
+                                        border-color: ${colors.dark};">
                                 ${email.charAt(0)}
                             </div>
                             <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
@@ -125,9 +139,101 @@ export const useTypstCollaboration = (docId, userId) => {
             const left = prevUsersRef.current.filter(email => !emails.includes(email));
             if (prevUsersRef.current.length > 0) {
                 joined.forEach(email => makeToast(`${email} joined`, "info"));
-                left.forEach(email => makeToast(`${email} left`, "warning"));
+                left.forEach(email => {
+                    makeToast(`${email} left`, "warning");
+
+                    if (refs.editor && remoteCursorsRef.current[email]) {
+                        refs.editor.deltaDecorations(remoteCursorsRef.current[email], []);
+                        delete remoteCursorsRef.current[email];
+                    }
+
+                    const styleElement = document.getElementById(`cursor-style-${email}`);
+                    if (styleElement) styleElement.remove();
+                });
             }
             prevUsersRef.current = emails;
+        });
+
+        socket.on('remote-cursor', ({ filename, selection, email, userId: remoteUserId }) => {
+            if (!refs.editor || remoteUserId === userId) return;
+
+            if (filename !== currentFilePath) {
+                if (remoteCursorsRef.current[email]) {
+                    remoteCursorsRef.current[email] = refs.editor.deltaDecorations(
+                        remoteCursorsRef.current[email], 
+                        []
+                    );
+                }
+                return;
+            }
+            const monaco = window.monaco || refs.monaco;
+            const colors = stringToColor(email);
+
+            if (!document.getElementById(`cursor-style-${email}`)) {
+                const style = document.createElement('style');
+                style.id = `cursor-style-${email}`;
+                style.innerHTML = `
+                    .remote-cursor-${remoteUserId} {
+                        border-left: 2px solid ${colors.dark};
+                        position: absolute;
+                        height: 100%;
+                    }
+                    .remote-cursor-label-${remoteUserId}::after {
+                        content: '${email.split('@')[0]}';
+                        position: absolute;
+                        top: -1.2em;
+                        left: -2px;
+                        background: ${colors.dark};
+                        color: white;
+                        font-size: 10px;
+                        padding: 2px 4px;
+                        border-radius: 2px;
+                        white-space: nowrap;
+                        z-index: 50;
+                        pointer-events: none;
+                    }
+                    .remote-selection-${remoteUserId} {
+                        background-color: ${colors.dark};
+                        opacity: 0.2;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            const decorations = [];
+
+            decorations.push({
+                range: new monaco.Range(
+                    selection.positionLineNumber, 
+                    selection.positionColumn, 
+                    selection.positionLineNumber, 
+                    selection.positionColumn
+                ),
+                options: {
+                    className: `remote-cursor-${remoteUserId} remote-cursor-label-${remoteUserId}`,
+                    stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+                }
+            });
+
+            const hasSelection = selection.startLineNumber !== selection.endLineNumber || selection.startColumn !== selection.endColumn;
+            if (hasSelection) {
+                decorations.push({
+                    range: new monaco.Range(
+                        selection.startLineNumber,
+                        selection.startColumn,
+                        selection.endLineNumber,
+                        selection.endColumn
+                    ),
+                    options: {
+                        className: `remote-selection-${remoteUserId}`,
+                    }
+                });
+            }
+
+            remoteCursorsRef.current[email] = refs.editor.deltaDecorations(
+                remoteCursorsRef.current[email] || [],
+                decorations
+            );
         });
 
         socket.on('error', (msg) => console.error("Collaboration Error:", msg));
@@ -137,5 +243,5 @@ export const useTypstCollaboration = (docId, userId) => {
         };
     }, [docId, userId, debouncedRefresh]);
 
-    return { updateContent };
+    return { updateContent, updateCursor };
 };

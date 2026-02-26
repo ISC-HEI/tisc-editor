@@ -53,3 +53,17 @@ export function makeToast(text, type) {
             break;
     }
 }
+
+export function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash) % 360;
+    
+    return {
+        base: `hsl(${h}, 70%, 90%)`,
+        dark: `hsl(${h}, 70%, 45%)`,
+        darker: `hsl(${h}, 80%, 25%)`
+    };
+};

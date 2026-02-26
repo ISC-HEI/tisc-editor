@@ -25,7 +25,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
   const separatorRef = useRef(null);
   const [activePath, setActivePath] = useState("root/main.typ");
   
-  const { content, updateContent } = useTypstCollaboration(projectId, userId, fileTree);
+  const { updateContent, updateCursor } = useTypstCollaboration(projectId, userId, fileTree);
 
   useEditorWatcher();
 
@@ -148,6 +148,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
                   updateContent(newContent); 
                 }
               }} 
+              onCursorChange={updateCursor}
               onInstanceReady={handleEditorReady} 
             />
           </div>

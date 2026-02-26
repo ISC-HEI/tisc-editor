@@ -94,6 +94,17 @@ export const initSocket = (httpServer: any) => {
       }
     });
 
+    socket.on('cursor-change', ({ docId, filename, selection }) => {
+      if (session.authorized && session.docId === docId) {
+        socket.to(docId).emit('remote-cursor', {
+          filename,
+          selection,
+          userId: session.userId,
+          email: session.email
+        });
+      }
+    });
+
     socket.on('disconnect', () => {
       if (session.docId && activeUsers[session.docId]) {
         delete activeUsers[session.docId][socket.id];
