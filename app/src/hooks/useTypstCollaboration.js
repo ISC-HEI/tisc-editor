@@ -326,6 +326,14 @@ export const useTypstCollaboration = (docId, userId) => {
     return { updateContent, updateCursor };
 };
 
+/**
+ * Applies a series of Monaco Editor text changes to a raw string.
+ * This mimics the editor's behavior to synchronize file content in the background
+ * without needing an active Monaco instance for every file.
+ * * @param {string} source - The current content of the file (plain text).
+ * @param {Array} changes - Array of change objects from Monaco (containing range and text).
+ * @returns {string} The updated text content after applying all changes.
+ */
 function applyMonacoChangesToString(source, changes) {
     let content = source || "";
     let lines = content.split("\n");
@@ -352,6 +360,13 @@ function applyMonacoChangesToString(source, changes) {
     return lines.join("\n");
 }
 
+/**
+ * Recursively traverses the file tree to find a specific node and update its content.
+ * * @param {Object} node - The current node being inspected (root or folder).
+ * @param {string} targetPath - The full path of the file to update (e.g., "root/src/main.typ").
+ * @param {Function} updateFn - Callback that receives the old content and returns the new content.
+ * @returns {boolean} Returns true if the file was found and updated, false otherwise.
+ */
 const updateFileInTree = (node, targetPath, updateFn) => {
     const nodePath = node.fullPath;
     
