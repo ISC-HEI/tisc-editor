@@ -80,7 +80,7 @@ export const initSocket = (httpServer: any) => {
     });
 
     /**
-     * Broadcasts file edits, node operations (CRUD), and cursor movements.
+     * Broadcasts file edits, node operations (CRUD), cursor movements and new entry point.
      * Only relays data if the session is authorized for the specific docId.
      */
     socket.on('edit-file', ({ docId, filename, changes }) => {
@@ -117,6 +117,11 @@ export const initSocket = (httpServer: any) => {
         });
       }
     });
+    socket.on('set-main-file', ({ docId, path }) => {
+    if (session.authorized && session.docId === docId) {
+      socket.to(docId).emit('remote-set-main', { path });
+    }
+  });
 
     socket.on('disconnect', () => {
       if (session.docId && activeUsers[session.docId]) {

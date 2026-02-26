@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { Edit2, Trash2 } from "lucide-react";
+import { Crown, Edit2, Trash2 } from "lucide-react";
 import { initPreviewRefs } from "@/hooks/refs";
 
-function ContextMenu({ x, y, targetPath, type, onClose, onRename, onDelete }) {
+function ContextMenu({ x, y, targetPath, type, onClose, onRename, onDelete, onSetMain }) {
   const menuRef = useRef(null);
+  const isTypstFile = type === 'file' && targetPath?.toLowerCase().endsWith('.typ');
 
   useEffect(() => {
     const handleClickOutside = () => onClose();
@@ -40,6 +41,16 @@ function ContextMenu({ x, y, targetPath, type, onClose, onRename, onDelete }) {
         <span>Rename</span>
         <span className="ml-auto text-[10px] text-slate-400">F2</span>
       </button>
+
+      {isTypstFile && (
+        <button
+          onClick={() => { onSetMain(targetPath); onClose(); }}
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+        >
+          <Crown size={14} className="text-amber-500" />
+          <span>Set as main file</span>
+        </button>
+      )}
 
       <button 
         onClick={() => { onDelete(targetPath); onClose(); }}

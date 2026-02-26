@@ -1,6 +1,6 @@
 import { X, FolderPlus, Plus, FilePlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { deleteItem, renameItem, useFileManagerWatcher } from "@/hooks/useFileManager";
+import { deleteItem, renameItem, setMainFile, useFileManagerWatcher } from "@/hooks/useFileManager";
 import { initPreviewRefs } from "@/hooks/refs";
 import ContextMenu from "./ContextMenu"
 import { fileTree } from "@/hooks/useEditor";
@@ -60,6 +60,7 @@ export function FileExplorer() {
         onClose={closeMenu}
         onRename={(path) => renameItem(path)} 
         onDelete={(path) => deleteItem(path, fileTree)}
+        onSetMain={(path) => setMainFile(path, fileTree)}
       />
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500 italic">Explorer</h3>

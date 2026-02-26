@@ -38,6 +38,10 @@ const debounceFetchCompile = debounce(async () => {
     await autoSave();
 });
 
+export function setIsLoadingFile(value) {
+    isLoadingFile = value;
+}
+
 // ----------------------------------------------------
 
 /**
@@ -339,15 +343,16 @@ export function openFile(path) {
         onPathChangeCallback(path);
     }
 
-    let content = node.data || "";
+    let content = node.content ?? node.data ?? "";
 
-    if (node.name !== "main.typ" && content.startsWith('data:')) {
+    if (content.startsWith('data:')) {
         try {
             const base64 = content.split(',')[1];
             const binary = atob(base64);
             const bytes = new Uint8Array(binary.length);
             for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
             content = new TextDecoder().decode(bytes);
+            node.content = content;
         } catch (e) {
             console.error("Erreur décodage fichier secondaire:", e);
         }
@@ -390,7 +395,9 @@ export function syncFileTreeWithEditor() {
     }
 
     if (node && node.type === "file") {
-        if (node.name === "main.typ") {
+        node.content = content;
+
+        if (node.name.endsWith(".typ") || node.name.endsWith(".txt")) {
             node.data = content;
         } else {
             const bytes = new TextEncoder().encode(content);

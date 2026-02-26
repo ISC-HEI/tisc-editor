@@ -1,8 +1,9 @@
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { refs } from './refs';
-import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor } from './useEditor';
+import { fileTree as globalFileTree, currentFilePath, isLoadingFile, fetchCompile, syncFileTreeWithEditor, setIsLoadingFile } from './useEditor';
 import { debounce, makeToast, stringToColor } from './useUtils';
+import { renderFileExplorer } from './useFileManager';
 
 /**
  * React hook that manages real-time collaboration using Socket.IO.
@@ -87,33 +88,40 @@ export const useTypstCollaboration = (docId, userId) => {
          * Injects changes into the Monaco model without breaking the undo stack.
          */
         socket.on('remote-edit', ({ filename, changes }) => {
-            if (!refs.editor || filename !== currentFilePath) return;
+            updateFileInTree(globalFileTree, filename, (oldContent) => {
+                return applyMonacoChangesToString(oldContent || "", changes);
+            });
 
-            const model = refs.editor.getModel();
-            if (!model) return;
+            if (refs.editor && filename === currentFilePath) {
+                const model = refs.editor.getModel();
+                if (model) {
+                    isRemoteChange.current = true;
+                    const monaco = window.monaco || refs.monaco;
+                    
+                    const edits = changes.map(c => ({
+                        range: new monaco.Range(
+                            c.range.startLineNumber,
+                            c.range.startColumn,
+                            c.range.endLineNumber,
+                            c.range.endColumn
+                        ),
+                        text: c.text,
+                        forceMoveMarkers: true
+                    }));
 
-            isRemoteChange.current = true;
-            
-            const monaco = window.monaco || refs.monaco;
-            
-            const edits = changes.map(c => ({
-                range: new monaco.Range(
-                    c.range.startLineNumber,
-                    c.range.startColumn,
-                    c.range.endLineNumber,
-                    c.range.endColumn
-                ),
-                text: c.text,
-                forceMoveMarkers: true
-            }));
+                    model.pushEditOperations(
+                        refs.editor.getSelections(), 
+                        edits, 
+                        () => refs.editor.getSelections()
+                    );
+                    isRemoteChange.current = false;
+                }
+            } else {
+                import("./useFileManager").then(m => {
+                    m.renderFileExplorer(globalFileTree); 
+                });
+            }
 
-            model.pushEditOperations(
-                refs.editor.getSelections(), 
-                edits, 
-                () => refs.editor.getSelections()
-            );
-            
-            isRemoteChange.current = false;
             debouncedRefresh();
         });
 
@@ -277,6 +285,37 @@ export const useTypstCollaboration = (docId, userId) => {
             );
         });
 
+        /**
+         * Set new main entry point
+         * Listener to update the main entry point for the
+         * compilation and export.
+         */
+        socket.on('remote-set-main', ({ path }) => {
+            console.log(path)
+            const updateMainInTree = (node) => {
+                if (node.type === "file") {
+                    node.isMain = (node.fullPath === path || `root/${node.fullPath}` === path);
+                } else if (node.children) {
+                    Object.values(node.children).forEach(updateMainInTree);
+                }
+            };
+
+            updateMainInTree(globalFileTree);
+
+            import("./useFileManager").then(m => {
+                m.renderFileExplorer(globalFileTree);
+            });
+
+            const fileName = path.split('/').pop();
+            makeToast(`Remote: ${fileName} is now main`, "info");
+
+            setTimeout(() => {
+                setIsLoadingFile(false);
+                renderFileExplorer(globalFileTree);
+                fetchCompile();
+            }, 200);
+        });
+
         socket.on('error', (msg) => console.error("Collaboration Error:", msg));
 
         return () => {
@@ -285,4 +324,48 @@ export const useTypstCollaboration = (docId, userId) => {
     }, [docId, userId, debouncedRefresh]);
 
     return { updateContent, updateCursor };
+};
+
+function applyMonacoChangesToString(source, changes) {
+    let content = source || "";
+    let lines = content.split("\n");
+    
+    changes.forEach(change => {
+        const { range, text } = change;
+        const startLine = range.startLineNumber - 1;
+        const endLine = range.endLineNumber - 1;
+        const startCol = range.startColumn - 1;
+        const endCol = range.endColumn - 1;
+
+        while (lines.length <= endLine) {
+            lines.push("");
+        }
+
+        const prefix = (lines[startLine] || "").substring(0, startCol);
+        const suffix = (lines[endLine] || "").substring(endCol);
+        
+        const newTextLines = (prefix + text + suffix).split("\n");
+        
+        lines.splice(startLine, (endLine - startLine) + 1, ...newTextLines);
+    });
+
+    return lines.join("\n");
+}
+
+const updateFileInTree = (node, targetPath, updateFn) => {
+    const nodePath = node.fullPath;
+    
+    if (node.type === 'file' && (nodePath === targetPath || `root/${nodePath}` === targetPath)) {
+        node.content = updateFn(node.content);
+        return true;
+    }
+
+    if (node.children) {
+        for (const key in node.children) {
+            if (updateFileInTree(node.children[key], targetPath, updateFn)) {
+                return true;
+            }
+        }
+    }
+    return false;
 };

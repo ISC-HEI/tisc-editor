@@ -8,6 +8,8 @@ import { downloadBlob, formatDateNow } from "./useUtils";
 export async function fetchSvg(fileTree) {
     if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
 
+    const mainPath = findMainFile(fileTree);
+
     try {
         const response = await fetch("api/projects/compile", {
             method: "POST",
@@ -16,12 +18,14 @@ export async function fetchSvg(fileTree) {
             },
             body: JSON.stringify({ 
                 fileTree: fileTree,
+                mainFile: mainPath,
                 format: "svg" 
             })
         });
 
         if (!response.ok) {
-            throw new Error(`Erreur compilation: ${response.statusText}`);
+            console.log(response)
+            throw new Error(`Erreur compilation: ${response}`);
         }
 
         return await response.text();
@@ -41,6 +45,8 @@ export async function fetchSvg(fileTree) {
 export async function exportPdf(fileTree) {
     if (!fileTree || !fileTree.children) return;
 
+    const mainPath = findMainFile(fileTree);
+
     try {
         const response = await fetch("api/projects/compile", {
             method: "POST",
@@ -49,6 +55,7 @@ export async function exportPdf(fileTree) {
             },
             body: JSON.stringify({ 
                 fileTree: fileTree,
+                mainFile: mainPath,
                 format: "pdf"
             })
         });
@@ -78,3 +85,24 @@ export function exportSvg(svgContent) {
     const filename = `${formatDateNow()}_typstDocument.svg`;
     downloadBlob(blob, filename);
 }
+
+/**
+ * Search recursivley the main file of the project.
+ * @param {Object} node - The actual node.
+ * @returns {string|null} - The full path of the file or null if not found
+ */
+export const findMainFile = (node) => {
+    if (node.type === "file" && node.isMain) {
+        return node.fullPath;
+    }
+
+    if (node.children) {
+        const childrenArray = Object.values(node.children);
+        for (const child of childrenArray) {
+            const result = findMainFile(child);
+            if (result) return result;
+        }
+    }
+
+    return null;
+};

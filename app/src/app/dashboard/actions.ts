@@ -10,6 +10,7 @@ interface FileNode {
     fullPath?: string;
     data?: string;
     content?: string;
+    isMain?: boolean,
     children?: { [key: string]: FileNode };
 }
 
@@ -87,7 +88,8 @@ export async function createProject(formData: FormData) {
         projectData.fileTree.children["main.typ"] = {
             type: 'file',
             name: "main.typ",
-            fullPath: "root/main.typ",
+            fullPath: "main.typ",
+            isMain: true,
             data: ""
         };
     }
@@ -182,6 +184,7 @@ export const importPackageAsTree = async (packageName: string, templateFile: str
             type: 'file',
             name: mainFileName,
             fullPath: mainFileName,
+            isMain: true,
             data: content.replace(/\0/g, '')
         };
 

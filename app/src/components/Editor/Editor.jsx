@@ -11,6 +11,7 @@ import Breadcrumbs from "./Breadcrumbs";
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from "@/hooks/refs";
 import { isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
 import { useTypstCollaboration } from "@/hooks/useTypstCollaboration";
+import { findMainFile } from "@/hooks/useApi";
 
 const MonacoEditor = dynamic(
   () => import("./MonacoEditor").then((mod) => mod.MonacoEditor),
@@ -23,7 +24,10 @@ export default function Editor({ projectId, title, fileTree, userId }) {
   const [inputValue, setInputValue] = useState("");
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const separatorRef = useRef(null);
-  const [activePath, setActivePath] = useState("root/main.typ");
+  const [activePath, setActivePath] = useState(() => {
+      const path = findMainFile(fileTree) || "main.typ";
+      return "root/" + path;
+  });
   
   const { updateContent, updateCursor } = useTypstCollaboration(projectId, userId, fileTree);
 
@@ -57,6 +61,38 @@ export default function Editor({ projectId, title, fileTree, userId }) {
       modalConfig.callback(inputValue);
     }
     setIsModalOpen(false);
+  };
+
+  const getInitialContent = () => {
+    const findMainNode = (node) => {
+      if (node.type === "file" && node.isMain) return node;
+
+      if (node.children) {
+        for (const child of Object.values(node.children)) {
+          const found = findMainNode(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const mainNode = findMainNode(fileTree) || fileTree?.children?.["main.typ"];
+    let rawData = mainNode?.data || "";
+
+    if (rawData.startsWith('data:')) {
+      try {
+        const base64 = rawData.split(',')[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return new TextDecoder().decode(bytes);
+      } catch (e) {
+        console.error("Error:", e);
+        return rawData;
+      }
+    }
+
+    return rawData;
   };
 
   useEffect(() => {
@@ -142,7 +178,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
             <Breadcrumbs path={activePath} />
             <FileExplorer />
             <MonacoEditor
-              content={fileTree?.children?.["main.typ"]?.data || ""} 
+              content={getInitialContent()} 
               onChange={(newContent) => {
                 if (!isLoadingFile) {
                   updateContent(newContent); 

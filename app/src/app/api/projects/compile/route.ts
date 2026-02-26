@@ -15,7 +15,7 @@ const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
  * @param {Object} accumulator - Tracks created paths for later cleanup.
  * @returns {Object} Sets of created files and directories.
  */
-function writeImages(children: any = {}, baseDir = ".", accumulator = { files: new Set<string>(), dirs: new Set<string>() }) {
+function writeImages(children: any = {}, mainFile: string, baseDir = ".", accumulator = { files: new Set<string>(), dirs: new Set<string>() }) {
   for (const fileName in children) {
     const node = children[fileName];
     const currentPath = path.join(baseDir, node.name || fileName);
@@ -25,8 +25,8 @@ function writeImages(children: any = {}, baseDir = ".", accumulator = { files: n
         fs.mkdirSync(currentPath, { recursive: true });
         accumulator.dirs.add(currentPath);
       }
-      writeImages(node.children, currentPath, accumulator);
-    } else if (node.type === 'file' && fileName !== "main.typ") {
+      writeImages(node.children, mainFile, currentPath, accumulator);
+    } else if (node.type === 'file' && fileName !== mainFile) {
       if (!node.data) continue;
       try {
         const dir = path.dirname(currentPath);
@@ -76,6 +76,24 @@ function decodeContent(data: string) {
   return data;
 }
 
+/**
+ * Find a specific node from a path
+ * @param {any} node The node to check in 
+ * @param {sting} targetPath The path of the file
+ * @returns 
+ */
+function findNodeByPath(node: any, targetPath: string): any {
+  if (node.fullPath === targetPath || node.name === targetPath) {
+    return node;
+  }
+  if (node.children) {
+    for (const key in node.children) {
+      const found = findNodeByPath(node.children[key], targetPath);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 // ---------- Route POST ----------
 
 /**
@@ -88,17 +106,23 @@ function decodeContent(data: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { fileTree, format = 'svg' } = body;
+    const { fileTree, mainFile, format = 'svg' } = body;
 
-    const mainFile = fileTree?.children?.["main.typ"];
     if (!mainFile) {
-      return NextResponse.json({ error: 'Missing main.typ' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing main file' }, { status: 400 });
     }
 
-    const { createdFiles, createdDirs } = writeImages(fileTree.children);
+    const mainFileNode = findNodeByPath(fileTree, mainFile.replace(/^root\//, ""));
+    
+    if (!mainFileNode || !mainFileNode.data) {
+      console.error("Main file not found or empty:", mainFile);
+      return NextResponse.json({ error: 'Main file content not found' }, { status: 404 });
+    }
+
+    const { createdFiles, createdDirs } = writeImages(fileTree.children, mainFile);
 
     try {
-      const sourceCode = decodeContent(mainFile.data);
+      const sourceCode = decodeContent(mainFileNode.data);
 
       if (format === 'pdf') {
         const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });

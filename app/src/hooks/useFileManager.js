@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createElement, FileJson, Book, FileCode, Image, FileQuestion, Folder, Terminal, Notebook } from 'lucide';
 import { refs, functions, infos } from "@/hooks/refs"
-import { currentProjectId, fetchCompile, fileTree, openFile } from "./useEditor";
+import { currentProjectId, fetchCompile, fileTree, openAndShowFile, openFile, syncFileTreeWithEditor } from "./useEditor";
 import { makeToast } from "./useUtils";
 import JSZip from "jszip";
 
@@ -353,7 +353,7 @@ function renderTreeRecursive(folder, container, path) {
             renderTreeRecursive(item, ul, fullPath);
 
         } else {
-            const iconHTML = getIcon(item.name);
+            const iconHTML = getIcon(item.name, item.isMain);
             itemRow.innerHTML = `${iconHTML} <span>${item.name}</span>`;
 
             const ext = item.name.split('.').pop().toLowerCase();
@@ -478,7 +478,12 @@ export async function deleteItem(path, fileTree) {
     const parentPath = parts.slice(0, -1).join("/") || "root";
     const parent = getFolder(fileTree, parentPath);
 
-    if (!parent) return;
+    if (!parent || !parent.children[name]) return;
+
+    if (parent.children[name].type === "file" && parent.children[name].isMain) {
+        makeToast("Cannot delete the main file. Set another file as main first.", "error");
+        return;
+    }
 
     delete parent.children[name];
     await saveFileTree();
@@ -516,7 +521,7 @@ async function saveFileTree() {
  * @param {string} filename - The name of the file to determine the icon for.
  * @returns {string} The HTML string of the rendered SVG icon.
  */
-export function getIcon(filename) {
+export function getIcon(filename, isMain) {
     const ext = filename.split(".").pop().toLowerCase();
     const iconMap = { json: FileJson, typ: Book, tmtheme: Notebook, py: Terminal, js: FileCode, jpg: Image, png: Image, svg: Image };
     const IconData = iconMap[ext] || FileQuestion;
@@ -525,7 +530,12 @@ export function getIcon(filename) {
 
     svgElement.setAttribute('width', '18');
     svgElement.setAttribute('height', '18');
-    svgElement.setAttribute('class', 'inline-block mr-2');
+    if (isMain) {
+        svgElement.setAttribute('stroke', '#3b82f6');
+        svgElement.setAttribute('class', 'inline-block mr-2 font-bold');
+    } else {
+        svgElement.setAttribute('class', 'inline-block mr-2');
+    }
     svgElement.style.verticalAlign = "middle";
 
     return svgElement.outerHTML;
@@ -658,4 +668,47 @@ function zipContent(zip, folder) {
             }
         }
     });
+}
+
+/**
+ * Set a file as the main entry point for compilation and export
+ * @param {string} path The path of the new entry point
+ * @param {*} root The file tree
+ */
+export async function setMainFile(path, root) {
+    syncFileTreeWithEditor();
+
+    const clearMain = (node) => {
+        if (node.type === "file") {
+            node.isMain = false;
+        } else if (node.children) {
+            Object.values(node.children).forEach(clearMain);
+        }
+    };
+
+    clearMain(root);
+
+    const parts = path.split("/").filter(x => x);
+    let current = root;
+    const fileName = parts.pop();
+
+    for (const part of parts) {
+        current = current.children[part];
+    }
+
+    if (current.children[fileName]) {
+        current.children[fileName].isMain = true;
+        makeToast(`${fileName} is now the main file`, "success");
+    }
+
+    if (refs.socket?.connected) {
+        refs.socket.emit('set-main-file', { 
+            docId: currentProjectId, 
+            path: path 
+        });
+    }
+
+    await saveFileTree();
+    openFile(path)
+    renderFileExplorer(fileTree);
 }
