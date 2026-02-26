@@ -9,7 +9,7 @@ export async function fetchSvg(fileTree) {
     if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
 
     try {
-        const response = await fetch("/api/projects/compile", {
+        const response = await fetch("api/projects/compile", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json" 
@@ -42,7 +42,7 @@ export async function exportPdf(fileTree) {
     if (!fileTree || !fileTree.children) return;
 
     try {
-        const response = await fetch("/api/projects/compile", {
+        const response = await fetch("api/projects/compile", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json" 

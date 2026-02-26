@@ -240,7 +240,7 @@ async function autoSave() {
     syncFileTreeWithEditor();
 
     try {
-        await fetch('/api/projects/save', {
+        await fetch('api/projects/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
