@@ -50,7 +50,7 @@ export async function getUserProjects() {
         orderBy: { id: 'desc' }
     })
 
-    return projects.map(project => ({
+    return projects.map((project: any) => ({
         ...project,
         isAuthor: project.userId === userId
     }))
@@ -344,8 +344,8 @@ export async function removeSharedUser(projectId: string, sharedUserEmail: strin
         throw new Error("Only owner can remove");
     }
 
-    const newSharedUsers = project.sharedUsers.filter(id => id !== userToRemove.id);
-    const newSharedProjects = userToRemove.sharedProjects.filter(id => id !== projectId);
+    const newSharedUsers = project.sharedUsers.filter((id: string) => id !== userToRemove.id);
+    const newSharedProjects = userToRemove.sharedProjects.filter((id: string) => id !== projectId);
 
     await prisma.$transaction([
         prisma.project.update({

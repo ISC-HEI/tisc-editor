@@ -128,7 +128,7 @@ export async function POST(req: Request) {
 
       if (format === 'pdf') {
         const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });
-        return new NextResponse(pdfBuffer, { headers: { 'Content-Type': 'application/pdf' } });
+        return new NextResponse(new Uint8Array(pdfBuffer), { headers: { 'Content-Type': 'application/pdf' } });
       } 
       
       else {

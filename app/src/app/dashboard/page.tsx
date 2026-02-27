@@ -9,8 +9,8 @@ export default async function Dashboard() {
   const projects = await getUserProjects()
   
   const totalProjects = projects.length
-  const sharedProjects = projects.filter(p => p.sharedUsers?.length > 0 && p.isAuthor).length
-  const guest_projects = projects.filter(p => !p.isAuthor).length
+  const sharedProjects = projects.filter((p: any) => p.sharedUsers?.length > 0 && p.isAuthor).length
+  const guest_projects = projects.filter((p: any) => !p.isAuthor).length
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
