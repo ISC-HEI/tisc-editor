@@ -44,7 +44,8 @@ export let refs = {
 export let infos = {
     currentProjectId: null,
     defaultFileTree: null,
-    title: null
+    title: null,
+    logs: []
 }
 
 /**

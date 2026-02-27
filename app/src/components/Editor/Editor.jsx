@@ -8,6 +8,7 @@ import { FileExplorer } from "./FileExplorer";
 import { PreviewPane } from "./PreviewPane";
 import { PromptModal } from "./PromptModal";
 import Breadcrumbs from "./Breadcrumbs";
+import PaneLog from "../../components/Editor/PaneLog"
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from "@/hooks/refs";
 import { isLoadingFile, useEditorWatcher } from "@/hooks/useEditor";
 import { useTypstCollaboration } from "@/hooks/useTypstCollaboration";
@@ -194,7 +195,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
 
         <PreviewPane />
       </div>
-
+      <PaneLog />
       <PromptModal 
         isOpen={isModalOpen}
         title={modalConfig.title}

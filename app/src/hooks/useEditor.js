@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { refs, infos } from "./refs"
-import { debounce, makeToast } from "./useUtils"
+import { addLogToPane, debounce, makeToast } from "./useUtils"
 import { fetchSvg, exportPdf, exportSvg } from "./useApi"
 
 /** * State variables for project management and file tracking  */
@@ -160,39 +160,58 @@ async function applyFormatting(type) {
  */
 export async function fetchCompile() {
     refs.page.innerHTML = `
-        <div class="flex items-center justify-center min-h-screen w-full bg-gray-100">
+        <div class="flex items-center justify-center h-full w-full bg-gray-50/50">
             <div class="relative">
-                <div class="w-12 h-12 border-4 border-gray-200 rounded-full"></div>
-                <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+                <div class="w-10 h-10 border-4 border-slate-200 rounded-full"></div>
+                <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
             </div>
         </div>
     `;
-    const svg = await fetchSvg({ children: fileTree.children });
-    if (svg.startsWith("{")) {
-        let error = JSON.parse(svg);
-        let errorDetails = error.details ? error.details.split(": ")[1] : "";
-        let message = "";
 
-        if (errorDetails.includes("file not found")) {
-            const messageDetails = errorDetails.split(" (")[0];
-            let errorSuppDetail = "";
-            if (messageDetails.includes("file not found")) {
-                const match = errorDetails.match(/\(([^)]+)\)/);
-                const insideParentheses = match ? match[1] : "";
-                errorSuppDetail = insideParentheses.split("/app")[1] || "unknown path";
-            } else {
-                errorSuppDetail = errorDetails;
-            }
-            message = `${error.error}, ${messageDetails} (${errorSuppDetail})`;
-        } else {
-            message = `${error.error}`;
+    try {
+        const result = JSON.parse(await fetchSvg({ children: fileTree.children }));
+        if (result.logs) {
+            result.logs.forEach(log => {
+                addLogToPane(log);
+            });
         }
-        refs.page.innerText = message;
-    } else {
-        refs.page.innerHTML = svg;
+        if (result.success && result.svg) {
+            refs.page.innerHTML = result.svg;
+        } else {
+            let errorMessage = "Unknown compilation error";
+            
+            if (result.logs) {
+                const errorLog = result.logs.find(l => l.type === 'error');
+                if (errorLog) errorMessage = errorLog.msg;
+            }
+
+            refs.page.innerHTML = `
+                <div class="p-8 text-red-600 font-mono text-sm bg-red-50 h-full overflow-auto">
+                    <div class="flex items-center gap-2 font-bold mb-4">
+                        <span class="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] uppercase">Compilation Failed</span>
+                    </div>
+                    <div class="bg-white border border-red-200 rounded-lg p-4 shadow-sm">
+                        <pre class="whitespace-pre-wrap leading-relaxed">${errorMessage}</pre>
+                    </div>
+                    <p class="mt-4 text-red-400 text-xs italic">Check the System Logs for more details.</p>
+                </div>
+            `;
+        }
+    } catch (err) {
+        console.error("Critical Fetch Error:", err);
+        
+        addLogToPane({ 
+            type: 'error', 
+            msg: `Network or Server Error: ${err.message}`
+        });
+
+        refs.page.innerHTML = `
+            <div class="flex items-center justify-center h-full text-slate-400 text-sm italic">
+                Connection to compiler lost...
+            </div>
+        `;
     }
 }
-
 // ----------------------------------------------------
 
 /**

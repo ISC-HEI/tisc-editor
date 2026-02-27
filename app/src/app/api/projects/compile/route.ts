@@ -104,52 +104,68 @@ function findNodeByPath(node: any, targetPath: string): any {
  * 4. Cleans up temp files and returns the binary result.
  */
 export async function POST(req: Request) {
+  let createdFiles = new Set<string>();
+  let createdDirs = new Set<string>();
+
   try {
     const body = await req.json();
     const { fileTree, mainFile, format = 'svg' } = body;
 
-    if (!mainFile) {
-      return NextResponse.json({ error: 'Missing main file' }, { status: 400 });
-    }
-
     const mainFileNode = findNodeByPath(fileTree, mainFile.replace(/^root\//, ""));
-    
     if (!mainFileNode || !mainFileNode.data) {
-      console.error("Main file not found or empty:", mainFile);
-      return NextResponse.json({ error: 'Main file content not found' }, { status: 404 });
+      return NextResponse.json({ 
+        success: false, 
+        logs: [{ type: 'error', msg: 'Main file not found'}] 
+      }, { status: 404 });
     }
 
-    const { createdFiles, createdDirs } = writeImages(fileTree.children, mainFile);
+    const { createdFiles: files, createdDirs: dirs } = writeImages(fileTree.children, mainFile);
+    createdFiles = files;
+    createdDirs = dirs;
 
     try {
       const sourceCode = decodeContent(mainFileNode.data);
 
       if (format === 'pdf') {
         const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });
-        return new NextResponse(pdfBuffer, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/pdf',
-          },
-        });
-      } else {
+        return new NextResponse(pdfBuffer, { headers: { 'Content-Type': 'application/pdf' } });
+      } 
+      
+      else {
         const svg = $typst.svg({ mainFileContent: sourceCode });
-        return new NextResponse(svg, {
-          status: 200,
-          headers: {
-            'Content-Type': 'image/svg+xml',
-          },
+        
+        return NextResponse.json({
+          success: true,
+          svg: svg,
+          logs: [{ 
+            type: 'success', 
+            msg: 'Compilation successful', 
+            time: new Date().toLocaleTimeString() 
+          }]
         });
       }
 
-    } catch (err) {
-      console.error("Compilation error:", err);
-      return NextResponse.json({ error: 'Compilation failed' }, { status: 500 });
+    } catch (err: any) {
+      // Replace to adapt to the client
+      const errorMsg = err.code.replace("/app/", "/root/")
+
+      const errorLog = {
+        type: 'error',
+        msg: errorMsg || "Unknown compilation error",
+        time: new Date().toLocaleTimeString()
+      };
+
+      return NextResponse.json({
+        success: false,
+        svg: null,
+        logs: [errorLog]
+      }, { status: 200 });
+
     } finally {
       cleanupTemp(createdFiles, createdDirs);
     }
 
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid Request Body' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid Request' }, { status: 400 });
   }
 }

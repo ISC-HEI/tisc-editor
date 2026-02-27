@@ -1,4 +1,5 @@
 import { showToast } from "nextjs-toast-notify";
+import { infos } from "./refs";
 
 /**
  * Creates a debounced version of a function that delays execution until after 
@@ -97,3 +98,24 @@ export function stringToColor(str) {
         darker: `hsl(${h}, 80%, 25%)`
     };
 };
+
+/**
+ * Dispatches a custom event to update the PaneLog component with a new log entry.
+ * @param {Object} log - The log object.
+ * @param {string} log.type - 'info', 'success', 'warning', or 'error'.
+ * @param {string} log.msg - The message to display.
+ * @param {string} [log.time] - Optional timestamp.
+ */
+export function addLogToPane(log) {
+    const timeWithMs = log.time || new Date().toLocaleTimeString() + '.' + new Date().getMilliseconds().toString().padStart(3, '0');
+
+    const isDuplicate = infos.logs.some(existingLog => existingLog.time === timeWithMs);
+
+    if (!isDuplicate) {
+        infos.logs.push({
+            ...log,
+            id: crypto.randomUUID(),
+            time: timeWithMs
+        });
+    }
+}
