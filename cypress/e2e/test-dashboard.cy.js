@@ -67,10 +67,12 @@ describe("Dashboard, Templates & Collaboration", () => {
   });
 
   beforeEach(() => {
-    cy.visit("/login");
-    cy.get(UI.emailInput).should('be.visible').type(testUser.email);
-    cy.get(UI.passwordInput).type(`${testUser.password}{enter}`);
-    cy.url({ timeout: 15000 }).should("include", "/dashboard");
+    cy.session(testUser.email, () => {
+      cy.visit("/login");
+      cy.get(UI.emailInput).should('be.visible').type(testUser.email);
+      cy.get(UI.passwordInput).type(`${testUser.password}{enter}`);
+      cy.url({ timeout: 20000 }).should("include", "/dashboard");
+    });
   });
 
   // --- TESTS DES TEMPLATES ---
