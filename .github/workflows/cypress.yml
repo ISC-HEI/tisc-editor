@@ -23,16 +23,15 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: |
           echo "Token present? ${GITHUB_TOKEN:0:8}****"
-          docker compose up -d --build
-          docker compose ps
+          docker compose -f docker-compose-dev.yml up -d --build
           sleep 15
 
       - name: Run Cypress tests
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-        run: docker compose run --rm test
+        run: docker compose -f docker-compose-dev.yml run --rm test
 
       - name: Tear down Docker Compose
         if: always()
-        run: docker compose down
+        run: docker compose -f docker-compose-dev.yml down

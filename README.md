@@ -107,13 +107,13 @@ AUTH_SECRET=your_github_token_here
 - **Docker & Docker Compose** (Required)
 - **Node.js / Bun** (Optional, for local development outside Docker)
 
-### Deployment
+### Development Deployment Docker
 To launch the entire stack (App, API, Database) and see the tests run automatically:
 > Make sure you completed the [Configuration](#configuration--environment) before.
 ```bash
 git clone https://github.com/ISC-HEI/tisc-editor.git
 cd tisc-editor
-docker compose up -d --build
+docker compose -f docker-compose-dev.yml up -d --build
 ```
 > Note: The test container will launch, execute the suite, and exit. The App, API, and Database will remain running in the background for you to work on.
 
@@ -125,7 +125,7 @@ docker compose up -d --build
 
 For active development, we recommend using the following command to see live logs while you code:
 ```bash
-docker compose up --build
+docker compose -f docker-compose-dev.yml up --build
 ```
 
 </details>
@@ -142,6 +142,45 @@ To start the App and the API, see [here](app/README.md).
 
 </details>
 
+## Production Deployment
+
+1. You need to build the editor image
+```bash
+docker build -t isc-hei/tis-editor:latest ./app
+docker network create tisc-network
+```
+
+2. If you don't already have a database, you can start one here
+```bash
+docker run -d \
+  --name tisc-db \
+  --network tisc-network \
+  -e POSTGRES_USER=tisc_user \
+  -e POSTGRES_PASSWORD=YOUR_PASSWORD \
+  -e POSTGRES_DB=tisc_db \
+  -v tisc_db_data:/var/lib/postgresql/data \
+  postgres:15
+```
+
+3. Start your app on local
+```bash
+docker run -d \
+  --name tisc-app-prod \
+  --network tisc-network \
+  -p 8082:3000 \
+  -e DATABASE_URL=postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db \
+  -e AUTH_SECRET=YOUR_SECRET  \
+  -e AUTH_URL=https://tisc.isc-vs.dev \
+  -e GITHUB_TOKEN=YOUR_TOKEN \
+  --restart unless-stopped \
+  isc-hei/tis-editor:latest
+```
+
+4. Initialize the tables in the db
+```bash
+docker exec tisc-app-prod npx prisma db push --url="postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db"
+```
+
 ## Testing
 The project includes a robust End-to-End (E2E) testing suite powered by **Cypress**. These tests ensure that critical user flows remain stable and functional.
 
@@ -153,11 +192,11 @@ The project includes a robust End-to-End (E2E) testing suite powered by **Cypres
 ### Running Tests
 To run the full suite and shut down the environment automatically (ideal for CI):
 ```bash
-docker compose up --build --exit-code-from test
+docker compose -f docker-compose-dev.yml up --build --exit-code-from test
 ```
 To run tests while the application is already running in development mode:
 ```bash
-docker compose run test
+docker compose -f docker-compose-dev.yml run test
 ```
 
 ## License

@@ -17,7 +17,9 @@ services:
       retries: 5
 
   app:
-    build: ./app
+    build:
+      context: ./app
+      dockerfile: Dockerfile.dev
     container_name: tisc-app
     depends_on:
       db:
