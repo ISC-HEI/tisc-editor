@@ -13,11 +13,10 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
         setError('');
 
         startTransition(async () => {
-            try {
-                await shareProject(projectId, email);
+            if (result?.error) {
+                setError(result.error);
+            } else {
                 setEmail('');
-            } catch (err) {
-                setError(err.message);
             }
         });
     }

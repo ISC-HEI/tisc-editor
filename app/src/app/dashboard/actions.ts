@@ -298,10 +298,10 @@ export async function shareProject(projectId: string, sharedUserEmail: string) {
     if (!project) throw new Error("Projet introuvable");
 
     const sharedUser = await prisma.user.findUnique({ where: { email: sharedUserEmail } });
-    if (!sharedUser) throw new Error("User not found");
+    if (!sharedUser) return { error: "User not found" };
 
     if (project.sharedUsers.includes(sharedUser.id) || project.userId === sharedUser.id) {
-        throw new Error("User already has access");
+        return { error: "User already has access" };
     }
 
     const [updatedProject, updatedUser] = await prisma.$transaction([
