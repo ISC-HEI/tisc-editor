@@ -1,31 +1,45 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 
-const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
 
 // ---------- Helper functions ---------- 
 
 /**
- * Recursively writes files and folders from the JSON file tree to the server's local storage.
- * This allows the Typst compiler to access local assets (images, other .typ files).
- * @param {Object} children - The current level of the file tree.
- * @param {string} [baseDir="."] - The base directory for writing files.
- * @param {Object} accumulator - Tracks created paths for later cleanup.
- * @returns {Object} Sets of created files and directories.
+ * Decodes file content, converting Base64 encoded strings into 
+ * UTF-8 text if a data URI prefix is detected.
+ * @param {string} data - The raw file data (potentially base64 encoded).
+ * @returns {string} The decoded plain text content.
  */
-function writeImages(children: any = {}, mainFile: string, baseDir = ".", accumulator = { files: new Set<string>(), dirs: new Set<string>() }) {
+function decodeContent(data: string) {
+  if (data.startsWith('data:text/plain;base64,')) {
+    return Buffer.from(data.split(',')[1], 'base64').toString('utf-8');
+  }
+  return data;
+}
+
+/**
+ * Recursively traverses the JSON file tree to recreate the folder structure 
+ * and write files to the server's temporary local storage.
+ * @param {any} children - The nested object containing file/folder nodes.
+ * @param {string} baseDir - The target destination path on the disk.
+ * @param {Object} accumulator - Tracking object to store created paths for cleanup.
+ * @returns {Object} An object containing Sets of created file and directory paths.
+ */
+function writeImages(children: any = {}, baseDir: string, accumulator = { files: new Set<string>(), dirs: new Set<string>() }) {
   for (const fileName in children) {
     const node = children[fileName];
-    const currentPath = path.resolve(path.join(baseDir, node.name || fileName));
+    const currentPath = path.join(baseDir, node.name || fileName);
 
     if (node.type === 'folder') {
       if (!fs.existsSync(currentPath)) {
         fs.mkdirSync(currentPath, { recursive: true });
         accumulator.dirs.add(currentPath);
       }
-      writeImages(node.children, mainFile, currentPath, accumulator);
+      writeImages(node.children, currentPath, accumulator);
     } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
@@ -53,12 +67,13 @@ function writeImages(children: any = {}, mainFile: string, baseDir = ".", accumu
 }
 
 /**
- * Deletes all temporary files and empty directories created during the compilation process.
- * Prevents memory leaks and storage clogging on the server.
- * @param {Set<string>} createdFiles - Set of file paths to delete.
- * @param {Set<string>} createdDirs - Set of directory paths to remove.
+ * Recursively deletes temporary files and empty directories created 
+ * during the compilation process to prevent disk space saturation.
+ * @param {Set<string>} createdFiles - Set of absolute file paths to remove.
+ * @param {Set<string>} createdDirs - Set of absolute directory paths to clean up.
+ * @param {string} workingDir - The root session directory to be removed.
  */
-function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>) {
+function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>, workingDir: string) {
   for (const file of createdFiles) {
     if (fs.existsSync(file)) fs.unlinkSync(file);
   }
@@ -68,49 +83,22 @@ function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>) {
       fs.rmdirSync(dir);
     }
   }
+  if (fs.existsSync(workingDir) && fs.readdirSync(workingDir).length === 0) {
+    fs.rmdirSync(workingDir);
+  }
 }
 
 /**
- * Decodes the content of a file. 
- * Converts Base64 encoded strings back to UTF-8 text if necessary.
- * @param {string} data - The raw data string from the file tree.
- * @returns {string} The decoded plain text content.
- */
-function decodeContent(data: string) {
-  if (data.startsWith('data:text/plain;base64,')) {
-    return Buffer.from(data.split(',')[1], 'base64').toString('utf-8');
-  }
-  return data;
-}
-
-/**
- * Find a specific node from a path
- * @param {any} node The node to check in 
- * @param {sting} targetPath The path of the file
- * @returns 
- */
-function findNodeByPath(node: any, targetPath: string): any {
-  if (node.fullPath === targetPath || node.name === targetPath) {
-    return node;
-  }
-  if (node.children) {
-    for (const key in node.children) {
-      const found = findNodeByPath(node.children[key], targetPath);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-// ---------- Route POST ----------
-
-/**
- * API Route Handler for document compilation.
- * 1. Receives the file tree and target format.
- * 2. Prepares the local environment (writeImages).
- * 3. Compiles using the @myriaddreamin/typst-ts-node-compiler.
- * 4. Cleans up temp files and returns the binary result.
+ * Main API Route Handler for Typst document compilation.
+ * Manages session isolation, disk I/O, NodeCompiler execution, 
+ * and automated resource cleanup.
+ * @param {Request} req - The incoming request containing fileTree, mainFile, and format.
+ * @returns {Promise<NextResponse>} The compiled PDF blob or a JSON response (SVG/Logs).
  */
 export async function POST(req: Request) {
+  const sessionId = crypto.randomBytes(8).toString('hex');
+  const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
+  
   let createdFiles = new Set<string>();
   let createdDirs = new Set<string>();
 
@@ -119,30 +107,36 @@ export async function POST(req: Request) {
     const { fileTree, mainFile, format = 'svg' } = body;
 
     const mainFileCleanPath = mainFile.replace(/^root\//, "");
-    const mainFileNode = findNodeByPath(fileTree, mainFileCleanPath);
     
-    if (!mainFileNode || !mainFileNode.data) {
-      return NextResponse.json({ 
-        success: false, 
-        logs: [{ type: 'error', msg: 'Main file not found'}] 
-      }, { status: 404 });
+    if (!fs.existsSync(workingDir)) {
+      fs.mkdirSync(workingDir, { recursive: true });
     }
 
-    const { createdFiles: files, createdDirs: dirs } = writeImages(fileTree.children, mainFile);
+    const { createdFiles: files, createdDirs: dirs } = writeImages(fileTree.children, workingDir);
     createdFiles = files;
     createdDirs = dirs;
 
+    const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
+
+    const localCompiler = NodeCompiler.create({ 
+        workspace: workingDir,
+        inputs: { 'X': 'u' } 
+    });
+
     try {
-      const sourceCode = decodeContent(mainFileNode.data);
+      const compileOptions = { 
+        mainFilePath: absoluteMainPath
+      };
 
       if (format === 'pdf') {
-        const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });;
-        return new NextResponse(new Uint8Array(pdfBuffer), { headers: { 'Content-Type': 'application/pdf' } });
+        const pdfBuffer = localCompiler.pdf(compileOptions);
+        return new NextResponse(new Uint8Array(pdfBuffer), { 
+            headers: { 'Content-Type': 'application/pdf' } 
+        });
       } 
       
       else {
-        const svg = $typst.svg({ mainFileContent: sourceCode });
-        
+        const svg = localCompiler.svg(compileOptions);
         return NextResponse.json({
           success: true,
           svg: svg,
@@ -155,26 +149,23 @@ export async function POST(req: Request) {
       }
 
     } catch (err: any) {
-      const errorMsg = err.code || (typeof err === 'string' ? err : "Unknown compilation error");
-      const cleanedError = errorMsg.replace(/\/.*?\//g, "root/");
-
-      const errorLog = {
-        type: 'error',
-        msg: cleanedError,
-        time: new Date().toLocaleTimeString()
-      };
+      const errorMsg = err.message || err.code || (typeof err === 'string' ? err : "Compilation error");
+      const cleanedError = errorMsg.replace(new RegExp(workingDir, 'g'), "root");
 
       return NextResponse.json({
         success: false,
         svg: null,
-        logs: [errorLog]
+        logs: [{ type: 'error', msg: cleanedError, time: new Date().toLocaleTimeString() }]
       }, { status: 200 });
 
     } finally {
-      cleanupTemp(createdFiles, createdDirs);
+      cleanupTemp(createdFiles, createdDirs, workingDir);
     }
 
-  } catch (error) {
-    return NextResponse.json({ success: false, logs: [{ type: 'error', msg: "Request error"}]  }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json({ 
+        success: false, 
+        logs: [{ type: 'error', msg: error.message || "Request error"}]  
+    }, { status: 400 });
   }
 }
