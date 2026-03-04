@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:15
     container_name: tisc-db
+    userns_mode: "host"
     environment:
       POSTGRES_USER: tisc_user
       POSTGRES_PASSWORD: qaywsxedc
@@ -21,6 +22,7 @@ services:
       context: ./app
       dockerfile: Dockerfile.dev
     container_name: tisc-app
+    userns_mode: "host"
     depends_on:
       db:
         condition: service_healthy
@@ -52,6 +54,7 @@ services:
   test:
     image: cypress/included:13.15.0
     container_name: tisc_test
+    userns_mode: "host"
     depends_on:
       app:
         condition: service_healthy

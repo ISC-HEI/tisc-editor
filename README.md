@@ -179,7 +179,7 @@ docker run -d \
 docker exec tisc-app-prod npx prisma db push --url="postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db"
 ```
 
-5. If you want to run the test, execute this
+5. If you want to run the test, execute this (required bun or npm)
 ```bash
 bun i cypress
 bun x cypress run --config baseUrl=https://tisc.isc-vs.dev,screenshotOnRunFailure=false
