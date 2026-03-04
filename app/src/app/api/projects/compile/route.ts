@@ -18,7 +18,7 @@ const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
 function writeImages(children: any = {}, mainFile: string, baseDir = ".", accumulator = { files: new Set<string>(), dirs: new Set<string>() }) {
   for (const fileName in children) {
     const node = children[fileName];
-    const currentPath = path.join(baseDir, node.name || fileName);
+    const currentPath = path.resolve(path.join(baseDir, node.name || fileName));
 
     if (node.type === 'folder') {
       if (!fs.existsSync(currentPath)) {
@@ -26,7 +26,7 @@ function writeImages(children: any = {}, mainFile: string, baseDir = ".", accumu
         accumulator.dirs.add(currentPath);
       }
       writeImages(node.children, mainFile, currentPath, accumulator);
-    } else if (node.type === 'file' && fileName !== mainFile) {
+    } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
         const dir = path.dirname(currentPath);
@@ -34,8 +34,15 @@ function writeImages(children: any = {}, mainFile: string, baseDir = ".", accumu
           fs.mkdirSync(dir, { recursive: true });
           accumulator.dirs.add(dir);
         }
-        const base64Data = node.data.includes(',') ? node.data.split(',')[1] : node.data;
-        fs.writeFileSync(currentPath, Buffer.from(base64Data, 'base64'));
+        
+        if (fileName.endsWith('.typ')) {
+            const textContent = decodeContent(node.data);
+            fs.writeFileSync(currentPath, textContent, 'utf-8');
+        } else {
+            const base64Data = node.data.includes(',') ? node.data.split(',')[1] : node.data;
+            fs.writeFileSync(currentPath, Buffer.from(base64Data, 'base64'));
+        }
+        
         accumulator.files.add(currentPath);
       } catch (err) {
         console.error(`Error writing ${currentPath}:`, err);
@@ -111,7 +118,9 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { fileTree, mainFile, format = 'svg' } = body;
 
-    const mainFileNode = findNodeByPath(fileTree, mainFile.replace(/^root\//, ""));
+    const mainFileCleanPath = mainFile.replace(/^root\//, "");
+    const mainFileNode = findNodeByPath(fileTree, mainFileCleanPath);
+    
     if (!mainFileNode || !mainFileNode.data) {
       return NextResponse.json({ 
         success: false, 
@@ -124,15 +133,15 @@ export async function POST(req: Request) {
     createdDirs = dirs;
 
     try {
-      const sourceCode = decodeContent(mainFileNode.data);
+      const absoluteMainPath = path.resolve(mainFileCleanPath);
 
       if (format === 'pdf') {
-        const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });
+        const pdfBuffer = $typst.pdf({ mainFilePath: absoluteMainPath });
         return new NextResponse(new Uint8Array(pdfBuffer), { headers: { 'Content-Type': 'application/pdf' } });
       } 
       
       else {
-        const svg = $typst.svg({ mainFileContent: sourceCode });
+        const svg = $typst.svg({ mainFilePath: absoluteMainPath });
         
         return NextResponse.json({
           success: true,
@@ -146,12 +155,12 @@ export async function POST(req: Request) {
       }
 
     } catch (err: any) {
-      // Replace to adapt to the client
-      const errorMsg = err.code.replace("/app/", "/root/")
+      const errorMsg = err.code || (typeof err === 'string' ? err : "Unknown compilation error");
+      const cleanedError = errorMsg.replace(/\/.*?\//g, "root/");
 
       const errorLog = {
         type: 'error',
-        msg: errorMsg || "Unknown compilation error",
+        msg: cleanedError,
         time: new Date().toLocaleTimeString()
       };
 
@@ -166,6 +175,6 @@ export async function POST(req: Request) {
     }
 
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Invalid Request' }, { status: 400 });
+    return NextResponse.json({ success: false, logs: [{ type: 'error', msg: "Request error"}]  }, { status: 400 });
   }
 }
