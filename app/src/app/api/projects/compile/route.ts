@@ -133,15 +133,15 @@ export async function POST(req: Request) {
     createdDirs = dirs;
 
     try {
-      const absoluteMainPath = path.resolve(mainFileCleanPath);
+      const sourceCode = decodeContent(mainFileNode.data);
 
       if (format === 'pdf') {
-        const pdfBuffer = $typst.pdf({ mainFilePath: absoluteMainPath });
+        const pdfBuffer = $typst.pdf({ mainFileContent: sourceCode });;
         return new NextResponse(new Uint8Array(pdfBuffer), { headers: { 'Content-Type': 'application/pdf' } });
       } 
       
       else {
-        const svg = $typst.svg({ mainFilePath: absoluteMainPath });
+        const svg = $typst.svg({ mainFileContent: sourceCode });
         
         return NextResponse.json({
           success: true,
