@@ -84,7 +84,6 @@ To avoid this, you must configure a **Personal Access Token**.
    No special scopes are required for public repositories.
 
 2. **Update your `.env`:** Add the token to the app environment file
-   (or directly in `docker-compose.yml`):
 
 ```env
 GITHUB_TOKEN=your_github_token_here
@@ -93,9 +92,8 @@ GITHUB_TOKEN=your_github_token_here
 
 ### Next.js Auth Secret
 
-1. **Create a random secret**
+1. **Create a random secret**, you can generate one via `openssl rand -base64 32`
 2. **Update your `.env`:** Add the secret to the app environment file
-   (or directly in `docker-compose.yml`):
 
 ```env
 AUTH_SECRET=your_github_token_here
