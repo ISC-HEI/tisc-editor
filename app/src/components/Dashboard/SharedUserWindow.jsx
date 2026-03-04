@@ -13,6 +13,7 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
         setError('');
 
         startTransition(async () => {
+            const result = await shareProject(projectId, email);
             if (result?.error) {
                 setError(result.error);
             } else {
