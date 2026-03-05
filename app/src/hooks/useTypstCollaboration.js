@@ -291,7 +291,6 @@ export const useTypstCollaboration = (docId, userId) => {
          * compilation and export.
          */
         socket.on('remote-set-main', ({ path }) => {
-            console.log(path)
             const updateMainInTree = (node) => {
                 if (node.type === "file") {
                     node.isMain = (node.fullPath === path || `root/${node.fullPath}` === path);

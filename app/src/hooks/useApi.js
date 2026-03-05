@@ -24,7 +24,6 @@ export async function fetchSvg(fileTree) {
         });
 
         if (!response.ok) {
-            console.log(response)
             throw new Error(`Erreur compilation: ${response}`);
         }
 
