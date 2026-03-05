@@ -187,6 +187,8 @@ bun i cypress
 bun x cypress run --config baseUrl=https://tisc.isc-vs.dev,screenshotOnRunFailure=false
 ```
 
+> **Note :** A script is available on the server to update the version.
+
 ## Testing
 The project includes a robust End-to-End (E2E) testing suite powered by **Cypress**. These tests ensure that critical user flows remain stable and functional.
 
