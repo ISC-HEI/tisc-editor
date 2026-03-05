@@ -15,6 +15,7 @@ function PaneLog() {
     const handleClear = (e) => {
         e.stopPropagation();
         infos.logs = [];
+        setIsOpen(false)
     };
 
     return (
