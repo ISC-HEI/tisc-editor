@@ -1,9 +1,9 @@
-export default function Footer() {
+export default function Footer({ position = "sticky" }) {
     const version = process.env.NEXT_PUBLIC_APP_VERSION || "v0.0.0";
     const isDev = version.includes('-') && !version.includes('main');
 
     return (
-        <footer className="absolute bottom-0 left-0 w-full z-10 py-3 px-6 flex items-center justify-between pointer-events-none select-none bg-transparent">
+        <footer className={`${position} bottom-0 left-0 w-full z-10 py-3 px-6 flex items-center justify-between pointer-events-none select-none bg-transparent`}>
             
             <p className="text-gray-400 text-[9px] uppercase tracking-[0.2em] font-medium">
                 TISC Editor

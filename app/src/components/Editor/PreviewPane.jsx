@@ -78,7 +78,9 @@ export const PreviewPane = () => {
         >
         </div>
       </div>
-      <Footer />
+      <Footer 
+        position="absolute"
+      />
     </div>
   );
 };
