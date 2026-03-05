@@ -386,6 +386,7 @@ export function openFile(path) {
     }
 
     refs.editor.setValue(content);
+    refs.imageExplorer.style.display = "none";
 
     setTimeout(() => {
         isLoadingFile = false;
