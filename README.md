@@ -187,7 +187,19 @@ bun i cypress
 bun x cypress run --config baseUrl=https://tisc.isc-vs.dev,screenshotOnRunFailure=false
 ```
 
-> **Note :** A script is available on the server to update the version.
+### Script Automation
+The `publish_new_version.sh` script automates the deployment process. After pushing your changes to the repository, run the following on the server:
+```bash
+./publish_new_version.sh
+```
+
+**Options:**
+To reset or start the database container along with the application, use the `--db` flag:
+```bash
+./publish_new_version.sh --db
+```
+
+> All infos is configurable in this script.
 
 ## Testing
 The project includes a robust End-to-End (E2E) testing suite powered by **Cypress**. These tests ensure that critical user flows remain stable and functional.
