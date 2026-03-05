@@ -148,7 +148,7 @@ APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)-$(git rev-pa
 docker build --build-arg NEXT_PUBLIC_APP_VERSION=$APP_VER -t isc-hei/tis-editor:latest ./app
 docker network create tisc-network
 ```
-![OpBento]()
+
 2. If you don't already have a database, you can start one here
 ```bash
 docker run -d \
