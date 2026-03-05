@@ -144,7 +144,8 @@ To start the App and the API, see [here](app/README.md).
 
 1. You need to build the editor image
 ```bash
-APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)-$(git rev-parse --abbrev-ref HEAD)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)$([ "$BRANCH" != "main" ] && echo "-$BRANCH")
 docker build --build-arg NEXT_PUBLIC_APP_VERSION=$APP_VER -t isc-hei/tis-editor:latest ./app
 docker network create tisc-network
 ```
