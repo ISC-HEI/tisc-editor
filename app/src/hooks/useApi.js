@@ -9,6 +9,18 @@ export async function fetchSvg(fileTree) {
     if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
 
     const mainPath = findMainFile(fileTree);
+    const pathParts = mainPath.split('/');
+    let current = fileTree;
+    
+    for (const part of pathParts) {
+        if (current.children && current.children[part]) {
+            current = current.children[part];
+        }
+    }
+
+    if (current.type === 'file' && (!current.data || current.data.trim() === "")) {
+        current.data = " ";
+    }
 
     try {
         const response = await fetch("api/projects/compile", {
@@ -45,6 +57,18 @@ export async function exportPdf(fileTree) {
     if (!fileTree || !fileTree.children) return;
 
     const mainPath = findMainFile(fileTree);
+    const pathParts = mainPath.split('/');
+    let current = fileTree;
+    
+    for (const part of pathParts) {
+        if (current.children && current.children[part]) {
+            current = current.children[part];
+        }
+    }
+
+    if (current.type === 'file' && (!current.data || current.data.trim() === "")) {
+        current.data = " ";
+    }
 
     try {
         const response = await fetch("api/projects/compile", {
