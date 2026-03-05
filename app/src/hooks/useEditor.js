@@ -174,7 +174,15 @@ export async function fetchCompile() {
             result.logs.forEach(log => {
                 addLogToPane(log);
             });
+
+            const hasError = result.logs.some(log => log.type === 'error');
+    
+            if (hasError) {
+                window.dispatchEvent(new CustomEvent('open-log-pane'));
+            }
         }
+
+
         if (result.success && result.svg) {
             refs.page.innerHTML = result.svg;
         } else {

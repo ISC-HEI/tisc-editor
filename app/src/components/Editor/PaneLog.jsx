@@ -18,6 +18,13 @@ function PaneLog() {
         setIsOpen(false)
     };
 
+    useEffect(() => {
+        const handleOpenEvent = () => setIsOpen(true);
+        window.addEventListener('open-log-pane', handleOpenEvent);
+        
+        return () => window.removeEventListener('open-log-pane', handleOpenEvent);
+    }, []);
+
     return (
         <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-2 font-sans text-slate-900">
             {isOpen && (
