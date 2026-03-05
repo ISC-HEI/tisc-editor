@@ -1,5 +1,5 @@
 <div align="center">
-    <img alt="Tisc logo" src="./img/banner.jpg">
+    <img alt="Tisc logo" src="./.github/assets/banner.jpg">
     <h1>
         TISC Editor
     </h1>
@@ -16,7 +16,7 @@
 
   <br />
 
-  [Explore Docs](./app/README.md) • [API Reference](./server/README.md) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
+  [Explore Docs](./app/README.md) • [Dev URL](https://tisc.isc-vs.dev) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
 </div>
 
 ## Overview
@@ -217,6 +217,35 @@ docker compose -f docker-compose-dev.yml up --build --exit-code-from test
 To run tests while the application is already running in development mode:
 ```bash
 docker compose -f docker-compose-dev.yml run test
+```
+
+## Diagram
+
+```mermaid
+graph TD
+    subgraph Client_Side [Client / Browser]
+        UI[Editor UI - Next.js]
+        SIOC[Socket.io Client]
+    end
+
+    subgraph Docker_Container [TISC Editor Stack]
+        NextJS[Next.js Server]
+        SIOS[Socket.io Server]
+        Typst[Typst Binary / Compiler]
+        Prisma[Prisma ORM]
+    end
+
+    subgraph Storage
+        DB[(PostgreSQL)]
+    end
+
+    %% Interactions
+    UI -->|HTTP / Server Actions| NextJS
+    SIOC <-->|Real-time Sync| SIOS
+    SIOS <--> Prisma
+    NextJS <--> Prisma
+    Prisma <--> DB
+    NextJS -->|Exec| Typst
 ```
 
 ## License

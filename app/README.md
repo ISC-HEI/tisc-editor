@@ -1,7 +1,7 @@
 <div align="center">
-  <img alt="Tisc" src="../img/banner.jpg">
-  <h1>TISC Editor — Client App</h1>
-  <p>The Next.js frontend for the Typst Online ecosystem.</p>
+  <img alt="Tisc" src="../.github/assets/banner.jpg">
+  <h1>TISC Editor — Client and API</h1>
+  <p>The Next.js frontend for the Typst Online ecosystem including the API.</p>
 </div>
 
 
