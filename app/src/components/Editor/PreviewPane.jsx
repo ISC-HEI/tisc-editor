@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { ZoomOut, ZoomIn, Download } from "lucide-react";
 import { initPreviewRefs } from "@/hooks/refs";
 import { useZoomWatcher } from "@/hooks/useZoom"
+import Footer from "../Footer";
 
 export const PreviewPane = () => {
   const btnInRef = useRef(null);
@@ -31,7 +32,7 @@ export const PreviewPane = () => {
   }, []);
 
   return (
-    <div className="flex-1 bg-slate-100 overflow-hidden flex flex-col">
+    <div className="flex-1 bg-slate-100 overflow-hidden flex flex-col relative">
       <div className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center bg-slate-100 rounded-lg p-1">
           <button 
@@ -77,6 +78,7 @@ export const PreviewPane = () => {
         >
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

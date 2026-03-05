@@ -19,7 +19,7 @@ services:
 
   app:
     build:
-      context: ./app
+      context: .
       dockerfile: Dockerfile.dev
     container_name: tisc-app
     userns_mode: "host"
@@ -37,6 +37,7 @@ services:
     volumes:
       - ./app:/app
       - /app/node_modules
+      - ./.git:/app/.git:ro
     networks:
       - tisc-network
     environment:
@@ -45,6 +46,7 @@ services:
       - AUTH_SECRET=${AUTH_SECRET}
     command: >
       sh -c "
+      git config --global --add safe.directory /app && 
       bun install &&
       bun x prisma generate &&
       bun x prisma db push &&

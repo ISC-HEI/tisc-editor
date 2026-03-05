@@ -147,7 +147,7 @@ To start the App and the API, see [here](app/README.md).
 docker build -t isc-hei/tis-editor:latest ./app
 docker network create tisc-network
 ```
-
+![OpBento]()
 2. If you don't already have a database, you can start one here
 ```bash
 docker run -d \
@@ -162,10 +162,12 @@ docker run -d \
 
 3. Start your app on local
 ```bash
+APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)-$(git rev-parse --abbrev-ref HEAD)
 docker run -d \
   --name tisc-app-prod \
   --network tisc-network \
   -p 8082:3000 \
+  -e NEXT_PUBLIC_APP_VERSION="$APP_VER" \
   -e DATABASE_URL=postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db \
   -e AUTH_SECRET=YOUR_SECRET  \
   -e AUTH_URL=https://tisc.isc-vs.dev \

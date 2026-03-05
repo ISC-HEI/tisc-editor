@@ -1,17 +1,17 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache curl bash
+RUN apk add --no-cache curl bash git
 
 WORKDIR /app
 
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:$PATH"
 
-COPY package.json bun.lock ./
+COPY app/package.json app/bun.lock ./
 RUN bun install
 
-COPY . .
+COPY app/ .
+
+COPY .git ./.git
 
 EXPOSE 3000
-
-CMD ["bun", "dev"]
