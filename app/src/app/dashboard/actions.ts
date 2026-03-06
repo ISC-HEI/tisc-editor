@@ -19,7 +19,7 @@ const fetchOptions = {
         'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
         'User-Agent': 'TISC-Editor-App'
     },
-    next: { revalidate: 3600 }
+    next: { revalidate: 86400 }
 };
 
 /**
