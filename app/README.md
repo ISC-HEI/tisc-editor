@@ -52,7 +52,10 @@ DATABASE_URL="postgresql://user:password@localhost:5432/tisc_db"
 
 # GitHub API
 # Needed to avoid rate limits when fetching templates
-GITHUB_TOKEN="your_personal_access_token"
+GITHUB_TOKEN=your_github_token_here
+
+# Authentification Secret
+AUTH_SECRET=your_auth_secret_here
 ```
 
 ### Installation

@@ -96,7 +96,7 @@ GITHUB_TOKEN=your_github_token_here
 2. **Update your `.env`:** Add the secret to the app environment file
 
 ```env
-AUTH_SECRET=your_github_token_here
+AUTH_SECRET=your_auth_secret_here
 ```
 
 ## Getting Started
