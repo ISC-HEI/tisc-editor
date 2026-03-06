@@ -12,9 +12,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport = {
+  themeColor: "#f8fafc",
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "TISC Editor",
-  description: "An online editor for typst document. Support export (pdf/svg) and projects sharing.",
+  description: "The modern online Typst editor. Write, collaborate, and export high-quality documents to PDF or SVG instantly. The powerful LaTeX alternative for fast and intuitive typesetting",
+  keywords: ["Typst", "Editor", "LaTeX alternative", "Collaboration", "Online Editor", "HES", "ISC", "HEI"],
+  authors: [{ name: "Adrien Reynard" }],
 };
 
 export default function RootLayout({
