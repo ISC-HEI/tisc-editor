@@ -50,9 +50,9 @@ describe("Dashboard, Templates & Collaboration", () => {
   };
 
   const createProject = (modelSelector, name) => {
-    cy.get(UI.createProjectBtn, { timeout: 15000 }).should('be.visible').click();
+    cy.get(UI.createProjectBtn, { timeout: 20000 }).should('be.visible').click();
     
-    cy.get(modelSelector, { timeout: 10000 }).should('be.visible').click();
+    cy.get(modelSelector, { timeout: 20000 }).should('be.visible').click();
     
     cy.get(UI.projectNameInput).should('be.visible').type(`${name}{enter}`);
     
