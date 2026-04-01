@@ -10,10 +10,16 @@ const ALLOWED_DOMAINS = ["gmail.com", "hevs.ch", "hes-so.ch", "edu.vs.ch"]
 
 // Define Zod schema for validating sign-up form data
 const SignupSchema = z.object({
-  email: z.string().email().refine((val: string) => {
-    return ALLOWED_DOMAINS.some(domain => val.endsWith(`@${domain}`));
-  }).withMessage("Email must be from an allowed domain."),
-  password: z.string().min(8, "8 characters minimum").max(100, "100 characters maximum"),
+  email: z.string()
+    .email("Invalid email format")
+    .refine((val: string) => {
+      return ALLOWED_DOMAINS.some(domain => val.endsWith(`@${domain}`));
+    }, { 
+      message: "Email must be from an allowed domain."
+    }),
+  password: z.string()
+    .min(8, "8 characters minimum")
+    .max(100, "100 characters maximum"),
 });
 
 type ActionResponse = string | null | undefined;
