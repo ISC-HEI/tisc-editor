@@ -29,7 +29,7 @@ describe("Authentication Flow", () => {
     });
 
     it("should display an error message with invalid credentials", () => {
-      cy.get(UI.emailInput).type("wrong@email.com");
+      cy.get(UI.emailInput).type("wrong_email@hevs.ch");
       cy.get(UI.passwordInput).type("wrongPassword{enter}");
       
       cy.get(UI.errorMsg)
@@ -44,7 +44,7 @@ describe("Authentication Flow", () => {
     });
 
     it("should create an account and redirect to dashboard", () => {
-      const uniqueEmail = `testuser+${Date.now()}@example.com`;
+      const uniqueEmail = `testuser+${Date.now()}@gmail.com`; // Use an email with an allowed domain
       
       cy.get(UI.emailInput).type(uniqueEmail);
       cy.get(UI.passwordInput).type("SecurePass123{enter}");
@@ -53,7 +53,7 @@ describe("Authentication Flow", () => {
     });
 
     it("should refuse to create an account if user already exists", () => {
-      const existingEmail = `existing_${Date.now()}@test.com`;
+      const existingEmail = `existing_${Date.now()}@hevs.ch`; // Use an email with an allowed domain
 
       cy.visit("/signup");
       cy.get(UI.emailInput).type(existingEmail);
@@ -67,7 +67,7 @@ describe("Authentication Flow", () => {
       
       cy.get(UI.errorMsg)
         .should("be.visible")
-        .and("contain.text", "User already exists.");
+        .and("contain.text", "User already registered.");
     });
   })
 });

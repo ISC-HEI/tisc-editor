@@ -45,7 +45,7 @@ describe("Dashboard, Templates & Collaboration", () => {
   };
 
   const testUser = {
-    email: `test_${Date.now()}@exemple.com`,
+    email: `test_${Date.now()}@hevs.ch`, // Use an email with an allowed domain
     password: "Password123!"
   };
 
@@ -99,7 +99,7 @@ describe("Dashboard, Templates & Collaboration", () => {
   // --- TESTS DE COLLABORATION ---
   describe("Collaboration & Sharing", () => {
     const projectName = "Collaboration Project";
-    const colleagueEmail = `colleague_${Date.now()}@exemple.com`;
+    const colleagueEmail = `colleague_${Date.now()}@hevs.ch`;
 
     before("Create Colleague Account", () => {
       cy.visit("/signup");
@@ -151,7 +151,7 @@ describe("Dashboard, Templates & Collaboration", () => {
     });
 
     it("should show error for non-existent user", () => {
-      const unknown = "nobody@exists.com";
+      const unknown = "nobody_exists@hevs.ch";
       cy.get(UI.shareModal.input).should('be.visible').type(unknown);
       cy.get(UI.shareModal.addButton).click();
 

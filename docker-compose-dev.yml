@@ -56,7 +56,7 @@ services:
       resources:
         limits:
           cpus: '1.0' # Limit to 1 CPU core
-          memory: 1G  # If request > 1Go, the container will be killed
+          memory: 1.5G  # If request > 1.5Go, the container will be killed
         reservations:
           memory: 512M
 
