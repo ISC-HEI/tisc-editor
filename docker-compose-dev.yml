@@ -52,6 +52,13 @@ services:
       bun x prisma db push &&
       bun dev
       "
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0' # Limit to 1 CPU core
+          memory: 1G  # If request > 1Go, the container will be killed
+        reservations:
+          memory: 512M
 
   test:
     image: cypress/included:13.15.0

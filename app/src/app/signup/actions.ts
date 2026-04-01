@@ -3,6 +3,18 @@
 import { signIn } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import{ z } from "zod"
+
+// Only allow emails
+const ALLOWED_DOMAINS = ["gmail.com", "hevs.ch", "hes-so.ch", "edu.vs.ch"] 
+
+// Define Zod schema for validating sign-up form data
+const SignupSchema = z.object({
+  email: z.string().email().refine((val: string) => {
+    return ALLOWED_DOMAINS.some(domain => val.endsWith(`@${domain}`));
+  }).withMessage("Email must be from an allowed domain."),
+  password: z.string().min(8, "8 characters minimum").max(100, "100 characters maximum"),
+});
 
 type ActionResponse = string | null | undefined;
 
@@ -18,31 +30,45 @@ type ActionResponse = string | null | undefined;
  */
 export async function signUpAction(prevState: ActionResponse, formData: FormData): Promise<ActionResponse> {
   try {
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
+
+    // Validate form data using Zod schema
+    const validatedFields = SignupSchema.safeParse(
+      Object.fromEntries(formData.entries())
+    );
+
+    // If validation fails, return the first error message
+    if (!validatedFields.success) {
+
+      return validatedFields.error.issues[0].message;
+    }
+
+    // Extract validated email and password
+    const { email, password } = validatedFields.data;
 
     const existingUser = await prisma.user.findUnique({
       where: { email }
-    })
+    });
 
+    // Verify if the email is already registered
     if (existingUser) {
-      return "User already exists."
+      return "User already registered.";
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
       },
-    })
+    });
+
 
     await signIn("credentials", {
         email,
         password,
         redirectTo: "/dashboard"
-    })
+    });
 
   } catch (error) {
     if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
