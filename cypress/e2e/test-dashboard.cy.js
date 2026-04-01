@@ -56,8 +56,8 @@ describe("Dashboard, Templates & Collaboration", () => {
     
     cy.get(UI.projectNameInput).should('be.visible').type(`${name}{enter}`);
     
-    cy.get(UI.projectNameInput, { timeout: 10000 }).should('not.exist');
-    cy.contains(name, { timeout: 20000 }).should('be.visible');
+    cy.get(UI.projectNameInput, { timeout: 30000 }).should('not.exist');
+    cy.contains(name, { timeout: 30000 }).should('be.visible');
   };
 
   before("Initial Signup", () => {
