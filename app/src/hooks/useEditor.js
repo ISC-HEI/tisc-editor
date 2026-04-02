@@ -151,7 +151,7 @@ export function useEditorWatcher() {
             return () => clearInterval(interval);
         }
 
-        return () => {
+            return () => {
             if (refs.btnBold) refs.btnBold.onclick = null;
             if (refs.btnItalic) refs.btnItalic.onclick = null;
             if (refs.btnUnderline) refs.btnUnderline.onclick = null;
