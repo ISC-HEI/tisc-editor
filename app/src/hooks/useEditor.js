@@ -20,11 +20,18 @@ export let currentFilePath = "root/main.typ"
 /** @type {boolean} Flag to prevent sync conflicts during file switching */
 export let isLoadingFile = false;
 
+/** @type {boolean} Flag to track if there's a compilation error */
+let hasCompilationError = false;
+
 let onPathChangeCallback = null;
 
 /** Extension lists for file access control */
 const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
 const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh', 'scala'];
+
+// Named handlers for event listeners to enable proper cleanup
+let handleExportPdf = null;
+let handleExportSvg = null;
 
 /**
  * Debounced function to sync content, compile the Typst document, 
@@ -40,6 +47,22 @@ const debounceFetchCompile = debounce(async () => {
 
 export function setIsLoadingFile(value) {
     isLoadingFile = value;
+}
+
+/**
+ * Updates the disabled state of export buttons based on compilation errors.
+ */
+function updateExportButtons() {
+    if (refs.btnExportPdf) {
+        refs.btnExportPdf.disabled = hasCompilationError;
+        refs.btnExportPdf.style.opacity = hasCompilationError ? '0.5' : '1';
+        refs.btnExportPdf.style.cursor = hasCompilationError ? 'not-allowed' : 'pointer';
+    }
+    if (refs.btnExportSvg) {
+        refs.btnExportSvg.disabled = hasCompilationError;
+        refs.btnExportSvg.style.opacity = hasCompilationError ? '0.5' : '1';
+        refs.btnExportSvg.style.cursor = hasCompilationError ? 'not-allowed' : 'pointer';
+    }
 }
 
 // ----------------------------------------------------
@@ -65,19 +88,39 @@ function initEditor() {
     refs.btnOpen.addEventListener('click', () => refs.fileInputOpen.click());
     refs.fileInputOpen.addEventListener('change', openAndShowFile);
 
-    refs.btnExportPdf.addEventListener('click', () => {
-        const mainNode = fileTree.children["main.typ"];
-        if (mainNode) {
-            mainNode.data = refs.editor.getValue();
-        }
-        exportPdf(fileTree);
-    });
+    // Create named handlers for export buttons to enable proper cleanup
+    if (!handleExportPdf) {
+        handleExportPdf = () => {
+            if (hasCompilationError) {
+                makeToast("Cannot export: compilation has errors", "error");
+                return;
+            }
+            const mainNode = fileTree.children["main.typ"];
+            if (mainNode) {
+                mainNode.data = refs.editor.getValue();
+            }
+            exportPdf(fileTree);
+        };
+    }
 
-    refs.btnExportSvg.addEventListener('click', async () => {
-        exportSvg(await fetchSvg({ children: fileTree.children }));
-    });
+    if (!handleExportSvg) {
+        handleExportSvg = async () => {
+            if (hasCompilationError) {
+                makeToast("Cannot export: compilation has errors", "error");
+                return;
+            }
+            exportSvg(await fetchSvg({ children: fileTree.children }));
+        };
+    }
+
+    // Attach handlers only once
+    refs.btnExportPdf.addEventListener('click', handleExportPdf);
+    refs.btnExportSvg.addEventListener('click', handleExportSvg);
 
     setupResizable();
+    
+    // Initialize export button states
+    updateExportButtons();
 
     if (!infos.currentProjectId || !infos.defaultFileTree) {
         return
@@ -113,8 +156,14 @@ export function useEditorWatcher() {
             if (refs.btnItalic) refs.btnItalic.onclick = null;
             if (refs.btnUnderline) refs.btnUnderline.onclick = null;
             if (refs.btnSave) refs.btnSave.onclick = null;
-            if (refs.btnExportPdf) refs.btnExportPdf = null;
-            if (refs.btnExportSvg) refs.btnExportSvg = null;
+            
+            // Remove event listeners for export buttons
+            if (refs.btnExportPdf && handleExportPdf) {
+                refs.btnExportPdf.removeEventListener('click', handleExportPdf);
+            }
+            if (refs.btnExportSvg && handleExportSvg) {
+                refs.btnExportSvg.removeEventListener('click', handleExportSvg);
+            }
         };
     }, []);
 }
@@ -176,6 +225,8 @@ export async function fetchCompile() {
             });
 
             const hasError = result.logs.some(log => log.type === 'error');
+            hasCompilationError = hasError;
+            updateExportButtons();
     
             if (hasError) {
                 window.dispatchEvent(new CustomEvent('open-log-pane'));
@@ -184,6 +235,8 @@ export async function fetchCompile() {
 
 
         if (result.success && result.svg) {
+            hasCompilationError = false;
+            updateExportButtons();
             refs.page.innerHTML = result.svg;
         } else {
             let errorMessage = "Unknown compilation error";
@@ -192,6 +245,9 @@ export async function fetchCompile() {
                 const errorLog = result.logs.find(l => l.type === 'error');
                 if (errorLog) errorMessage = errorLog.msg;
             }
+
+            hasCompilationError = true;
+            updateExportButtons();
 
             refs.page.innerHTML = `
                 <div class="p-8 text-red-600 font-mono text-sm bg-red-50 h-full overflow-auto">
@@ -212,6 +268,9 @@ export async function fetchCompile() {
             type: 'error', 
             msg: `Network or Server Error: ${err.message}`
         });
+
+        hasCompilationError = true;
+        updateExportButtons();
 
         refs.page.innerHTML = `
             <div class="flex items-center justify-center h-full text-slate-400 text-sm italic">
