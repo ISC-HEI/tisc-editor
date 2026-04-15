@@ -5,6 +5,7 @@ import os from 'os';
 import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 
+const LATEST_TEMPLATE_VERSION = "0.7.0"; 
 
 // ---------- Helper functions ---------- 
 
@@ -50,7 +51,12 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
         }
         
         if (fileName.endsWith('.typ')) {
-            const textContent = decodeContent(node.data);
+            let textContent = decodeContent(node.data);
+            textContent = textContent.replace(
+                /(@preview\/(?:exec-summary|bthesis|report)):[0-9]+\.[0-9]+\.[0-9]+/g,
+                `$1:${LATEST_TEMPLATE_VERSION}`
+            );
+
             fs.writeFileSync(currentPath, textContent, 'utf-8');
         } else {
             const base64Data = node.data.includes(',') ? node.data.split(',')[1] : node.data;
