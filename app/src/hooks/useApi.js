@@ -36,7 +36,8 @@ export async function fetchSvg(fileTree) {
         });
 
         if (!response.ok) {
-            throw new Error(`Erreur compilation: ${response}`);
+            const errorText = await response.text();
+            throw new Error(`Erreur compilation: ${errorText || response.statusText}`);
         }
 
         return await response.text();
@@ -46,7 +47,6 @@ export async function fetchSvg(fileTree) {
     }
 }
 
-// ----------------------------------------------------
 
 /**
  * Compiles the project and triggers a browser download for the resulting PDF file.

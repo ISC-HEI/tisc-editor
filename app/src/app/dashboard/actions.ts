@@ -105,6 +105,29 @@ export async function createProject(formData: FormData) {
     revalidatePath("/")
 }
 
+export async function getUserStorage() {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { 
+            storageQuota: true,
+            projects: { select: { fileTree: true } }
+        }
+    });
+
+    if (!user) return null;
+
+    const usage = user.projects.reduce((acc: number, p: { fileTree: any; }) => acc + JSON.stringify(p.fileTree).length, 0);
+    
+    return {
+        usage,
+        limit: user.storageQuota,
+        percentage: (usage / user.storageQuota) * 100
+    };
+}
+
 /**
  * Recursively fetches a directory structure from GitHub and converts it into a local FileNode tree.
  * @param {string} url - GitHub API URL for the directory.

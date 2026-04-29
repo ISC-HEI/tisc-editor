@@ -65,7 +65,6 @@ function updateExportButtons() {
     }
 }
 
-// ----------------------------------------------------
 
 /**
  * Attaches event listeners to UI components (buttons, inputs) 

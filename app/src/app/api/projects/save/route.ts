@@ -1,19 +1,37 @@
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { checkUserQuota } from "@/lib/quota-service";
 
-/**
- * API Route Handler for persisting the project's file tree.
- * Updates the 'fileTree' JSON field in the database for a specific project.
- * * @param {Request} req - The incoming Next.js Request object containing the project ID and the updated file tree.
- * @returns {Promise<NextResponse>} A JSON response indicating the success of the update operation.
- */
 export async function POST(req: Request) {
-    const { id, fileTree } = await req.json();
-    
-    await prisma.project.update({
-        where: { id: id },
-        data: { fileTree }
-    });
+    const session = await auth();
 
-    return NextResponse.json({ success: true });
+    if (!session?.user?.id) {
+        return new NextResponse("Pas de session", { status: 401 });
+    }
+
+    try {
+        const { id, fileTree } = await req.json();
+        
+        const dataSize = JSON.stringify(fileTree).length;
+     
+        const quota = await checkUserQuota(session.user.id, dataSize);
+
+        if (!quota.allowed) {
+            return new NextResponse(
+                `Quota dépassé (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(quota.limit / 1024 / 1024).toFixed(2)}MB)`,
+                { status: 403 }
+            );
+        }
+
+        await prisma.project.update({
+            where: { id: id },
+            data: { fileTree }
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Erreur lors de la sauvegarde :", error);
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
 }

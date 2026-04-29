@@ -11,6 +11,7 @@ model User {
   email          String   @unique @db.VarChar(60)
   password       String
   projects       Project[]
+  storageQuota Int    @default(10485760)
 
   sharedProjects String[] @map("shared_projects") @db.Uuid
 

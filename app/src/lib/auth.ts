@@ -9,6 +9,8 @@ import bcrypt from 'bcryptjs';
  * This file handles the database adapter, credential validation, 
  * and session augmentation (JWT/Session callbacks).
  */
+
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   pages: {

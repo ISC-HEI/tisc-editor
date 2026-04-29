@@ -6,8 +6,9 @@ import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 
 const LATEST_TEMPLATE_VERSION = "0.7.0"; 
+const MAX_SESSION_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; 
 
-// ---------- Helper functions ---------- 
 
 /**
  * Decodes file content, converting Base64 encoded strings into 
@@ -30,7 +31,7 @@ function decodeContent(data: string) {
  * @param {Object} accumulator - Tracking object to store created paths for cleanup.
  * @returns {Object} An object containing Sets of created file and directory paths.
  */
-function writeImages(children: any = {}, baseDir: string, accumulator = { files: new Set<string>(), dirs: new Set<string>() }) {
+function writeImages(children: any = {}, baseDir: string, accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 }) {
   for (const fileName in children) {
     const node = children[fileName];
     const currentPath = path.join(baseDir, node.name || fileName);
@@ -44,12 +45,8 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
     } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
-        const dir = path.dirname(currentPath);
-        if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-          accumulator.dirs.add(dir);
-        }
-        
+        let buffer: Buffer;
+
         if (fileName.endsWith('.typ')) {
             let textContent = decodeContent(node.data);
             textContent = textContent.replace(
@@ -57,15 +54,32 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
                 `$1:${LATEST_TEMPLATE_VERSION}`
             );
 
-            fs.writeFileSync(currentPath, textContent, 'utf-8');
+            buffer = Buffer.from(textContent, 'utf-8');
         } else {
             const base64Data = node.data.includes(',') ? node.data.split(',')[1] : node.data;
-            fs.writeFileSync(currentPath, Buffer.from(base64Data, 'base64'));
+            buffer = Buffer.from(base64Data, 'base64');
         }
         
+        const fileSize = buffer.length;
+        if (fileSize > MAX_FILE_SIZE) {
+          throw new Error(`File ${fileName} is too heavy (${(fileSize / 1024 / 1024).toFixed(2)}MB). Max 5MB.`);
+        }
+
+        accumulator.totalSize += fileSize;
+        if (accumulator.totalSize > MAX_SESSION_SIZE) {
+          throw new Error(`Total project size exceeds session quota (10MB).`);
+        }
+
+        const dir = path.dirname(currentPath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+          accumulator.dirs.add(dir);
+        }
+
+        fs.writeFileSync(currentPath, buffer);
         accumulator.files.add(currentPath);
       } catch (err) {
-        console.error(`Error writing ${currentPath}:`, err);
+        throw err;
       }
     }
   }
