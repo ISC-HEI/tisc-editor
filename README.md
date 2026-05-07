@@ -1,10 +1,15 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/ISC-HEI/isc-logos/main/white/ISC%20Logo%20inline%20white%20v3%20-%20large.webp">
+  <img align="right" src="https://raw.githubusercontent.com/ISC-HEI/isc-logos/main/black/ISC%20Logo%20inline%20black%20v3%20-%20large.webp" alt="ISC Logo" height="50"/>
+</picture>
+
 <div align="center">
     <img alt="Tisc logo" src="./.github/assets/banner.jpg">
     <h1>
         TISC Editor
     </h1>
   
-  <p><strong>A professional, full-stack solution for cloud-based Typst authoring.</strong></p>
+  <p><strong>A full-stack solution for cloud-based Typst authoring.</strong></p>
 
   <div>
     <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
