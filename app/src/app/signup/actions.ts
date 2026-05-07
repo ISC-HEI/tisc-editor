@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs"
 import{ z } from "zod"
 
 // Only allow emails
-const ALLOWED_DOMAINS = ["gmail.com", "hevs.ch", "hes-so.ch", "edu.vs.ch"] 
+const ALLOWED_DOMAINS = ["hevs.ch", "hes-so.ch", "edu.vs.ch"] 
 
 // Define Zod schema for validating sign-up form data
 const SignupSchema = z.object({

@@ -19,6 +19,7 @@ export let refs = {
   btnExportPdf: null,
   btnExportSvg: null,
   btnCreateFile: null,
+  btnLang: null,
 
   fileInputOpen: null,
 
@@ -79,3 +80,30 @@ export const initPreviewInfos = (elements) => {
 export const initPreviewFunctions = (elements) => {
   functions = { ...functions, ...elements };
 }
+
+export const applyLanguageToTypst = (langCode) => {
+  if (!refs.editor) return;
+
+  // 1. Injecter la règle dans le texte (pour Typst)
+  const content = refs.editor.state?.doc?.toString() || refs.editor.getValue();
+  const langRegex = /^#set text\(lang: ".*"\)\s*\n?/;
+  const newRule = `#set text(lang: "${langCode}")\n`;
+  
+  let newContent = langRegex.test(content) 
+    ? content.replace(langRegex, newRule) 
+    : newRule + content;
+
+  // Update texte
+  if (refs.editor.dispatch) {
+    refs.editor.dispatch({ changes: { from: 0, to: content.length, insert: newContent } });
+  } else {
+    refs.editor.setValue(newContent);
+  }
+
+  // 2. ACTIVER LE SPELLCHECK (Pour l'Issue #48)
+  const editorElement = document.querySelector('.cm-content') || document.querySelector('.monaco-editor textarea');
+  if (editorElement) {
+    editorElement.setAttribute('lang', langCode);
+    editorElement.setAttribute('spellcheck', 'true');
+  }
+};

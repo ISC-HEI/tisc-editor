@@ -44,7 +44,7 @@ describe("Authentication Flow", () => {
     });
 
     it("should create an account and redirect to dashboard", () => {
-      const uniqueEmail = `testuser+${Date.now()}@gmail.com`; // Use an email with an allowed domain
+      const uniqueEmail = `testuser+${Date.now()}@edu.vs.ch`; // Use an email with an allowed domain
       
       cy.get(UI.emailInput).type(uniqueEmail);
       cy.get(UI.passwordInput).type("SecurePass123{enter}");
