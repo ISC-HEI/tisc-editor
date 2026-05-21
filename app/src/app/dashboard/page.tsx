@@ -1,4 +1,4 @@
-import { getUserProjects } from "./actions"
+import { getUserProjects, getUserStorage } from "./actions"
 import { ProjectList } from "../../components/Dashboard/ProjectList"
 import Footer from "../../components/Footer"
 import CreateProjectModal from "../../components/Dashboard/CreateProjectModal"
@@ -8,6 +8,7 @@ import StorageBar from "@/components/Dashboard/StorageBar"
 
 export default async function Dashboard() {
   const projects = await getUserProjects()
+  const storage = await getUserStorage()
   
   const totalProjects = projects.length
   const sharedProjects = projects.filter((p: any) => p.sharedUsers?.length > 0 && p.isAuthor).length
@@ -16,7 +17,7 @@ export default async function Dashboard() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-row">
       
-      <StorageBar />
+      <StorageBar storage={storage} />
 
       <main className="flex-grow py-12 px-6 overflow-y-auto">
         <div className="max-w-5xl mx-auto">
@@ -24,7 +25,7 @@ export default async function Dashboard() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-1 bg-blue-600 rounded-full" suppressHydrationWarning={true} />
+                <div className="h-8 w-1 bg-blue-600 rounded-full" />
                 <span className="text-blue-600 font-bold text-xs uppercase tracking-widest">Workspace</span>
               </div>
               <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h1>

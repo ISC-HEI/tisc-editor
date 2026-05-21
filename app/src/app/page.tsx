@@ -7,17 +7,53 @@ const Editor = dynamic(() => import("../components/Editor/Editor"), {
   loading: () => <h2>The editor is loading</h2>
 })
 
-type FileTree = {
+type FileNode = {
   type: "folder" | "file";
   name: string;
-  children: Record<string, FileTree>;
+  fullPath?: string;
+  data?: string;
+  content?: string;
+  isMain?: boolean;
+  children?: Record<string, FileNode>;
 };
 
-export default async function Page({ searchParams, }: { searchParams: Promise<{ projectId?: string }> }) {
+
+function normalizeFileTree(value: any): FileNode {
+  if (!value || typeof value !== "object") {
+    return { type: "folder", name: "root", children: {} };
+  }
+
+  if (value.type === "file") {
+    return {
+      type: "file",
+      name: String(value.name ?? ""),
+      fullPath: value.fullPath ?? value.name ?? "",
+      data: value.data ?? "",
+      content: value.content ?? undefined,
+      isMain: value.isMain === true,
+    };
+  }
+
+
+  const normalizedChildren: Record<string, FileNode> = {};
+  if (value.children && typeof value.children === "object") {
+    for (const [key, child] of Object.entries(value.children)) {
+      normalizedChildren[key] = normalizeFileTree(child);
+    }
+  }
+
+  return {
+    type: "folder",
+    name: String(value.name ?? "root"),
+    children: normalizedChildren,
+  };
+}
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ projectId?: string }> }) {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
-    redirect("/login"); 
+    redirect("/login");
   }
 
   const { projectId } = await searchParams;
@@ -30,24 +66,6 @@ export default async function Page({ searchParams, }: { searchParams: Promise<{ 
 
   if (!project) {
     redirect("/dashboard");
-  }
-
-  function normalizeFileTree(value: any): FileTree {
-    if (
-      value &&
-      typeof value === "object" &&
-      value.type &&
-      value.name &&
-      typeof value.children === "object"
-    ) {
-      return {
-        type: value.type === "file" ? "file" : "folder",
-        name: String(value.name),
-        children: value.children ?? {},
-      };
-    }
-
-    return { type: "folder", name: "root", children: {} };
   }
 
   const projectData = {

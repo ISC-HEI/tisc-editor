@@ -1,18 +1,7 @@
-"use client";
-import { useState, useEffect } from "react";
-import { getUserStorage } from "@/app/dashboard/actions";
-
-export default function StorageBar() {
-    const [storage, setStorage] = useState(null);
-
-    useEffect(() => {
-        
-        getUserStorage().then(data => {
-            if (data) setStorage(data);
-        });
-    }, []);
-
-    if (!storage) return <div className="h-12 w-full bg-gray-50 animate-pulse rounded-lg" />;
+export default function StorageBar({ storage }) {
+    if (!storage) {
+        return <div className="h-12 w-full bg-gray-50 rounded-lg" />;
+    }
 
     return (
         <div className="mt-auto p-4 border-t border-gray-100">

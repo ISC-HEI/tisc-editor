@@ -3,8 +3,9 @@ import { ProjectActions } from "./ProjectAction"
 import { Folder, Users, ChevronRight } from "lucide-react"
 
 export function ProjectCard({ project }) {
-  const isSharedWithMe = !project.isAuthor;
-  const isShared = project.sharedUsers.length != 0 && !isSharedWithMe
+  // On utilise les propriétés injectées par notre action getUserProjects
+  const isAuthor = project.isAuthor; 
+  const isSharedWithMe = !isAuthor;
 
   return (
     <div className="group relative bg-white border border-slate-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex items-center justify-between">
@@ -32,9 +33,14 @@ export function ProjectCard({ project }) {
                 Guest
               </span>
             )}
-            {isShared && (
-              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md">
-                Shared
+            
+            {/* 
+               Si le rôle est 'owner' mais que c'est un système de partage, 
+               tu pourras ajouter une logique plus tard pour le badge "Shared"
+            */}
+            {!isSharedWithMe && project.role === 'owner' && (
+              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md">
+                Owner
               </span>
             )}
           </div>
@@ -51,9 +57,9 @@ export function ProjectCard({ project }) {
       <div className="ml-4 pl-4 border-l border-slate-100">
         <ProjectActions
           projectId={project.id}
-          usersSharing={project.sharedUsers}
           title={project.title}
-          isAuthor={project.isAuthor}
+          isAuthor={isAuthor}
+          usersSharing={project.usersSharing}
         />
       </div>
     </div>

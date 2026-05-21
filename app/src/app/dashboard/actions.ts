@@ -10,198 +10,358 @@ interface FileNode {
     fullPath?: string;
     data?: string;
     content?: string;
-    isMain?: boolean,
+    isMain?: boolean;
     children?: { [key: string]: FileNode };
 }
 
-const fetchOptions = {
-    headers: {
-        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+function getFetchOptions(useAuth = true) {
+    const headers: Record<string, string> = {
         'User-Agent': 'TISC-Editor-App'
-    },
-    next: { revalidate: 86400 }
-};
+    };
 
-/**
- * Retrieves all projects associated with the current user.
- * Includes both owned projects and projects shared with the user.
- * @returns {Promise<Array>} List of projects with an 'isAuthor' flag.
- * @throws {Error} If the user is not authenticated.
- */
+    if (useAuth && process.env.GITHUB_TOKEN) {
+        headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
+
+    return {
+        headers,
+        next: { revalidate: 86400 }
+    };
+}
+
+async function fetchGitHub(url: string) {
+    const authResponse = await fetch(url, getFetchOptions(true));
+    if (
+        process.env.GITHUB_TOKEN &&
+        (authResponse.status === 401 ||
+            (authResponse.status === 404 && url.includes("raw.githubusercontent.com")))
+    ) {
+        console.warn(`GitHub token invalid or blocked, retrying without auth for ${url}`);
+        return await fetch(url, getFetchOptions(false));
+    }
+    return authResponse;
+}
+
+
+
 export async function getUserProjects() {
+
     const session = await auth()
-    if (!session?.user?.id) throw new Error("No authorization")
+
+    if (!session?.user?.id) {
+        throw new Error("No authorization")
+    }
 
     const userId = session.user.id
 
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { sharedProjects: true }
-    })
-    const sharedIds = user?.sharedProjects || []
-
-    const projects = await prisma.project.findMany({
+    const assignments = await prisma.projectAssignment.findMany({
         where: {
-            OR: [
-                { userId: userId },
-                { id: { in: sharedIds } }
-            ]
+            userId
         },
-        orderBy: { id: 'desc' }
+        include: {
+            project: {
+                include: {
+                    userLinks: true
+                }
+            }
+        },
+        orderBy: {
+            project: {
+                id: 'desc'
+            }
+        }
     })
 
-    return projects.map((project: any) => ({
-        ...project,
-        isAuthor: project.userId === userId
+    return assignments.map((a: { project: any; role: string; }) => ({
+        ...a.project,
+        isAuthor: a.role === 'owner',
+        role: a.role,
+        usersSharing: a.project.userLinks
+            .filter((link: any) => link.userId !== userId)
+            .map((link: any) => link.userId)
     }))
 }
 
-/**
- * Creates a new project. 
- * Can initialize from a "blank" state or import a template from the Typst package repository.
- * @param {FormData} formData - Contains 'title', 'template' (package ID), and 'entryFile'.
- */
-export async function createProject(formData: FormData) {
+export async function getProjectAssignmentRole(projectId: string) {
     const session = await auth()
-    if (!session?.user?.id) throw new Error("No authorization")
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const assignment = await prisma.projectAssignment.findUnique({
+        where: {
+            userId_projectId: {
+                userId: session.user.id,
+                projectId
+            }
+        }
+    })
+
+    return assignment?.role ?? null
+}
+
+
+export async function createProject(formData: FormData) {
+
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("No authorization")
+    }
+
+    const userId = session.user.id
 
     const title = formData.get("title") as string
     const packageId = formData.get("template") as string
     const entryFile = formData.get("entryFile") as string
 
-    if (!title || !packageId) return
+    if (!title || !packageId) {
+        return
+    }
 
-    let projectData = { 
+    let projectData = {
         fileTree: {
             type: "folder" as const,
             name: "root",
             children: {} as Record<string, FileNode>
         }
-    };
+    }
 
     if (packageId !== "blank") {
-        const imported = await importPackageAsTree(packageId, entryFile);
+
+        const imported = await importPackageAsTree(
+            packageId,
+            entryFile
+        )
+
         if (imported) {
-            projectData.fileTree = imported.fileTree as any;
+            projectData.fileTree = imported.fileTree as any
+        } else {
+            throw new Error("Template import failed.")
         }
+
     } else {
+
         projectData.fileTree.children["main.typ"] = {
             type: 'file',
             name: "main.typ",
             fullPath: "main.typ",
             isMain: true,
             data: ""
-        };
+        }
     }
 
     await prisma.project.create({
         data: {
-            title: title,
-            userId: session.user.id,
+            title,
             fileTree: projectData.fileTree as any,
+            userLinks: {
+                create: {
+                    user: {
+                        connect: {
+                            id: userId
+                        }
+                    },
+                    role: "owner"
+                }
+            }
         }
     })
 
-    revalidatePath("/")
+    revalidatePath("/dashboard")
 }
 
+
+function calcFileTreeSize(node: any): number {
+    if (!node) return 0;
+    let size = 0;
+
+    if (node.type === 'file' && node.data) {
+        const data = node.data as string;
+        if (data.startsWith('data:')) {
+            // Fichier binaire encodé en base64 — calculer la taille réelle décodée
+            const base64 = data.split(',')[1] ?? '';
+            // Soustraire les caractères de padding '='
+            const padding = (base64.match(/=+$/) || [''])[0].length;
+            size += Math.round((base64.length * 3) / 4) - padding;
+        } else {
+            // Fichier texte brut (ex: main.typ)
+            size += new TextEncoder().encode(data).length;
+        }
+    }
+
+    if (node.children) {
+        for (const child of Object.values(node.children) as any[]) {
+            size += calcFileTreeSize(child);
+        }
+    }
+
+    return size;
+}
+
+
 export async function getUserStorage() {
-    const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
+
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
 
     const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { 
+        where: {
+            id: userId
+        },
+        select: {
             storageQuota: true,
-            projects: { select: { fileTree: true } }
+            projectLinks: {
+                include: {
+                    project: {
+                        select: {
+                            fileTree: true
+                        }
+                    }
+                }
+            }
         }
-    });
+    })
 
-    if (!user) return null;
+    if (!user) {
+        return null
+    }
 
-    const usage = user.projects.reduce((acc: number, p: { fileTree: any; }) => acc + JSON.stringify(p.fileTree).length, 0);
-    
+    // Calcul de la taille réelle des fichiers (et non de la longueur JSON)
+    const usage = user.projectLinks.reduce((acc: number, link: { project: { fileTree: any } }) => {
+        return acc + calcFileTreeSize(link.project.fileTree)
+    }, 0)
+
     return {
         usage,
         limit: user.storageQuota,
         percentage: (usage / user.storageQuota) * 100
-    };
+    }
 }
 
-/**
- * Recursively fetches a directory structure from GitHub and converts it into a local FileNode tree.
- * @param {string} url - GitHub API URL for the directory.
- * @param {string} currentPath - Cumulative path for internal file tracking.
- * @param {string} templateFile - The main entry file to skip during initial recursion.
- * @returns {Promise<Object>} A mapped object of FileNodes.
- */
-const buildTreeFromGitHub = async (url: string, currentPath: string = "", templateFile = ""): Promise<{ [key: string]: FileNode }> => {
-    const response = await fetch(url, fetchOptions);
-    if (response.status === 403) throw new Error("GitHub API Rate limit exceeded.");
 
-    const items = await response.json();
-    if (!Array.isArray(items)) return {};
+const buildTreeFromGitHub = async (
+    url: string,
+    currentPath: string = "",
+    templateFile = ""
+): Promise<{ [key: string]: FileNode }> => {
 
-    const children: { [key: string]: FileNode } = {};
+    const response = await fetchGitHub(url)
+
+    if (!response.ok) {
+        if (response.status === 403) {
+            throw new Error("GitHub API rate limit exceeded.");
+        }
+        throw new Error(`GitHub API error ${response.status} ${response.statusText}`);
+    }
+
+    const items = await response.json()
+
+    if (!Array.isArray(items)) {
+        return {}
+    }
+
+    const children: { [key: string]: FileNode } = {}
 
     for (const item of items) {
-        if (item.name.startsWith('.') || item.name.endsWith('.md') || item.name === "LICENSE" || item.name === templateFile) {
-            continue;
-        }
 
-        const newPath = currentPath === "" ? `${item.name}` : `${currentPath}/${item.name}`;
+        const newPath =
+            currentPath === ""
+                ? `${item.name}`
+                : `${currentPath}/${item.name}`
+
+        if (
+            item.name.startsWith('.') ||
+            item.name.endsWith('.md') ||
+            item.name === "LICENSE" ||
+            newPath === templateFile
+        ) {
+            continue
+        }
 
         if (item.type === 'dir') {
             children[item.name] = {
                 type: 'folder',
                 name: item.name,
-                children: await buildTreeFromGitHub(item.url, newPath, templateFile)
-            };
+                children: await buildTreeFromGitHub(
+                    item.url,
+                    newPath,
+                    templateFile
+                )
+            }
         } else {
             children[item.name] = {
                 type: 'file',
                 name: item.name,
                 fullPath: newPath,
-                data: await getFileContentAsBase64(item.download_url)
-            };
+                data: await getFileContentAsBase64(
+                    item.download_url
+                )
+            }
         }
     }
-    return children;
-};
 
-/**
- * Downloads a file from GitHub and encodes it as a Base64 Data URL.
- * Necessary for storing images and binary assets in the JSON file tree.
- * @param {string} url - The raw download URL.
- */
-async function getFileContentAsBase64(url: string) {
-    const response = await fetch(url, fetchOptions);
-    if (!response.ok) return "";
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString('base64');
-
-    return `data:application/octet-stream;base64,${base64}`;
+    return children
 }
 
-/**
- * Orchestrates the import of a Typst package from GitHub.
- * Fetches the directory structure and the main template file content.
- * @param {string} packageName - The full name/version of the package (e.g., "charged-ieee/0.1.0").
- * @param {string} templateFile - The entry point file name defined in the package.
- * @returns {Promise<Object|null>} An object containing the formatted fileTree or null on failure.
- */
-export const importPackageAsTree = async (packageName: string, templateFile: string) => {
-    const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${packageName}`;
+
+async function getFileContentAsBase64(url: string) {
+
+    const response = await fetchGitHub(url)
+
+    if (!response.ok) {
+        throw new Error(`Unable to download file from GitHub: ${response.status} ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+
+    const buffer = Buffer.from(arrayBuffer)
+
+    const base64 = buffer.toString('base64')
+
+    return `data:application/octet-stream;base64,${base64}`
+}
+
+
+export const importPackageAsTree = async (
+    packageName: string,
+    templateFile: string
+) => {
+
+    if (!packageName || !templateFile) {
+        throw new Error("Invalid package name or template file.");
+    }
+
+    const safePackageName = packageName.split('/').map(encodeURIComponent).join('/');
+    const safeTemplateFile = encodeURIComponent(templateFile);
+
+    const url =
+        `https://api.github.com/repos/typst/packages/contents/packages/preview/${safePackageName}`
 
     try {
-        const treeData = await buildTreeFromGitHub(url, "", templateFile);
 
-        const response = await fetch(`https://raw.githubusercontent.com/typst/packages/main/packages/preview/${packageName}/${templateFile}`, fetchOptions);
-        const content = await response.text();
-        
-        const mainFileName = "main.typ";
+        const treeData = await buildTreeFromGitHub(
+            url,
+            "",
+            templateFile
+        )
+
+        const rawUrl = `https://raw.githubusercontent.com/typst/packages/main/packages/preview/${safePackageName}/${safeTemplateFile}`;
+        const response = await fetchGitHub(rawUrl)
+
+        if (!response.ok) {
+            throw new Error(`Unable to download template "${templateFile}" from GitHub: ${response.status} ${response.statusText} (${rawUrl})`)
+        }
+
+        const content = await response.text()
+
+        const mainFileName = "main.typ"
 
         treeData[mainFileName] = {
             type: 'file',
@@ -209,7 +369,7 @@ export const importPackageAsTree = async (packageName: string, templateFile: str
             fullPath: mainFileName,
             isMain: true,
             data: content.replace(/\0/g, '')
-        };
+        }
 
         return {
             fileTree: {
@@ -217,190 +377,519 @@ export const importPackageAsTree = async (packageName: string, templateFile: str
                 name: "root",
                 children: treeData
             }
-        };
-    } catch (error) {
-        console.error(error);
-        return null;
-    }
-};
+        }
 
-/**
- * Permanently deletes a project from the database.
- * Security: Validates that the requesting user is the actual owner of the project.
- * @param {FormData} formData - Must contain the 'id' of the project to delete.
- */
+    } catch (error) {
+
+        console.error("Template import error:", error)
+
+        throw new Error(`Template import failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+}
+
+
 export async function deleteProject(formData: FormData) {
+
     const session = await auth()
-    if (!session?.user?.id) throw new Error("No authorization")
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
 
     const projectId = formData.get("id") as string
 
-    if (!projectId) return
+    if (!projectId) {
+        throw new Error("Missing project id")
+    }
 
-    await prisma.project.delete({
+    return await prisma.$transaction(async (tx: { projectAssignment: { findUnique: (arg0: { where: { userId_projectId: { userId: string; projectId: string; }; }; }) => any; delete: (arg0: { where: { userId_projectId: { userId: string; projectId: string; }; }; }) => any; }; project: { delete: (arg0: { where: { id: string; }; }) => any; }; }) => {
+
+        const assignment =
+            await tx.projectAssignment.findUnique({
+                where: {
+                    userId_projectId: {
+                        userId,
+                        projectId
+                    }
+                }
+            })
+
+        if (!assignment) {
+            throw new Error("Unauthorized")
+        }
+
+        if (assignment.role !== "owner") {
+            throw new Error("Only project owners can delete the project")
+        }
+
+        await tx.project.delete({
+            where: {
+                id: projectId
+            }
+        })
+
+        revalidatePath("/dashboard")
+
+        return {
+            action: "deleted"
+        }
+    })
+}
+
+
+export async function leaveProject(formData: FormData) {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+    const projectId = formData.get("id") as string
+
+    if (!projectId) {
+        throw new Error("Missing project id")
+    }
+
+    const assignment = await prisma.projectAssignment.findUnique({
         where: {
-            id: projectId,
-            userId: session.user.id
+            userId_projectId: {
+                userId,
+                projectId
+            }
         }
     })
 
-    revalidatePath("/")
+    if (!assignment) {
+        throw new Error("Unauthorized")
+    }
+
+    const membersCount = await prisma.projectAssignment.count({
+        where: {
+            projectId
+        }
+    })
+
+    if (assignment.role === "owner") {
+        if (membersCount === 1) {
+            await prisma.project.delete({
+                where: {
+                    id: projectId
+                }
+            })
+
+            revalidatePath("/dashboard")
+
+            return {
+                action: "deleted"
+            }
+        }
+
+        throw new Error("Vous devez transférer la propriété à un autre membre avant de quitter le projet.")
+    }
+
+    await prisma.projectAssignment.delete({
+        where: {
+            userId_projectId: {
+                userId,
+                projectId
+            }
+        }
+    })
+
+    revalidatePath("/dashboard")
+
+    return {
+        action: "left"
+    }
 }
 
-/**
- * Updates the project's file structure and content in the database.
- * Triggers a path revalidation to ensure the dashboard reflects the latest changes.
- * @param {string} projectId - Unique identifier of the project.
- * @param {string} content - (Optional) Text content of the main file.
- * @param {any} fileTree - The complete JSON structure of the project.
- */
-export async function saveProjectData(projectId: string, content: string, fileTree: any) {
+
+export async function saveProjectData(
+    projectId: string,
+    content: string,
+    fileTree: any
+) {
+
     const session = await auth()
-    if (!session?.user?.id) throw new Error("Non autorisé")
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    const assignment =
+        await prisma.projectAssignment.findUnique({
+            where: {
+                userId_projectId: {
+                    userId,
+                    projectId
+                }
+            }
+        })
+
+    if (!assignment) {
+        throw new Error("Access denied")
+    }
 
     await prisma.project.update({
         where: {
-            id: projectId,
-            userId: session.user.id
+            id: projectId
         },
         data: {
-            fileTree: fileTree
+            fileTree
         }
     })
-    revalidatePath("/")
+
+    revalidatePath("/dashboard")
 }
 
-/**
- * Fetches a project by ID and validates if the current user has access (owner or shared).
- * @param {string} id - The project ID.
- * @returns {Promise<Object|null>} The project data or null if unauthorized/not found.
- */
+
 export async function loadProject(id: string) {
+
     const session = await auth()
-    if (!session?.user?.id) throw new Error("Non autorisé")
-    return await getProjectById(id, session.user.id)
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    return await getProjectById(id, userId)
 }
 
-/**
- * Internal helper to retrieve a project and verify access rights.
- * Checks if the user is either the owner or part of the allowed collaborators.
- * @param {string} projectId - The ID of the project to fetch.
- * @param {string} userId - The ID of the user requesting access.
- * @returns {Promise<Object|null>} The project object if authorized, otherwise null.
- */
-async function getProjectById(projectId: string, userId: string) {
-    const project = await prisma.project.findUnique({
-        where: { id: projectId }
+
+async function getProjectById(
+    projectId: string,
+    userId: string
+) {
+
+    const assignment =
+        await prisma.projectAssignment.findUnique({
+            where: {
+                userId_projectId: {
+                    userId,
+                    projectId
+                }
+            },
+            include: {
+                project: true
+            }
+        })
+
+    if (!assignment) {
+        return null
+    }
+
+    return assignment.project
+}
+
+
+export async function shareProject(
+    projectId: string,
+    sharedUserEmail: string
+) {
+
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    const ownerCheck =
+        await prisma.projectAssignment.findUnique({
+            where: {
+                userId_projectId: {
+                    userId,
+                    projectId
+                }
+            }
+        })
+
+    if (ownerCheck?.role !== "owner") {
+        throw new Error("Only owner can share")
+    }
+
+    const sharedUser =
+        await prisma.user.findUnique({
+            where: {
+                email: sharedUserEmail
+            }
+        })
+
+    if (!sharedUser) {
+        return {
+            error: "Utilisateur non trouvé"
+        }
+    }
+
+
+    if (sharedUser.id === userId) {
+        return {
+            error: "Vous avez déjà accès à ce projet"
+        }
+    }
+
+    // Vérifier si déjà partagé
+    const existing =
+        await prisma.projectAssignment.findUnique({
+            where: {
+                userId_projectId: {
+                    userId: sharedUser.id,
+                    projectId
+                }
+            }
+        })
+
+    if (existing) {
+        return {
+            error: "L'utilisateur a déjà accès"
+        }
+    }
+
+
+    await prisma.projectAssignment.create({
+        data: {
+            userId: sharedUser.id,
+            projectId,
+            role: "editor"
+        }
     })
 
-    if (!project) return null;
+    revalidatePath("/dashboard")
 
-    if (project.userId === userId || project.sharedUsers.includes(userId)) {
-        return project;
+    return {
+        success: true
     }
-
-    return null;
 }
 
-/**
- * Grants access to a project to another user via their email.
- * Uses a Prisma transaction to update both the project's shared list and the user's project list.
- * @param {string} projectId - Target project.
- * @param {string} sharedUserEmail - Email of the collaborator to add.
- * @throws {Error} If user not found or already has access.
- */
-export async function shareProject(projectId: string, sharedUserEmail: string) {
-    const session = await auth();
-    if (!session?.user?.id) throw new Error("Non autorisé");
 
-    const project = await prisma.project.findUnique({
-        where: { id: projectId },
-        select: { sharedUsers: true, userId: true }
-    });
+export async function transferProjectOwnership(
+    projectId: string,
+    newOwnerEmail: string
+) {
+    const session = await auth()
 
-    if (!project) throw new Error("Projet introuvable");
-
-    const sharedUser = await prisma.user.findUnique({ where: { email: sharedUserEmail } });
-    if (!sharedUser) return { error: "User not found" };
-
-    if (project.sharedUsers.includes(sharedUser.id) || project.userId === sharedUser.id) {
-        return { error: "User already has access" };
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
     }
 
-    const [updatedProject, updatedUser] = await prisma.$transaction([
-        prisma.project.update({
-            where: { id: projectId },
-            data: { sharedUsers: { push: sharedUser.id } }
-        }),
-        prisma.user.update({
-            where: { id: sharedUser.id },
-            data: { sharedProjects: { push: projectId } }
-        })
-    ]);
+    const userId = session.user.id
 
-    revalidatePath("/dashboard");
-    return updatedUser;
-}
-
-/**
- * Revokes a user's access to a project.
- * Only the project owner can perform this action.
- */
-export async function removeSharedUser(projectId: string, sharedUserEmail: string) {
-    const session = await auth();
-    if (!session?.user?.id) throw new Error("Unauthorized");
-
-    const [project, userToRemove] = await Promise.all([
-        prisma.project.findUnique({
-            where: { id: projectId },
-            select: { userId: true, sharedUsers: true }
-        }),
-        prisma.user.findUnique({
-            where: { email: sharedUserEmail },
-            select: { id: true, sharedProjects: true }
-        })
-    ]);
-
-    if (!project || !userToRemove) throw new Error("Not found");
-
-    if (project.userId !== session.user.id) {
-        throw new Error("Only owner can remove");
+    if (!projectId || !newOwnerEmail) {
+        throw new Error("Missing project id or new owner email")
     }
 
-    const newSharedUsers = project.sharedUsers.filter((id: string) => id !== userToRemove.id);
-    const newSharedProjects = userToRemove.sharedProjects.filter((id: string) => id !== projectId);
+    const currentOwner =
+        await prisma.projectAssignment.findUnique({
+            where: {
+                userId_projectId: {
+                    userId,
+                    projectId
+                }
+            }
+        })
+
+    if (!currentOwner || currentOwner.role !== "owner") {
+        throw new Error("Only the owner can transfer ownership")
+    }
+
+    const newOwner =
+        await prisma.user.findUnique({
+            where: {
+                email: newOwnerEmail
+            }
+        })
+
+    if (!newOwner) {
+        throw new Error("Utilisateur introuvable")
+    }
+
+    const newOwnerAssignment =
+        await prisma.projectAssignment.findUnique({
+            where: {
+                userId_projectId: {
+                    userId: newOwner.id,
+                    projectId
+                }
+            }
+        })
+
+    if (!newOwnerAssignment) {
+        throw new Error("L'utilisateur n'a pas accès à ce projet")
+    }
 
     await prisma.$transaction([
-        prisma.project.update({
-            where: { id: projectId },
-            data: { sharedUsers: newSharedUsers }
+        prisma.projectAssignment.update({
+            where: {
+                userId_projectId: {
+                    userId: newOwner.id,
+                    projectId
+                }
+            },
+            data: {
+                role: "owner"
+            }
         }),
-        prisma.user.update({
-            where: { id: userToRemove.id },
-            data: { sharedProjects: newSharedProjects }
+        prisma.projectAssignment.update({
+            where: {
+                userId_projectId: {
+                    userId,
+                    projectId
+                }
+            },
+            data: {
+                role: "editor"
+            }
         })
-    ]);
+    ])
 
-    revalidatePath("/dashboard");
-    return { success: true };
+    revalidatePath("/dashboard")
+
+    return {
+        success: true
+    }
 }
 
-/**
- * Resolves a list of user IDs into their corresponding email addresses.
- * Used for displaying the list of collaborators in the UI.
- * @param {string[]} usersId - Array of unique user identifiers.
- * @returns {Promise<Array>} List of objects containing user IDs and emails.
- */
+
+export async function removeSharedUser(
+    projectId: string,
+    sharedUserEmail: string
+) {
+
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    const ownerAssignment =
+        await prisma.projectAssignment.findUnique({
+            where: {
+                userId_projectId: {
+                    userId,
+                    projectId
+                }
+            }
+        })
+
+    if (ownerAssignment?.role !== "owner") {
+        throw new Error("Only owner can remove users")
+    }
+
+    const userToRemove =
+        await prisma.user.findUnique({
+            where: {
+                email: sharedUserEmail
+            }
+        })
+
+    if (!userToRemove) {
+        throw new Error("User not found")
+    }
+
+    if (userToRemove.id === userId) {
+        throw new Error("Owner cannot remove themselves")
+    }
+
+    await prisma.projectAssignment.delete({
+        where: {
+            userId_projectId: {
+                userId: userToRemove.id,
+                projectId
+            }
+        }
+    })
+
+    revalidatePath("/dashboard")
+
+    return {
+        success: true
+    }
+}
+
+
+export async function getProjectUsers(projectId: string) {
+
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const users =
+        await prisma.projectAssignment.findMany({
+            where: {
+                projectId
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true
+                    }
+                }
+            }
+        })
+
+    return users.map((u: { user: { id: any; email: any; }; role: any; }) => ({
+        id: u.user.id,
+        email: u.user.email,
+        role: u.role
+    }))
+}
+
+
 export async function getUsersEmailFromId(usersId: string[]) {
+
     return await prisma.user.findMany({
-        where: { id: { in: usersId } },
-        select: { id: true, email: true }
-    });
+        where: {
+            id: {
+                in: usersId
+            }
+        },
+        select: {
+            id: true,
+            email: true
+        }
+    })
 }
 
-/**
- * Signs the current user out of the application and clears the session.
- */
+
+export async function getProjectMembers(projectId: string) {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    const members = await prisma.projectAssignment.findMany({
+        where: {
+            projectId,
+            userId: { not: userId }
+        },
+        include: {
+            user: { select: { id: true, email: true } }
+        }
+    })
+
+    return members.map((m: { user: { id: any; email: any }; role: any }) => ({
+        id: m.user.id,
+        email: m.user.email,
+        role: m.role
+    }))
+}
+
+
 export async function handleSignOut() {
     await signOut()
 }

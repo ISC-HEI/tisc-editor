@@ -505,8 +505,9 @@ export async function deleteItem(path, fileTree) {
 async function saveFileTree() {
     if (!currentProjectId) return;
     try {
-        await fetch('api/projects/save', {
+        await fetch('api/projects/save', {  // ← slash absolu
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: currentProjectId, fileTree: fileTree })
         });
     } catch (err) {

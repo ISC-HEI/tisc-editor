@@ -3,43 +3,23 @@ import { refs, infos } from "./refs"
 import { addLogToPane, debounce, makeToast } from "./useUtils"
 import { fetchSvg, exportPdf, exportSvg } from "./useApi"
 
-/** * State variables for project management and file tracking  */
-
-/** @type {string|null} The current project ID from the database */
 export let currentProjectId;
-
-/** @type {Object} The hierarchical structure of the project files */
 export let fileTree = { type: "folder", name: "root", children: {} };
-
-/** @type {string} Path of the folder currently being explored */
 export let currentFolderPath = "root";
-
-/** @type {string} Path of the file currently loaded in the editor */
 export let currentFilePath = "root/main.typ"
-
-/** @type {boolean} Flag to prevent sync conflicts during file switching */
 export let isLoadingFile = false;
 
-/** @type {boolean} Flag to track if there's a compilation error */
 let hasCompilationError = false;
-
 let onPathChangeCallback = null;
 
-/** Extension lists for file access control */
 const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
 const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh', 'scala'];
 
-// Named handlers for event listeners to enable proper cleanup
 let handleExportPdf = null;
 let handleExportSvg = null;
 
-/**
- * Debounced function to sync content, compile the Typst document, 
- * and trigger an auto-save to the database.
- */
 const debounceFetchCompile = debounce(async () => {
     if (isLoadingFile) return;
-
     syncFileTreeWithEditor();
     await fetchCompile();
     await autoSave();
@@ -49,9 +29,6 @@ export function setIsLoadingFile(value) {
     isLoadingFile = value;
 }
 
-/**
- * Updates the disabled state of export buttons based on compilation errors.
- */
 function updateExportButtons() {
     if (refs.btnExportPdf) {
         refs.btnExportPdf.disabled = hasCompilationError;
@@ -65,12 +42,6 @@ function updateExportButtons() {
     }
 }
 
-
-/**
- * Attaches event listeners to UI components (buttons, inputs) 
- * and initializes the Monaco editor content.
- * @returns {boolean|undefined} True if initialization was successful.
- */
 function initEditor() {
     if (!refs.editor || !refs.btnBold || !refs.btnItalic || !refs.btnUnderline || !refs.page || !refs.btnSave || !refs.btnOpen || !refs.fileInputOpen || !refs.btnExportPdf || !refs.btnExportSvg || !refs.separator) {
         return
@@ -87,16 +58,11 @@ function initEditor() {
     refs.btnOpen.addEventListener('click', () => refs.fileInputOpen.click());
     refs.fileInputOpen.addEventListener('change', openAndShowFile);
 
-    // Create named handlers for export buttons to enable proper cleanup
     if (!handleExportPdf) {
         handleExportPdf = () => {
             if (hasCompilationError) {
                 makeToast("Cannot export: compilation has errors", "error");
                 return;
-            }
-            const mainNode = fileTree.children["main.typ"];
-            if (mainNode) {
-                mainNode.data = refs.editor.getValue();
             }
             exportPdf(fileTree);
         };
@@ -108,33 +74,31 @@ function initEditor() {
                 makeToast("Cannot export: compilation has errors", "error");
                 return;
             }
-            exportSvg(await fetchSvg({ children: fileTree.children }));
+            fetchSvg(fileTree);
         };
     }
 
-    // Attach handlers only once
     refs.btnExportPdf.addEventListener('click', handleExportPdf);
     refs.btnExportSvg.addEventListener('click', handleExportSvg);
 
     setupResizable();
-    
-    // Initialize export button states
     updateExportButtons();
 
-    if (!infos.currentProjectId || !infos.defaultFileTree) {
-        return
+    if (infos.currentProjectId) {
+        currentProjectId = infos.currentProjectId;
     }
-    currentProjectId = infos.currentProjectId;
-    fileTree = infos.defaultFileTree;
+
+    if (infos.defaultFileTree?.children) {
+        fileTree = infos.defaultFileTree;
+    } else {
+        console.warn("No fileTree loaded → fallback empty project");
+    }
+
     fetchCompile();
 
     return true;
 }
 
-/**
- * React hook that monitors the availability of DOM refs and 
- * initializes the editor once all elements are ready.
- */
 export function useEditorWatcher() {
     const [initialized, setInitialized] = useState(false);
     useEffect(() => {
@@ -150,13 +114,11 @@ export function useEditorWatcher() {
             return () => clearInterval(interval);
         }
 
-            return () => {
+        return () => {
             if (refs.btnBold) refs.btnBold.onclick = null;
             if (refs.btnItalic) refs.btnItalic.onclick = null;
             if (refs.btnUnderline) refs.btnUnderline.onclick = null;
             if (refs.btnSave) refs.btnSave.onclick = null;
-            
-            // Remove event listeners for export buttons
             if (refs.btnExportPdf && handleExportPdf) {
                 refs.btnExportPdf.removeEventListener('click', handleExportPdf);
             }
@@ -167,12 +129,6 @@ export function useEditorWatcher() {
     }, []);
 }
 
-// ----------------------------------------------------
-
-/**
- * Wraps selected text with specific Typst syntax (bold, italic, underline).
- * @param {('bold'|'italic'|'underline')} type - The type of formatting to apply.
- */
 async function applyFormatting(type) {
     const delimiters = {
         bold: ["*", "*"],
@@ -200,13 +156,9 @@ async function applyFormatting(type) {
     await autoSave();
 }
 
-// ----------------------------------------------------
-
-/**
- * Sends the current file tree to the compilation API and 
- * updates the preview pane with the resulting SVG or error messages.
- */
 export async function fetchCompile() {
+    if (!refs.page) return;
+
     refs.page.innerHTML = `
         <div class="flex items-center justify-center h-full w-full bg-gray-50/50">
             <div class="relative">
@@ -217,21 +169,30 @@ export async function fetchCompile() {
     `;
 
     try {
-        const result = JSON.parse(await fetchSvg({ children: fileTree.children }));
-        if (result.logs) {
-            result.logs.forEach(log => {
-                addLogToPane(log);
-            });
+        
+        const raw = await fetchSvg(fileTree);
 
+        if (!raw) {
+            refs.page.innerHTML = `<div class="flex items-center justify-center h-full text-slate-400 text-sm italic">Empty project — start typing to preview.</div>`;
+            return;
+        }
+
+        let result;
+        try {
+            result = JSON.parse(raw);
+        } catch (parseError) {
+            throw new Error(`Compilation API response is not valid JSON:\n${raw}`);
+        }
+
+        if (result.logs) {
+            result.logs.forEach(log => addLogToPane(log));
             const hasError = result.logs.some(log => log.type === 'error');
             hasCompilationError = hasError;
             updateExportButtons();
-    
             if (hasError) {
                 window.dispatchEvent(new CustomEvent('open-log-pane'));
             }
         }
-
 
         if (result.success && result.svg) {
             hasCompilationError = false;
@@ -239,7 +200,6 @@ export async function fetchCompile() {
             refs.page.innerHTML = result.svg;
         } else {
             let errorMessage = "Unknown compilation error";
-            
             if (result.logs) {
                 const errorLog = result.logs.find(l => l.type === 'error');
                 if (errorLog) errorMessage = errorLog.msg;
@@ -262,28 +222,22 @@ export async function fetchCompile() {
         }
     } catch (err) {
         console.error("Critical Fetch Error:", err);
-        
-        addLogToPane({ 
-            type: 'error', 
-            msg: `Network or Server Error: ${err.message}`
-        });
-
+        addLogToPane({ type: 'error', msg: `Network or Server Error: ${err.message}` });
         hasCompilationError = true;
         updateExportButtons();
-
         refs.page.innerHTML = `
-            <div class="flex items-center justify-center h-full text-slate-400 text-sm italic">
-                Connection to compiler lost...
+            <div class="p-8 text-red-600 font-mono text-sm bg-red-50 h-full overflow-auto">
+                <div class="flex items-center gap-2 font-bold mb-4">
+                    <span class="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] uppercase">Compilation Error</span>
+                </div>
+                <div class="bg-white border border-red-200 rounded-lg p-4 shadow-sm">
+                    <pre class="whitespace-pre-wrap leading-relaxed">${err.message}</pre>
+                </div>
             </div>
         `;
     }
 }
-// ----------------------------------------------------
 
-/**
- * Generates a local .typ file and triggers a browser download 
- * of the current editor content.
- */
 export function downloadDocument() {
     const content = refs.editor.getValue();
     if (!content) return;
@@ -291,19 +245,12 @@ export function downloadDocument() {
     const blob = new Blob([content], { type: "text/plain" });
     const filename = `${new Date().toISOString().replace(/[-:.]/g, '')}_typstDocument.typ`;
     const link = document.createElement("a");
-
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
     URL.revokeObjectURL(link.href);
 }
 
-// ----------------------------------------------------
-
-/**
- * Handles local file uploads: reads the file content as text 
- * and loads it into the editor.
- */
 async function openAndShowFile() {
     const file = refs.fileInputOpen.files[0];
     if (!file) return;
@@ -317,17 +264,9 @@ async function openAndShowFile() {
     await autoSave();
 }
 
-// ----------------------------------------------------
-
-/**
- * Synchronizes the local file tree and sends it to the server 
- * for persistent storage.
- */
 async function autoSave() {
     if (!currentProjectId) return;
-
     syncFileTreeWithEditor();
-
     try {
         await fetch('api/projects/save', {
             method: 'POST',
@@ -342,17 +281,11 @@ async function autoSave() {
     }
 }
 
-// ----------------------------------------------------
 let isDragging = false;
 let container;
 
-/**
- * Sets up mouse event listeners for the draggable separator 
- * to resize the editor and preview panes.
- */
 function setupResizable() {
     if (!refs.separator) return;
-
     container = refs.separator.parentElement;
 
     refs.separator.addEventListener('mousedown', (e) => {
@@ -363,12 +296,10 @@ function setupResizable() {
 
     document.addEventListener('mousemove', (e) => {
         if (!isDragging || !container) return;
-
         const containerRect = container.getBoundingClientRect();
         const relativeX = e.clientX - containerRect.left;
         const containerWidth = containerRect.width;
         let percentage = (relativeX / containerWidth) * 100;
-
         const editorSide = container.firstElementChild;
         editorSide.style.flex = `0 0 ${percentage}%`;
     });
@@ -382,13 +313,6 @@ function setupResizable() {
     });
 }
 
-// ----------------------------------------------------
-
-/**
- * Loads a file into the editor based on its path. 
- * Handles binary file restrictions and language detection.
- * @param {string} path - The full path of the file to open (e.g., "root/main.typ").
- */
 export function openFile(path) {
     if (!path || !refs.editor) return;
 
@@ -416,7 +340,6 @@ export function openFile(path) {
 
     const lang = getEditorLanguage(ext);
     const model = refs.editor.getModel();
-
     if (model) {
         refs.monaco.editor.setModelLanguage(model, lang)
     }
@@ -451,20 +374,10 @@ export function openFile(path) {
     }, 150);
 }
 
-/**
- * Registers a callback function to be executed when the active file path changes.
- * @param {Function} cb - The callback function.
- */
 export function setOnPathChange(cb) {
     onPathChangeCallback = cb;
 }
 
-// ----------------------------------------------------
-
-/**
- * Updates the 'fileTree' object with the current value of the Monaco editor.
- * Converts content to Base64 for non-main files.
- */
 export function syncFileTreeWithEditor() {
     if (!refs.editor || !currentFilePath || isLoadingFile) return;
 
@@ -482,7 +395,6 @@ export function syncFileTreeWithEditor() {
 
     if (node && node.type === "file") {
         node.content = content;
-
         if (node.name.endsWith(".typ") || node.name.endsWith(".txt")) {
             node.data = content;
         } else {
@@ -493,59 +405,26 @@ export function syncFileTreeWithEditor() {
     }
 }
 
-// ----------------------------------------------------
-
-/**
- * Maps a file extension to a Monaco-compatible language ID.
- * @param {string} extension - The file extension (e.g., "js", "typ").
- * @returns {string} The corresponding language identifier.
- */
 function getEditorLanguage(extension) {
     if (!extension) return "plaintext";
     const ext = extension.toLowerCase();
-
     switch (ext) {
-        case "typ":
-            return "typst";
-        case "json":
-            return "json";
-        case "yml":
-        case "yaml":
-            return "yaml";
-        case "py":
-            return "python";
-        case "js":
-        case "mjs":
-        case "cjs":
-            return "javascript";
-        case "ts":
-            return "typescript";
-        case "html":
-        case "htm":
-            return "html";
-        case "css":
-            return "css";
-        case "md":
-        case "markdown":
-            return "markdown";
-        case "sh":
-        case "bash":
-            return "shell";
-        case "sql":
-            return "sql";
-        case "cpp":
-        case "cc":
-        case "cxx":
-            return "cpp";
-        case "c":
-            return "c";
-        case "rs":
-            return "rust";
-        case "go":
-            return "go";
-        case "scala":
-            return "scala"
-        default:
-            return "plaintext";
+        case "typ": return "typst";
+        case "json": return "json";
+        case "yml": case "yaml": return "yaml";
+        case "py": return "python";
+        case "js": case "mjs": case "cjs": return "javascript";
+        case "ts": return "typescript";
+        case "html": case "htm": return "html";
+        case "css": return "css";
+        case "md": case "markdown": return "markdown";
+        case "sh": case "bash": return "shell";
+        case "sql": return "sql";
+        case "cpp": case "cc": case "cxx": return "cpp";
+        case "c": return "c";
+        case "rs": return "rust";
+        case "go": return "go";
+        case "scala": return "scala";
+        default: return "plaintext";
     }
 }

@@ -2,13 +2,15 @@ import { downloadBlob, formatDateNow } from "./useUtils";
 
 /**
  * Sends the project file tree to the server to compile it into an SVG string.
- * * @param {Object} fileTree - The hierarchical structure of the project files.
+ * @param {Object} fileTree - The hierarchical structure of the project files.
  * @returns {Promise<string>} The SVG content as a string, or an empty string if compilation fails.
  */
 export async function fetchSvg(fileTree) {
     if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
 
-    const mainPath = findMainFile(fileTree);
+
+    const mainPath = findMainFile(fileTree) || findFirstFile(fileTree) || "main.typ";
+
     const pathParts = mainPath.split('/');
     let current = fileTree;
     
@@ -43,20 +45,21 @@ export async function fetchSvg(fileTree) {
         return await response.text();
     } catch (e) {
         console.error("SVG fetch error:", e);
-        return "";
+        throw e;
     }
 }
 
 
 /**
  * Compiles the project and triggers a browser download for the resulting PDF file.
- * * @param {Object} fileTree - The hierarchical structure of the project files.
+ * @param {Object} fileTree - The hierarchical structure of the project files.
  * @returns {Promise<void>}
  */
 export async function exportPdf(fileTree) {
     if (!fileTree || !fileTree.children) return;
 
-    const mainPath = findMainFile(fileTree);
+    const mainPath = findMainFile(fileTree) || findFirstFile(fileTree) || "main.typ";
+
     const pathParts = mainPath.split('/');
     let current = fileTree;
     
@@ -89,7 +92,6 @@ export async function exportPdf(fileTree) {
         }
 
         const blob = await response.blob();
-        
         downloadBlob(blob, `${formatDateNow()}_typstDocument.pdf`);
         
     } catch (e) {
@@ -99,7 +101,7 @@ export async function exportPdf(fileTree) {
 
 /**
  * Converts a raw SVG string into a Blob and triggers a browser download.
- * * @param {string} svgContent - The raw SVG XML string to export.
+ * @param {string} svgContent - The raw SVG XML string to export.
  */
 export function exportSvg(svgContent) {
     if (!svgContent) return;
@@ -110,19 +112,35 @@ export function exportSvg(svgContent) {
 }
 
 /**
- * Search recursivley the main file of the project.
- * @param {Object} node - The actual node.
- * @returns {string|null} - The full path of the file or null if not found
+ * Cherche récursivement le fichier principal (isMain: true) dans le fileTree.
+ * @param {Object} node - Le nœud courant.
+ * @returns {string|null} - Le fullPath du fichier principal ou null si absent.
  */
 export const findMainFile = (node) => {
+    if (!node) return null;
     if (node.type === "file" && node.isMain) {
         return node.fullPath;
     }
 
     if (node.children) {
-        const childrenArray = Object.values(node.children);
-        for (const child of childrenArray) {
+        for (const child of Object.values(node.children)) {
             const result = findMainFile(child);
+            if (result) return result;
+        }
+    }
+
+    return null;
+};
+
+export const findFirstFile = (node) => {
+    if (!node) return null;
+    if (node.type === "file") {
+        return node.fullPath;
+    }
+
+    if (node.children) {
+        for (const child of Object.values(node.children)) {
+            const result = findFirstFile(child);
             if (result) return result;
         }
     }

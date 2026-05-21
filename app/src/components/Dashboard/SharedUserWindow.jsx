@@ -1,12 +1,15 @@
 "use client"
 import { useState, useTransition } from "react"
-import { shareProject, removeSharedUser } from "@/app/dashboard/actions"
-import { Trash, Plus, Users, X, Mail, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { shareProject, removeSharedUser, transferProjectOwnership } from "@/app/dashboard/actions"
+import { Trash, Plus, Users, X, Mail, Loader2, ArrowRight } from "lucide-react"
 
 export default function SharedUserWindow({ projectId, title, users, onClose, onRemoveSuccess }) {
+    const router = useRouter()
     const [email, setEmail] = useState('')
     const [isPending, startTransition] = useTransition()
     const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
 
     const handleShare = async () => {
         if (!email) return;
@@ -29,6 +32,22 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                 const result = await removeSharedUser(projectId, targetEmail);
                 if (result.success) {
                     onRemoveSuccess(targetEmail);
+                }
+            } catch (err) {
+                setError(err.message);
+            }
+        });
+    }
+
+    const handleTransfer = async (targetEmail) => {
+        setError('');
+        setSuccess('');
+        startTransition(async () => {
+            try {
+                const result = await transferProjectOwnership(projectId, targetEmail);
+                if (result?.success) {
+                    setSuccess("Propriété transférée avec succès.")
+                    router.refresh()
                 }
             } catch (err) {
                 setError(err.message);
@@ -90,6 +109,12 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                         </div>
                     )}
 
+                    {success && (
+                        <div className="mt-3 text-xs font-medium text-emerald-700 bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                            {success}
+                        </div>
+                    )}
+
                     <div className="mt-8" data-test="shared-user-container">
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                             <Users size={14} /> Shared with ({users.length})
@@ -107,18 +132,35 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                                             <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
                                                 {u.email.charAt(0)}
                                             </div>
-                                            <span className="text-sm font-medium text-slate-700 truncate max-w-[180px]">
-                                                {u.email}
-                                            </span>
+                                            <div>
+                                                <span className="text-sm font-medium text-slate-700 truncate max-w-[180px] block">
+                                                    {u.email}
+                                                </span>
+                                                <span className="text-[11px] text-slate-400 uppercase tracking-widest">
+                                                    {u.role === 'owner' ? 'Owner' : 'Editor'}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <button 
-                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                            onClick={() => handleRemove(u.email)}
-                                            disabled={isPending}
-                                            title="Remove access"
-                                        >
-                                            <Trash size={16} />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            {u.role !== 'owner' && (
+                                                <button
+                                                    type="button"
+                                                    className="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-slate-700 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+                                                    onClick={() => handleTransfer(u.email)}
+                                                    disabled={isPending}
+                                                >
+                                                    <ArrowRight size={14} /> Owner
+                                                </button>
+                                            )}
+                                            <button 
+                                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                onClick={() => handleRemove(u.email)}
+                                                disabled={isPending}
+                                                title="Remove access"
+                                            >
+                                                <Trash size={16} />
+                                            </button>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>

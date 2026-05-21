@@ -7,27 +7,34 @@ datasource db {
 }
 
 model User {
-  id             String   @id @default(uuid()) @db.Uuid
-  email          String   @unique @db.VarChar(60)
-  password       String
-  projects       Project[]
-  storageQuota Int    @default(10485760)
-
-  sharedProjects String[] @map("shared_projects") @db.Uuid
+  id           String              @id @default(uuid()) @db.Uuid
+  email        String              @unique @db.VarChar(60)
+  password     String
+  storageQuota Int                 @default(10485760)
+  // Relation via la table pivot
+  projectLinks ProjectAssignment[]
 
   @@map("users")
 }
 
 model Project {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  title        String   @db.VarChar(60)
-  fileTree     Json     @map("file_tree")
+  id        String              @id @default(uuid()) @db.Uuid
+  title     String              @db.VarChar(60)
+  fileTree  Json                @map("file_tree")
+  // Relation via la table pivot
+  userLinks ProjectAssignment[]
 
-  sharedUsers  String[] @map("shared_users") @db.Uuid
-
-  user         User     @relation(fields: [userId], references: [id])
-
-  @@index([userId])
   @@map("projects")
+}
+
+model ProjectAssignment {
+  userId    String  @map("user_id") @db.Uuid
+  projectId String  @map("project_id") @db.Uuid
+  role      String  @default("owner") // "owner" ou "editor"
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+  @@map("project_assignments")
 }

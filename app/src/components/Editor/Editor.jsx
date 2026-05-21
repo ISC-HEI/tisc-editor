@@ -77,8 +77,20 @@ export default function Editor({ projectId, title, fileTree, userId }) {
       return null;
     };
 
-    const mainNode = findMainNode(fileTree) || fileTree?.children?.["main.typ"];
-    let rawData = mainNode?.data || "";
+    const findFirstFileNode = (node) => {
+      if (node.type === "file") return node;
+
+      if (node.children) {
+        for (const child of Object.values(node.children)) {
+          const found = findFirstFileNode(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const mainNode = findMainNode(fileTree) || fileTree?.children?.["main.typ"] || findFirstFileNode(fileTree);
+    let rawData = mainNode?.data || mainNode?.content || "";
 
     if (rawData.startsWith('data:')) {
       try {
