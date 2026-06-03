@@ -1,4 +1,5 @@
 import { downloadBlob, formatDateNow } from "./useUtils";
+import { refs } from "./refs";
 
 /**
  * Sends the project file tree to the server to compile it into an SVG string.
@@ -25,7 +26,7 @@ export async function fetchSvg(fileTree) {
     }
 
     try {
-        const response = await fetch("api/projects/compile", {
+        const response = await fetch("/api/projects/compile", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json" 
@@ -33,7 +34,8 @@ export async function fetchSvg(fileTree) {
             body: JSON.stringify({ 
                 fileTree: fileTree,
                 mainFile: mainPath,
-                format: "svg" 
+                format: "svg",
+                documentFontSize: refs?.editorFontSize || undefined
             })
         });
 
@@ -74,7 +76,7 @@ export async function exportPdf(fileTree) {
     }
 
     try {
-        const response = await fetch("api/projects/compile", {
+        const response = await fetch("/api/projects/compile", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json" 
@@ -82,7 +84,8 @@ export async function exportPdf(fileTree) {
             body: JSON.stringify({ 
                 fileTree: fileTree,
                 mainFile: mainPath,
-                format: "pdf"
+                format: "pdf",
+                documentFontSize: refs?.editorFontSize || undefined
             })
         });
 

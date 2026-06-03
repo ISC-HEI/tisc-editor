@@ -180,13 +180,10 @@ function calcFileTreeSize(node: any): number {
     if (node.type === 'file' && node.data) {
         const data = node.data as string;
         if (data.startsWith('data:')) {
-            // Fichier binaire encodé en base64 — calculer la taille réelle décodée
             const base64 = data.split(',')[1] ?? '';
-            // Soustraire les caractères de padding '='
             const padding = (base64.match(/=+$/) || [''])[0].length;
             size += Math.round((base64.length * 3) / 4) - padding;
         } else {
-            // Fichier texte brut (ex: main.typ)
             size += new TextEncoder().encode(data).length;
         }
     }
@@ -233,7 +230,7 @@ export async function getUserStorage() {
         return null
     }
 
-    // Calcul de la taille réelle des fichiers (et non de la longueur JSON)
+
     const usage = user.projectLinks.reduce((acc: number, link: { project: { fileTree: any } }) => {
         return acc + calcFileTreeSize(link.project.fileTree)
     }, 0)

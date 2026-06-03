@@ -31,7 +31,7 @@ function decodeContent(data: string) {
  * @param {Object} accumulator - Tracking object to store created paths for cleanup.
  * @returns {Object} An object containing Sets of created file and directory paths.
  */
-function writeImages(children: any = {}, baseDir: string, accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 }) {
+function writeImages(children: any = {}, baseDir: string, accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 }, options: { documentFontSize?: number } = {}) {
   for (const fileName in children) {
     const node = children[fileName];
     const currentPath = path.join(baseDir, node.name || fileName);
@@ -41,7 +41,7 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
         fs.mkdirSync(currentPath, { recursive: true });
         accumulator.dirs.add(currentPath);
       }
-      writeImages(node.children, currentPath, accumulator);
+      writeImages(node.children, currentPath, accumulator, options);
     } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
@@ -53,6 +53,10 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
                 /(@preview\/(?:exec-summary|bthesis|report)):[0-9]+\.[0-9]+\.[0-9]+/g,
                 `$1:${LATEST_TEMPLATE_VERSION}`
             );
+
+        if (fileName.endsWith('.typ') && options?.documentFontSize) {
+            textContent = `#set text(size: ${options?.documentFontSize}pt)\n` + textContent;
+        }
 
             buffer = Buffer.from(textContent, 'utf-8');
         } else {
@@ -124,7 +128,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { fileTree, mainFile, format = 'svg' } = body;
+    const { fileTree, mainFile, format = 'svg', documentFontSize } = body;
 
     const mainFileCleanPath = mainFile.replace(/^root\//, "");
     
@@ -132,9 +136,12 @@ export async function POST(req: Request) {
       fs.mkdirSync(workingDir, { recursive: true });
     }
 
-    const { createdFiles: files, createdDirs: dirs } = writeImages(fileTree.children, workingDir);
-    createdFiles = files;
-    createdDirs = dirs;
+    const { createdFiles: files, createdDirs: dirs } = writeImages(
+      fileTree.children,
+      workingDir,
+      undefined,
+      { documentFontSize }
+    );
 
     const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
 

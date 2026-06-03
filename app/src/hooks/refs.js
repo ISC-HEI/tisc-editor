@@ -36,7 +36,10 @@ export let refs = {
 
   separator: null,
 
-  contextMenu: null
+  contextMenu: null,
+
+  // Current editor font size in pixels (used to request scaled compilation)
+  editorFontSize: 14
 };
 
 /**

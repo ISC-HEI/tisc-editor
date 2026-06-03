@@ -24,7 +24,40 @@ export default function Editor({ projectId, title, fileTree, userId }) {
   const [modalConfig, setModalConfig] = useState({ title: "", callback: null });
   const [inputValue, setInputValue] = useState("");
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
+  const [editorFontSize, setEditorFontSize] = useState(14);
   const separatorRef = useRef(null);
+
+  const handleFontSizeChange = (size) => {
+    setEditorFontSize(size);
+
+    const editor = refs.editor;
+    if (!editor) return;
+
+    const selection = editor.getSelection();
+    const model = editor.getModel();
+    const selectedText = model.getValueInRange(selection);
+
+    if (!selectedText.trim()) {
+      const newContent = `#set text(size: ${size}pt)\n` + model.getValue();
+      updateContent(newContent);
+      return;
+    }
+
+    const wrapped = `#text(size: ${size}pt)[${selectedText}]`;
+
+    editor.executeEdits(null, [
+      {
+        range: selection,
+        text: wrapped,
+        forceMoveMarkers: true
+      }
+    ]);
+
+    updateContent(model.getValue());
+  };
+
+
+
   const [activePath, setActivePath] = useState(() => {
       const path = findMainFile(fileTree) || "main.typ";
       return "root/" + path;
@@ -180,7 +213,12 @@ export default function Editor({ projectId, title, fileTree, userId }) {
         </div>
       </div>
     )}
-      <EditorHeader title={title} />
+      <EditorHeader 
+        title={title} 
+        fontSize={editorFontSize} 
+        onFontSizeChange={handleFontSizeChange}
+      />
+
 
       <div className="flex flex-1 overflow-hidden relative">
         <div className="flex flex-1 min-w-0 bg-white">
@@ -191,6 +229,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
             <FileExplorer />
             <MonacoEditor
               content={getInitialContent()} 
+              fontSize={editorFontSize}
               onChange={(newContent) => {
                 if (!isLoadingFile) {
                   updateContent(newContent); 
