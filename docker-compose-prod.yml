@@ -21,6 +21,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
+      target: builder
       args:
         NEXT_PUBLIC_APP_VERSION: ${APP_VER:-dev}
     container_name: tisc-migrate-prod
@@ -32,7 +33,7 @@ services:
     networks:
       - tisc-network
     entrypoint: []
-    command: ["npx", "prisma", "db", "push", "--skip-generate"]
+    command: ["bunx", "prisma", "db", "push"]
 
   app:
     build:
