@@ -15,11 +15,8 @@ export default async function Dashboard() {
   const guest_projects = projects.filter((p: any) => !p.isAuthor).length
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-row">
-      
-      <StorageBar storage={storage} />
-
-      <main className="flex-grow py-12 px-6 overflow-y-auto">
+    <div className="min-h-screen bg-[#f8fafc]">
+      <main className="py-12 px-6 overflow-y-auto">
         <div className="max-w-5xl mx-auto">
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -34,6 +31,8 @@ export default async function Dashboard() {
 
             <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
               <CreateProjectModal />
+              <div className="w-[1px] h-8 bg-slate-100 mx-1" />
+              <StorageBar storage={storage} />
               <div className="w-[1px] h-8 bg-slate-100 mx-1" />
               <SignOutButton />
             </div>
