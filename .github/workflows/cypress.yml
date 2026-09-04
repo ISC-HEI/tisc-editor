@@ -1,4 +1,4 @@
-name: Cypress Tests
+name: Cypress Tests (prod build)
 
 on:
   push:
@@ -13,25 +13,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # needed so `git describe` works for the version tag
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build and start Docker Compose
+      - name: Compute app version
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)$([ "$BRANCH" != "main" ] && echo "-$BRANCH")
+          echo "APP_VER=$APP_VER" >> "$GITHUB_ENV"
+
+      - name: Build and start Docker Compose (prod images)
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: |
           echo "Token present? ${GITHUB_TOKEN:0:8}****"
-          docker compose -f docker-compose-dev.yml up -d --build
-          sleep 15
+          docker compose -f docker-compose-prod.yml up -d --build
 
       - name: Run Cypress tests
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-        run: docker compose -f docker-compose-dev.yml run --rm test
+        run: docker compose -f docker-compose-prod.yml run --rm test
 
       - name: Tear down Docker Compose
         if: always()
-        run: docker compose -f docker-compose-dev.yml down
+        run: docker compose -f docker-compose-prod.yml down -v

@@ -1,0 +1,92 @@
+services:
+  db:
+    image: postgres:15
+    container_name: tisc-db-prod
+    userns_mode: "host"
+    environment:
+      POSTGRES_USER: tisc_user
+      POSTGRES_PASSWORD: qaywsxedc
+      POSTGRES_DB: tisc_db
+    ports:
+      - "5433:5432"
+    networks:
+      - tisc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tisc_user -d tisc_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      target: builder
+      args:
+        NEXT_PUBLIC_APP_VERSION: ${APP_VER:-dev}
+    container_name: tisc-migrate-prod
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
+    networks:
+      - tisc-network
+    entrypoint: []
+    command: ["bunx", "prisma", "db", "push"]
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_VERSION: ${APP_VER:-dev}
+    container_name: tisc-app-prod
+    userns_mode: "host"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_URL=http://localhost:3000
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - NODE_ENV=production
+    networks:
+      - tisc-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1.5G
+        reservations:
+          memory: 512M
+
+  test:
+    image: cypress/included:13.15.0
+    container_name: tisc_test_prod
+    userns_mode: "host"
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./:/opt/app
+    working_dir: /opt/app
+    networks:
+      - tisc-network
+    environment:
+      - CYPRESS_baseUrl=http://app:3000
+
+networks:
+  tisc-network:
+    driver: bridge

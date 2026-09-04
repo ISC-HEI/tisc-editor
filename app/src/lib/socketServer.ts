@@ -38,29 +38,23 @@ export const initSocket = (httpServer: any) => {
       if (!docId || !userId) return;
 
       try {
-        const project = await prisma.project.findFirst({
+        const assignment = await prisma.projectAssignment.findUnique({
           where: {
-            id: docId,
-            OR: [
-              { userId: userId },
-              { sharedUsers: { has: userId } }
-            ]
+            userId_projectId: {
+              userId: userId,
+              projectId: docId
+            }
           },
           select: {
-            id: true,
+            role: true,
             user: {
               select: { email: true }
             }
           }
         });
 
-        if (project) {
-          const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { email: true }
-          });
-
-          const email = user?.email || "Unknown User";
+        if (assignment) {
+          const email = assignment.user?.email || "Unknown User";
 
           socket.join(docId);
           session = { userId, docId, authorized: true, email };
