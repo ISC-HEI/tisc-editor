@@ -46,7 +46,7 @@ services:
       - AUTH_SECRET=${AUTH_SECRET}
     command: >
       sh -c "
-      git config --global --add safe.directory /app && 
+      git config --global --add safe.directory /app &&
       bun install &&
       bun x prisma generate &&
       bun x prisma db push &&

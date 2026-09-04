@@ -213,16 +213,12 @@ export default function Editor({ projectId, title, fileTree, userId }) {
         </div>
       </div>
     )}
-      <EditorHeader 
-        title={title} 
-        fontSize={editorFontSize} 
-        onFontSizeChange={handleFontSizeChange}
-      />
+      <EditorHeader title={title} />
 
 
       <div className="flex flex-1 overflow-hidden relative">
         <div className="flex flex-1 min-w-0 bg-white">
-          <Toolbar />
+          <Toolbar fontSize={editorFontSize} onFontSizeChange={handleFontSizeChange} />
           
           <div className="flex-1 relative min-w-0 overflow-hidden">
             <Breadcrumbs path={activePath} />

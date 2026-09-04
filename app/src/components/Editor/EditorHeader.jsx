@@ -3,7 +3,7 @@ import { SignOutButton } from "../SignOutButton";
 import { useEffect, useRef } from "react";
 import { initPreviewRefs } from "@/hooks/refs";
 
-export const EditorHeader = ({ title, fontSize, onFontSizeChange }) => {
+export const EditorHeader = ({ title }) => {
   const userCountRef = useRef(null);
   const userListContainerRef = useRef(null);
 
@@ -51,18 +51,6 @@ export const EditorHeader = ({ title, fontSize, onFontSizeChange }) => {
         </div>
       </div>
       <div className="flex items-center justify-end gap-3 flex-1">
-        <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-600 text-xs">
-          <span>Taille</span>
-          <select
-            value={fontSize}
-            onChange={(event) => onFontSizeChange?.(Number(event.target.value))}
-            className="bg-transparent text-slate-700 outline-none text-xs"
-          >
-            {[12, 14, 16, 18, 20, 22, 24].map((size) => (
-              <option key={size} value={size}>{size}px</option>
-            ))}
-          </select>
-        </label>
         <SignOutButton />
       </div>
     </header>
