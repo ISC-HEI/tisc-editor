@@ -438,7 +438,6 @@ export async function persistFileTree(tree) {
 
         if (!res.ok) {
             const message = await res.text();
-            console.log("[persistFileTree] Status reçu:", res.status, "Message:", message); // ← regarde ça dans la console
 
             if (res.status === 403) {
                 if (!isQuotaExceeded) {

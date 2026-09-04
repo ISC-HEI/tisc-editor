@@ -1,6 +1,30 @@
 import { prisma } from "@/lib/prisma";
 
-export async function checkUserQuota(userId: string, newDataSize: number = 0, excludeProjectId?: string) {
+export function calcFileTreeSize(node: any): number {
+    if (!node) return 0;
+    let size = 0;
+
+    if (node.type === 'file' && node.data) {
+        const data = node.data as string;
+        if (data.startsWith('data:')) {
+            const base64 = data.split(',')[1] ?? '';
+            const padding = (base64.match(/=+$/) || [''])[0].length;
+            size += Math.round((base64.length * 3) / 4) - padding;
+        } else {
+            size += new TextEncoder().encode(data).length;
+        }
+    }
+
+    if (node.children) {
+        for (const child of Object.values(node.children) as any[]) {
+            size += calcFileTreeSize(child);
+        }
+    }
+
+    return size;
+}
+
+export async function getOwnedStorageUsage(userId: string, excludeProjectId?: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { projectLinks: { include: { project: true } } }
@@ -10,16 +34,22 @@ export async function checkUserQuota(userId: string, newDataSize: number = 0, ex
 
   const ownedLinks = user.projectLinks.filter(link => link.role === "owner");
 
-  const currentUsage = ownedLinks.reduce((acc: number, link) => {
+  const usage = ownedLinks.reduce((acc: number, link) => {
     if (excludeProjectId && link.project.id === excludeProjectId) return acc;
-    return acc + Buffer.byteLength(JSON.stringify(link.project.fileTree), 'utf8');
+    return acc + calcFileTreeSize(link.project.fileTree);
   }, 0);
 
-  const totalAttempted = currentUsage + newDataSize;
+  return { usage, limit: user.storageQuota, ownedLinks };
+}
 
-  if (totalAttempted > user.storageQuota) {
-    return { allowed: false, usage: currentUsage, limit: user.storageQuota };
+export async function checkUserQuota(userId: string, newDataSize: number = 0, excludeProjectId?: string) {
+  const { usage, limit } = await getOwnedStorageUsage(userId, excludeProjectId);
+
+  const totalAttempted = usage + newDataSize;
+
+  if (totalAttempted > limit) {
+    return { allowed: false, usage, limit };
   }
 
-  return { allowed: true, usage: currentUsage, limit: user.storageQuota };
+  return { allowed: true, usage, limit };
 }

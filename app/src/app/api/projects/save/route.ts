@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { calcFileTreeSize } from "@/lib/quota-service";
 
 export async function POST(req: Request) {
     const session = await auth();
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
 
     try {
         const { id, fileTree } = await req.json();
-        const dataSize = JSON.stringify(fileTree).length;
+        const dataSize = calcFileTreeSize(fileTree);
 
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.findUnique({
@@ -25,12 +26,12 @@ export async function POST(req: Request) {
 
             const currentProject = ownedLinks.find(link => link.project.id === id)?.project;
             const previousSize = currentProject
-                ? Buffer.byteLength(JSON.stringify(currentProject.fileTree), 'utf8')
+                ? calcFileTreeSize(currentProject.fileTree)
                 : 0;
 
             const otherProjectsUsage = ownedLinks.reduce((acc, link) => {
                 if (link.project.id === id) return acc;
-                return acc + Buffer.byteLength(JSON.stringify(link.project.fileTree), 'utf8');
+                return acc + calcFileTreeSize(link.project.fileTree);
             }, 0);
 
             const totalAttempted = otherProjectsUsage + dataSize;
