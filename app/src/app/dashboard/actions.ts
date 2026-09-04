@@ -114,10 +114,11 @@ export async function createProject(formData: FormData) {
     const userId = session.user.id
 
     const title = formData.get("title") as string
-    const packageId = formData.get("template") as string
+    const packageBase = formData.get("packageBase") as string
+    const packageSubPath = formData.get("packageSubPath") as string
     const entryFile = formData.get("entryFile") as string
 
-    if (!title || !packageId) {
+    if (!title || !packageBase) {
         return
     }
 
@@ -129,12 +130,12 @@ export async function createProject(formData: FormData) {
         }
     }
 
-    if (packageId !== "blank") {
+    if (packageBase !== "blank") {
 
-        const imported = await importPackageAsTree(
-            packageId,
-            entryFile
-        )
+        const latestVersion = await getLatestVersion(packageBase)
+        const packageId = `${packageBase}/${latestVersion}${packageSubPath ? `/${packageSubPath}` : ""}`
+
+        const imported = await importPackageAsTree(packageId, entryFile)
 
         if (imported) {
             projectData.fileTree = imported.fileTree as any
@@ -309,6 +310,41 @@ async function getFileContentAsBase64(url: string) {
     return `data:application/octet-stream;base64,${base64}`
 }
 
+async function getLatestVersion(packageBaseName: string): Promise<string> {
+    const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${encodeURIComponent(packageBaseName)}`
+
+    const response = await fetchGitHub(url)
+
+    if (!response.ok) {
+        throw new Error(`Unable to list versions for ${packageBaseName}: ${response.status} ${response.statusText}`)
+    }
+
+    const items = await response.json()
+
+    if (!Array.isArray(items)) {
+        throw new Error(`No versions found for ${packageBaseName}`)
+    }
+
+    const versions = items
+        .filter((item: any) => item.type === "dir")
+        .map((item: any) => item.name as string)
+        .filter((name: string) => /^\d+\.\d+\.\d+$/.test(name))
+
+    if (versions.length === 0) {
+        throw new Error(`No valid semver versions found for ${packageBaseName}`)
+    }
+
+    versions.sort((a: string, b: string) => {
+        const pa = a.split('.').map(Number)
+        const pb = b.split('.').map(Number)
+        for (let i = 0; i < 3; i++) {
+            if (pa[i] !== pb[i]) return pb[i] - pa[i]
+        }
+        return 0
+    })
+
+    return versions[0]
+}
 
 export const importPackageAsTree = async (
     packageName: string,
