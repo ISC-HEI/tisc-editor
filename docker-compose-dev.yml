@@ -50,8 +50,14 @@ services:
       bun install &&
       bun x prisma generate &&
       bun x prisma db push &&
-      bun dev
-      "
+      bun dev &
+      until curl -sf http://localhost:3000/api/ws; do
+        echo 'Waiting for Next.js...';
+        sleep 1;
+      done;
+      echo 'Socket.IO initialized';
+      wait
+  "
     deploy:
       resources:
         limits:
