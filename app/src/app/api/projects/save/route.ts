@@ -14,8 +14,6 @@ export async function POST(req: Request) {
         const dataSize = JSON.stringify(fileTree).length;
 
         const result = await prisma.$transaction(async (tx) => {
-            await tx.$executeRaw`SELECT id FROM "users" WHERE id = ${session.user.id} FOR UPDATE`;
-
             const user = await tx.user.findUnique({
                 where: { id: session.user.id },
                 include: { projectLinks: { include: { project: true } } }
@@ -23,17 +21,25 @@ export async function POST(req: Request) {
 
             if (!user) throw new Error("User not found");
 
-            const currentUsage = user.projectLinks.reduce((acc: number, link) => {
+            const ownedLinks = user.projectLinks.filter(link => link.role === "owner");
+
+            const currentProject = ownedLinks.find(link => link.project.id === id)?.project;
+            const previousSize = currentProject
+                ? Buffer.byteLength(JSON.stringify(currentProject.fileTree), 'utf8')
+                : 0;
+
+            const otherProjectsUsage = ownedLinks.reduce((acc, link) => {
                 if (link.project.id === id) return acc;
-                return acc + JSON.stringify(link.project.fileTree).length;
+                return acc + Buffer.byteLength(JSON.stringify(link.project.fileTree), 'utf8');
             }, 0);
 
-            const totalAttempted = currentUsage + dataSize;
+            const totalAttempted = otherProjectsUsage + dataSize;
+            const isGrowing = dataSize > previousSize;
 
-            if (totalAttempted > user.storageQuota) {
+            if (isGrowing && totalAttempted > user.storageQuota) {
                 return {
                     allowed: false,
-                    usage: currentUsage,
+                    usage: otherProjectsUsage + previousSize,
                     limit: user.storageQuota
                 };
             }
