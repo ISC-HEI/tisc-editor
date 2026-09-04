@@ -5,7 +5,7 @@ import { typstSyntax, typstConfig } from "../../assets/typst-definition";
 import { refs } from "@/hooks/refs";
 import { currentFilePath } from "@/hooks/useEditor";
 
-export const MonacoEditor = ({ content, onChange, onCursorChange, onInstanceReady, fontSize }) => {
+export const MonacoEditor = ({ content, fontSize, wordWrap, onChange, onCursorChange, onInstanceReady }) => {
   const editorRef = useRef(null);
   const monacoInstance = useRef(null);
   const isRemoteChange = useRef(false);
@@ -28,6 +28,7 @@ export const MonacoEditor = ({ content, onChange, onCursorChange, onInstanceRead
       theme: "vs-light",
       automaticLayout: true,
       fontSize: fontSize || 14,
+      wordWrap: wordWrap ? "on" : "off",
       fontFamily: "'Fira Code', monospace",
       minimap: { enabled: false },
       lineNumbers: "on",
@@ -79,6 +80,12 @@ export const MonacoEditor = ({ content, onChange, onCursorChange, onInstanceRead
       monacoInstance.current.updateOptions({ fontSize: fontSize || 14 });
     }
   }, [fontSize]);
+
+  useEffect(() => {
+    if (monacoInstance.current) {
+      monacoInstance.current.updateOptions({ wordWrap: wordWrap ? "on" : "off" });
+    }
+  }, [wordWrap]);
 
   return <div ref={editorRef} className="h-full w-full" />;
 };

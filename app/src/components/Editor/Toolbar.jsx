@@ -1,9 +1,9 @@
-import { ArrowDownToLine, FolderOpen, Bold, Italic, Underline, Folders, Languages, Settings2, Check } from "lucide-react";
+import { ArrowDownToLine, FolderOpen, Bold, Italic, Underline, Folders, Languages, Settings2 } from "lucide-react";
 import { useEditorWatcher } from "@/hooks/useEditor"
 import { useEffect, useRef, useState } from "react";
 import { functions, initPreviewRefs, applyLanguageToTypst} from "@/hooks/refs";
 
-export function Toolbar({ fontSize, onFontSizeChange }) {
+export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange }) {
   const btnSaveRef = useRef(null)
   const btnOpenRef = useRef(null)
   const btnBRef = useRef(null)
@@ -16,8 +16,6 @@ export function Toolbar({ fontSize, onFontSizeChange }) {
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const btnSettingsRef = useRef(null);
-
-  const fontSizes = [12, 14, 16, 18, 20, 22, 24];
 
   useEditorWatcher();
 
@@ -163,6 +161,30 @@ export function Toolbar({ fontSize, onFontSizeChange }) {
             />
             <span className="text-lg text-slate-400 font-medium">A</span>
           </div>
+
+          {/* --- Line Wrapping --- */}
+          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">
+            Line Wrapping
+          </p>
+          <button
+            onClick={() => onWordWrapChange?.(!wordWrap)}
+            className="flex justify-between items-center w-full p-3 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            <span className="font-medium text-sm text-slate-700">Line Wrapping</span>
+            <span
+              role="switch"
+              aria-checked={wordWrap}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+                wordWrap ? "bg-blue-600" : "bg-slate-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                  wordWrap ? "translate-x-[18px]" : "translate-x-[3px]"
+                }`}
+              />
+            </span>
+          </button>
         </div>
       )}
     </>
