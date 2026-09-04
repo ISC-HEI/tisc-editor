@@ -3,6 +3,7 @@
 import { auth, signOut } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { checkUserQuota, calcFileTreeSize } from "@/lib/quota-service";
 
 interface FileNode {
     type: 'file' | 'folder';
@@ -152,6 +153,15 @@ export async function createProject(formData: FormData) {
         }
     }
 
+    const dataSize = Buffer.byteLength(JSON.stringify(projectData.fileTree), 'utf8');
+    const quota = await checkUserQuota(userId, dataSize);
+
+    if (!quota.allowed) {
+        throw new Error(
+            `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(quota.limit! / 1024 / 1024).toFixed(2)}MB). Cannot create project.`
+        );
+    }
+
     await prisma.project.create({
         data: {
             title,
@@ -171,32 +181,6 @@ export async function createProject(formData: FormData) {
 
     revalidatePath("/dashboard")
 }
-
-
-function calcFileTreeSize(node: any): number {
-    if (!node) return 0;
-    let size = 0;
-
-    if (node.type === 'file' && node.data) {
-        const data = node.data as string;
-        if (data.startsWith('data:')) {
-            const base64 = data.split(',')[1] ?? '';
-            const padding = (base64.match(/=+$/) || [''])[0].length;
-            size += Math.round((base64.length * 3) / 4) - padding;
-        } else {
-            size += new TextEncoder().encode(data).length;
-        }
-    }
-
-    if (node.children) {
-        for (const child of Object.values(node.children) as any[]) {
-            size += calcFileTreeSize(child);
-        }
-    }
-
-    return size;
-}
-
 
 export async function getUserStorage() {
 
@@ -230,8 +214,9 @@ export async function getUserStorage() {
         return null
     }
 
+    const ownedLinks = user.projectLinks.filter((link: any) => link.role === "owner")
 
-    const usage = user.projectLinks.reduce((acc: number, link: { project: { fileTree: any } }) => {
+    const usage = ownedLinks.reduce((acc: number, link: { project: { fileTree: any } }) => {
         return acc + calcFileTreeSize(link.project.fileTree)
     }, 0)
 
@@ -241,7 +226,6 @@ export async function getUserStorage() {
         percentage: (usage / user.storageQuota) * 100
     }
 }
-
 
 const buildTreeFromGitHub = async (
     url: string,

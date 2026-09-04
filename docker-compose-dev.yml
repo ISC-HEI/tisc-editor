@@ -57,7 +57,7 @@ services:
       done;
       echo 'Socket.IO initialized';
       wait
-  "
+      "
     deploy:
       resources:
         limits:

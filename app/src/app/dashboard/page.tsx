@@ -11,7 +11,7 @@ export default async function Dashboard() {
   const storage = await getUserStorage()
   
   const totalProjects = projects.length
-  const sharedProjects = projects.filter((p: any) => p.sharedUsers?.length > 0 && p.isAuthor).length
+  const sharedProjects = projects.filter((p: any) => p.usersSharing?.length > 0 && p.isAuthor).length
   const guest_projects = projects.filter((p: any) => !p.isAuthor).length
 
   return (
