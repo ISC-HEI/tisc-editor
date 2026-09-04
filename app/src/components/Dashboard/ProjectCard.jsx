@@ -33,15 +33,18 @@ export function ProjectCard({ project }) {
                 Guest
               </span>
             )}
-            
-            {/* 
-               Si le rôle est 'owner' mais que c'est un système de partage, 
-               tu pourras ajouter une logique plus tard pour le badge "Shared"
-            */}
-            {!isSharedWithMe && project.role === 'owner' && (
-              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md">
-                Owner
-              </span>
+            {!isSharedWithMe && (
+              <>
+                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md">
+                  Owner
+                </span>
+
+                {project.usersSharing?.length > 0 && (
+                  <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md">
+                    Shared · {project.usersSharing.length}
+                  </span>
+                )}
+              </>
             )}
           </div>
           
