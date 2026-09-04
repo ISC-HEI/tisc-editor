@@ -3,6 +3,7 @@
 import { auth, signOut } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { checkUserQuota } from "@/lib/quota-service";
 
 interface FileNode {
     type: 'file' | 'folder';
@@ -150,6 +151,15 @@ export async function createProject(formData: FormData) {
             isMain: true,
             data: ""
         }
+    }
+
+    const dataSize = Buffer.byteLength(JSON.stringify(projectData.fileTree), 'utf8');
+    const quota = await checkUserQuota(userId, dataSize);
+
+    if (!quota.allowed) {
+        throw new Error(
+            `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(quota.limit! / 1024 / 1024).toFixed(2)}MB). Cannot create project.`
+        );
     }
 
     await prisma.project.create({
