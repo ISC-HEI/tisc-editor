@@ -9,6 +9,7 @@ export async function POST(req: Request) {
     if (!session?.user?.id) {
         return new NextResponse("No session", { status: 401 });
     }
+    const userId = session.user.id;
 
     try {
         const { id, fileTree } = await req.json();
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.findUnique({
-                where: { id: session.user.id },
+                where: { id: userId },
                 include: { projectLinks: { include: { project: true } } }
             });
 
