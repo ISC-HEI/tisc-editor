@@ -3,6 +3,7 @@
 import { auth, signOut } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { checkUserQuota, calcFileTreeSize } from "@/lib/quota-service";
 
 interface FileNode {
     type: 'file' | 'folder';
@@ -113,10 +114,11 @@ export async function createProject(formData: FormData) {
     const userId = session.user.id
 
     const title = formData.get("title") as string
-    const packageId = formData.get("template") as string
+    const packageBase = formData.get("packageBase") as string
+    const packageSubPath = formData.get("packageSubPath") as string
     const entryFile = formData.get("entryFile") as string
 
-    if (!title || !packageId) {
+    if (!title || !packageBase) {
         return
     }
 
@@ -128,12 +130,12 @@ export async function createProject(formData: FormData) {
         }
     }
 
-    if (packageId !== "blank") {
+    if (packageBase !== "blank") {
 
-        const imported = await importPackageAsTree(
-            packageId,
-            entryFile
-        )
+        const latestVersion = await getLatestVersion(packageBase)
+        const packageId = `${packageBase}/${latestVersion}${packageSubPath ? `/${packageSubPath}` : ""}`
+
+        const imported = await importPackageAsTree(packageId, entryFile)
 
         if (imported) {
             projectData.fileTree = imported.fileTree as any
@@ -150,6 +152,15 @@ export async function createProject(formData: FormData) {
             isMain: true,
             data: ""
         }
+    }
+
+    const dataSize = Buffer.byteLength(JSON.stringify(projectData.fileTree), 'utf8');
+    const quota = await checkUserQuota(userId, dataSize);
+
+    if (!quota.allowed) {
+        throw new Error(
+            `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(quota.limit! / 1024 / 1024).toFixed(2)}MB). Cannot create project.`
+        );
     }
 
     await prisma.project.create({
@@ -171,32 +182,6 @@ export async function createProject(formData: FormData) {
 
     revalidatePath("/dashboard")
 }
-
-
-function calcFileTreeSize(node: any): number {
-    if (!node) return 0;
-    let size = 0;
-
-    if (node.type === 'file' && node.data) {
-        const data = node.data as string;
-        if (data.startsWith('data:')) {
-            const base64 = data.split(',')[1] ?? '';
-            const padding = (base64.match(/=+$/) || [''])[0].length;
-            size += Math.round((base64.length * 3) / 4) - padding;
-        } else {
-            size += new TextEncoder().encode(data).length;
-        }
-    }
-
-    if (node.children) {
-        for (const child of Object.values(node.children) as any[]) {
-            size += calcFileTreeSize(child);
-        }
-    }
-
-    return size;
-}
-
 
 export async function getUserStorage() {
 
@@ -230,8 +215,9 @@ export async function getUserStorage() {
         return null
     }
 
+    const ownedLinks = user.projectLinks.filter((link: any) => link.role === "owner")
 
-    const usage = user.projectLinks.reduce((acc: number, link: { project: { fileTree: any } }) => {
+    const usage = ownedLinks.reduce((acc: number, link: { project: { fileTree: any } }) => {
         return acc + calcFileTreeSize(link.project.fileTree)
     }, 0)
 
@@ -241,7 +227,6 @@ export async function getUserStorage() {
         percentage: (usage / user.storageQuota) * 100
     }
 }
-
 
 const buildTreeFromGitHub = async (
     url: string,
@@ -325,6 +310,41 @@ async function getFileContentAsBase64(url: string) {
     return `data:application/octet-stream;base64,${base64}`
 }
 
+async function getLatestVersion(packageBaseName: string): Promise<string> {
+    const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${encodeURIComponent(packageBaseName)}`
+
+    const response = await fetchGitHub(url)
+
+    if (!response.ok) {
+        throw new Error(`Unable to list versions for ${packageBaseName}: ${response.status} ${response.statusText}`)
+    }
+
+    const items = await response.json()
+
+    if (!Array.isArray(items)) {
+        throw new Error(`No versions found for ${packageBaseName}`)
+    }
+
+    const versions = items
+        .filter((item: any) => item.type === "dir")
+        .map((item: any) => item.name as string)
+        .filter((name: string) => /^\d+\.\d+\.\d+$/.test(name))
+
+    if (versions.length === 0) {
+        throw new Error(`No valid semver versions found for ${packageBaseName}`)
+    }
+
+    versions.sort((a: string, b: string) => {
+        const pa = a.split('.').map(Number)
+        const pb = b.split('.').map(Number)
+        for (let i = 0; i < 3; i++) {
+            if (pa[i] !== pb[i]) return pb[i] - pa[i]
+        }
+        return 0
+    })
+
+    return versions[0]
+}
 
 export const importPackageAsTree = async (
     packageName: string,

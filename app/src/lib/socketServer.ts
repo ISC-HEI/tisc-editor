@@ -62,7 +62,10 @@ export const initSocket = (httpServer: any) => {
           if (!activeUsers[docId]) activeUsers[docId] = {};
           activeUsers[docId][socket.id] = email;
 
-          io.to(docId).emit('active-users-list', Object.values(activeUsers[docId]));
+          // Only count each user once, even if they have multiple sockets open
+          const uniqueUsers = [...new Set(Object.values(activeUsers[docId]))];
+
+          io.to(docId).emit('active-users-list', uniqueUsers);
           console.log(`User ${email} joined project ${docId}`);
         } else {
           socket.emit('error', 'Unauthorized: You do not have access to this project');
@@ -86,21 +89,25 @@ export const initSocket = (httpServer: any) => {
         });
       }
     });
+
     socket.on('create-node', ({ docId, path, type }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('node-created', { path, type });
       }
     });
+
     socket.on('rename-node', ({ docId, oldPath, newPath }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('node-renamed', { oldPath, newPath });
       }
     });
+
     socket.on('delete-node', ({ docId, path }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('node-deleted', { path });
       }
     });
+
     socket.on('cursor-change', ({ docId, filename, selection }) => {
       if (session.authorized && session.docId === docId) {
         socket.to(docId).emit('remote-cursor', {
@@ -111,21 +118,24 @@ export const initSocket = (httpServer: any) => {
         });
       }
     });
+
     socket.on('set-main-file', ({ docId, path }) => {
-    if (session.authorized && session.docId === docId) {
-      socket.to(docId).emit('remote-set-main', { path });
-    }
-  });
+      if (session.authorized && session.docId === docId) {
+        socket.to(docId).emit('remote-set-main', { path });
+      }
+    });
 
     socket.on('disconnect', () => {
       if (session.docId && activeUsers[session.docId]) {
         delete activeUsers[session.docId][socket.id];
-        const remaining = Object.values(activeUsers[session.docId]);
-        
-        if (remaining.length === 0) {
+
+        // Count unique users instead of sockets
+        const uniqueUsers = [...new Set(Object.values(activeUsers[session.docId]))];
+
+        if (uniqueUsers.length === 0) {
           delete activeUsers[session.docId];
         } else {
-          io.to(session.docId).emit('active-users-list', remaining);
+          io.to(session.docId).emit('active-users-list', uniqueUsers);
         }
       }
     });

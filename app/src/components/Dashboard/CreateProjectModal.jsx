@@ -1,35 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, LayoutTemplate, FileText, GraduationCap, BookOpen, ClipboardList, Loader2 } from "lucide-react";
+import { Plus, X, LayoutTemplate, FileText, GraduationCap, BookOpen, ClipboardList, Loader2, AlertCircle } from "lucide-react";
 import { createProject } from "@/app/dashboard/actions";
 
-const execSummaryVersion = "0.6.0"
-const bthesisVersion = "0.6.0"
-const reportVersion = "0.6.0"
 const TEMPLATES = [
     {
         id: "blank",
+        packageBase: "blank",
         name: "Blank Project",
         description: "Empty document",
         icon: <FileText className="text-gray-400" size={32} />
     },
     {
-        id: `isc-hei-exec-summary/${execSummaryVersion}/src`,
+        id: "isc-hei-exec-summary",
+        packageBase: "isc-hei-exec-summary",
+        packageSubPath: "src",
         name: "ISC-HEI Exec Summary",
         description: "Executive summary for the bachelor thesis",
         templateFile: "exec_summary.typ",
         icon: <GraduationCap className="text-blue-500" size={32} />
     },
     {
-        id: `isc-hei-bthesis/${bthesisVersion}/src`,
+        id: "isc-hei-bthesis",
+        packageBase: "isc-hei-bthesis",
+        packageSubPath: "src",
         name: "ISC-HEI BThesis",
         description: "Official bachelor thesis document",
         templateFile: "bachelor_thesis.typ",
         icon: <BookOpen className="text-purple-500" size={32} />
     },
     {
-        id: `isc-hei-report/${reportVersion}/src`,
+        id: "isc-hei-report",
+        packageBase: "isc-hei-report",
+        packageSubPath: "src",
         name: "ISC-HEI Report",
         description: "Official template for project report",
         templateFile: "report.typ",
@@ -41,11 +45,12 @@ export default function CreateProjectModal() {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState("blank");
     const [isCreating, setIsCreating] = useState(false);
+    const [error, setError] = useState(null);
 
     return (
         <>
             <button
-                onClick={() => setIsOpen(true)}
+                onClick={() => { setIsOpen(true); setError(null); }}
                 data-test="create-project-button"
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg active:scale-95"
             >
@@ -64,7 +69,7 @@ export default function CreateProjectModal() {
 
                     <div
                         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-                        onClick={() => !isCreating && setIsOpen(false)}
+                        onClick={() => !isCreating && (setIsOpen(false), setError(null))}
                     />
 
                     <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
@@ -77,7 +82,7 @@ export default function CreateProjectModal() {
                             </div>
                             {!isCreating && (
                                 <button
-                                    onClick={() => setIsOpen(false)}
+                                    onClick={() => {setIsOpen(false); setError(null);}}
                                     className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors"
                                 >
                                     <X size={20} />
@@ -88,13 +93,14 @@ export default function CreateProjectModal() {
                             onSubmit={async (e) => {
                                 e.preventDefault();
                                 setIsCreating(true);
+                                setError(null);
                                 
                                 const formData = new FormData(e.currentTarget);
                                 try {
                                     await createProject(formData);
                                     setIsOpen(false);
-                                } catch (error) {
-                                    console.error("Erreur lors de la création:", error);
+                                } catch (err) {
+                                    setError(err instanceof Error ? err.message : "An error occurred.");
                                 } finally {
                                     setIsCreating(false);
                                 }
@@ -105,6 +111,16 @@ export default function CreateProjectModal() {
                                 type="hidden"
                                 name="entryFile"
                                 value={TEMPLATES.find(t => t.id === selectedTemplate)?.templateFile || ""}
+                            />
+                            <input
+                                type="hidden"
+                                name="packageBase"
+                                value={TEMPLATES.find(t => t.id === selectedTemplate)?.packageBase || "blank"}
+                            />
+                            <input
+                                type="hidden"
+                                name="packageSubPath"
+                                value={TEMPLATES.find(t => t.id === selectedTemplate)?.packageSubPath || ""}
                             />
 
                             <div className="grid grid-cols-2 gap-4 mb-8">
@@ -148,11 +164,18 @@ export default function CreateProjectModal() {
                                 />
                             </div>
 
+                            {error && (
+                                <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                                    <p className="text-sm text-red-700 font-medium">{error}</p>
+                                </div>
+                            )}
+
                             <div className="flex gap-3">
                                 <button
                                     type="button"
                                     disabled={isCreating}
-                                    onClick={() => setIsOpen(false)}
+                                    onClick={() => { setIsOpen(false); setError(null); }}
                                     className="flex-1 px-4 py-3 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     Cancel

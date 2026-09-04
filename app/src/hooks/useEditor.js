@@ -74,7 +74,7 @@ function initEditor() {
                 makeToast("Cannot export: compilation has errors", "error");
                 return;
             }
-            fetchSvg(fileTree);
+            exportSvg(JSON.parse(await fetchSvg({ children: fileTree.children })).svg);
         };
     }
 
@@ -267,18 +267,7 @@ async function openAndShowFile() {
 async function autoSave() {
     if (!currentProjectId) return;
     syncFileTreeWithEditor();
-    try {
-        await fetch('api/projects/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                id: currentProjectId,
-                fileTree: fileTree
-            })
-        });
-    } catch (err) {
-        console.error("Erreur sauvegarde:", err);
-    }
+    await persistFileTree(fileTree);
 }
 
 let isDragging = false;
@@ -426,5 +415,51 @@ function getEditorLanguage(extension) {
         case "go": return "go";
         case "scala": return "scala";
         default: return "plaintext";
+    }
+}
+
+let isQuotaExceeded = false;
+
+/**
+ * Sauvegarde le fileTree sur le serveur, gère les erreurs de quota
+ * sans spammer l'utilisateur à chaque frappe.
+ * @param {Object} tree - Le fileTree à sauvegarder
+ * @returns {Promise<boolean>} true si sauvegardé avec succès
+ */
+export async function persistFileTree(tree) {
+    if (!currentProjectId) return false;
+
+    try {
+        const res = await fetch('/api/projects/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: currentProjectId, fileTree: tree })
+        });
+
+        if (!res.ok) {
+            const message = await res.text();
+
+            if (res.status === 403) {
+                if (!isQuotaExceeded) {
+                    isQuotaExceeded = true;
+                    makeToast(message || "Storage quota exceeded — changes are not being saved.", "error");
+                    window.dispatchEvent(new CustomEvent('quota-exceeded', { detail: { message } }));
+                }
+            } else {
+                makeToast("Failed to save project.", "error");
+            }
+            return false;
+        }
+
+        if (isQuotaExceeded) {
+            isQuotaExceeded = false;
+            makeToast("Storage OK — saving resumed.", "success");
+        }
+
+        return true;
+    } catch (err) {
+        console.error("Erreur sauvegarde:", err);
+        makeToast("Network error — could not save project.", "error");
+        return false;
     }
 }

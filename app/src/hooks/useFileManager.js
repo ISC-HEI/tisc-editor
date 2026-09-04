@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createElement, FileJson, Book, FileCode, Image, FileQuestion, Folder, Terminal, Notebook } from 'lucide';
 import { refs, functions, infos } from "@/hooks/refs"
-import { currentProjectId, fetchCompile, fileTree, openAndShowFile, openFile, syncFileTreeWithEditor } from "./useEditor";
+import { currentProjectId, fetchCompile, fileTree, openFile, syncFileTreeWithEditor, persistFileTree } from "./useEditor";
 import { makeToast } from "./useUtils";
 import JSZip from "jszip";
 
@@ -104,8 +104,12 @@ function initFileManager() {
     });
 
     refs.btnCloseImages.addEventListener("click", () => {
-        refs.imageExplorer.style.display = "none";
-    })
+        if (functions.closeFileExplorer) {
+            functions.closeFileExplorer();
+        } else {
+            refs.imageExplorer.style.display = "none";
+        }
+    });
 
     refs.btnCreateFolder.addEventListener("click", () => {
         functions.openCustomPrompt(`Create new folder in ${selectedFolderPath}`, async (folderName) => {
@@ -503,16 +507,7 @@ export async function deleteItem(path, fileTree) {
  * @async
  */
 async function saveFileTree() {
-    if (!currentProjectId) return;
-    try {
-        await fetch('api/projects/save', {  // ← slash absolu
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: currentProjectId, fileTree: fileTree })
-        });
-    } catch (err) {
-        console.error("Erreur sauvegarde:", err);
-    }
+    await persistFileTree(fileTree);
 }
 
 // ----------------------------------------------------
