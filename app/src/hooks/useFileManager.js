@@ -104,8 +104,12 @@ function initFileManager() {
     });
 
     refs.btnCloseImages.addEventListener("click", () => {
-        refs.imageExplorer.style.display = "none";
-    })
+        if (functions.closeFileExplorer) {
+            functions.closeFileExplorer();
+        } else {
+            refs.imageExplorer.style.display = "none";
+        }
+    });
 
     refs.btnCreateFolder.addEventListener("click", () => {
         functions.openCustomPrompt(`Create new folder in ${selectedFolderPath}`, async (folderName) => {
