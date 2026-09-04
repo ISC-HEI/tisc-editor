@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const session = await auth();
 
     if (!session?.user?.id) {
-        return new NextResponse("Pas de session", { status: 401 });
+        return new NextResponse("No session", { status: 401 });
     }
 
     try {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
         if (!quota.allowed) {
             return new NextResponse(
-                `Quota dépassé (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(quota.limit! / 1024 / 1024).toFixed(2)}MB)`,
+                `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(quota.limit! / 1024 / 1024).toFixed(2)}MB)`,
                 { status: 403 }
             );
         }

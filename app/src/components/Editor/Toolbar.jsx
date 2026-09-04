@@ -66,7 +66,7 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
           ref={btnSettingsRef} 
           onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
           className={`p-2.5 rounded-xl transition-all ${isSettingsOpen ? 'bg-blue-50 text-blue-600 shadow-inner' : 'hover:bg-white hover:shadow-sm text-slate-500'}`}
-          title="Réglages de l'éditeur"
+          title="Editor Settings"
         >
           <Settings2 size={18} />
         </button>
@@ -98,7 +98,7 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
               className="flex justify-between items-center text-left p-3 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-colors group" 
               onClick={() => { applyLanguageToTypst('fr'); setIsLangOpen(false); }}
             >
-              <span className="font-medium">Français</span>
+              <span className="font-medium">French</span>
               <span>🇫🇷</span>
             </button>
 
@@ -122,15 +122,16 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
           <div className="mt-8 p-3 bg-slate-50 rounded-lg border border-slate-100">
             <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Info</p>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Cette option modifie la langue structurelle (titres, dates, biblio) de ton document Typst.
+              This option changes the structural language (headings, dates, bibliography) of your Typst document.
             </p>
           </div>
         </div>
       )}
+
       {isSettingsOpen && (
         <div className="fixed left-14 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-xl z-50 p-4 animate-in slide-in-from-left duration-200">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-700">Réglages de l'éditeur</h3>
+            <h3 className="font-bold text-slate-700">Editor Settings</h3>
             <button 
               onClick={() => setIsSettingsOpen(false)}
               className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600"
@@ -148,6 +149,7 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
               {fontSize}px
             </span>
           </div>
+
           <div className="flex items-center gap-3 mb-6">
             <span className="text-[11px] text-slate-400 font-medium">A</span>
             <input
@@ -166,6 +168,7 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
           <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">
             Line Wrapping
           </p>
+
           <button
             onClick={() => onWordWrapChange?.(!wordWrap)}
             className="flex justify-between items-center w-full p-3 rounded-xl hover:bg-slate-50 transition-colors"

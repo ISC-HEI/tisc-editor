@@ -6,7 +6,7 @@ export default function StorageBar({ storage }) {
     return (
         <div className="mt-auto p-4 border-t border-gray-100">
             <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Espace de stockage</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Storage Space</span>
                 <span className={`text-[10px] font-bold ${storage.percentage > 90 ? 'text-red-500' : 'text-gray-600'}`}>
                     {storage.percentage.toFixed(0)}%
                 </span>
