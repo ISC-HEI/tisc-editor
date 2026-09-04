@@ -45,7 +45,7 @@ export default async function Dashboard() {
             <StatCard icon={<HandshakeIcon size={24}/>} label="Guest projects" value={guest_projects} color="emerald" />
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h2 className="font-bold text-slate-800">Your Projects</h2>
               <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Recent</span>
