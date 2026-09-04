@@ -5,7 +5,6 @@ import os from 'os';
 import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 
-const LATEST_TEMPLATE_VERSION = "0.7.0"; 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; 
 
@@ -49,10 +48,6 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
 
         if (fileName.endsWith('.typ')) {
             let textContent = decodeContent(node.data);
-            textContent = textContent.replace(
-                /(@preview\/(?:exec-summary|bthesis|report)):[0-9]+\.[0-9]+\.[0-9]+/g,
-                `$1:${LATEST_TEMPLATE_VERSION}`
-            );
 
         if (fileName.endsWith('.typ') && options?.documentFontSize) {
             textContent = `#set text(size: ${options?.documentFontSize}pt)\n` + textContent;
