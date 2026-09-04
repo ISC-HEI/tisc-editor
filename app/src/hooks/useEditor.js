@@ -74,7 +74,7 @@ function initEditor() {
                 makeToast("Cannot export: compilation has errors", "error");
                 return;
             }
-            fetchSvg(fileTree);
+            exportSvg(JSON.parse(await fetchSvg({ children: fileTree.children })).svg);
         };
     }
 
