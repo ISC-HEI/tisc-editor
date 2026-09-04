@@ -142,7 +142,10 @@ export async function POST(req: Request) {
 
     const localCompiler = NodeCompiler.create({ 
         workspace: workingDir,
-        inputs: { 'X': 'u' } 
+        inputs: { 'X': 'u' },
+        fontArgs: [
+          { fontPaths: ['/usr/local/share/fonts'] }
+        ]
     });
 
     try {
