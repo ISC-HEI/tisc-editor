@@ -9,6 +9,7 @@ export const PreviewPane = () => {
   const btnOutRef = useRef(null);
   const pageRef = useRef(null);
   const displayRef = useRef(null);
+  const previewContainerRef = useRef(null);
 
   const btnExportZip = useRef(null);
   const btnExportPdfRef = useRef(null);
@@ -16,9 +17,10 @@ export const PreviewPane = () => {
   useZoomWatcher();
 
   useEffect(() => {
-    if (btnInRef.current && btnOutRef.current && pageRef.current && displayRef.current && btnExportPdfRef.current && btnExportSvgRef.current && btnExportZip.current) {
+    if (btnInRef.current && btnOutRef.current && pageRef.current && displayRef.current && btnExportPdfRef.current && btnExportSvgRef.current && btnExportZip.current && previewContainerRef.current) {
       initPreviewRefs({
         page: pageRef.current,
+        previewContainer: previewContainerRef.current,
 
         btnExportZip: btnExportZip.current,
         btnExportPdf: btnExportPdfRef.current,
@@ -70,7 +72,10 @@ export const PreviewPane = () => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto p-8 flex justify-center items-baseline">
+      <div 
+        ref={previewContainerRef}
+        className="flex-1 overflow-auto p-8 flex justify-center items-baseline"
+      >
         <div 
           ref={pageRef}
           id="page"

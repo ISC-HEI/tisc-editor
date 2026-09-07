@@ -6,6 +6,8 @@ export let refs = {
   page: null,
   editor: null,
 
+  previewContainer: null,
+
   btnZoomIn: null,
   btnZoomOut: null,
   zoomLevelDisplay: null,
