@@ -183,6 +183,181 @@ export async function createProject(formData: FormData) {
     revalidatePath("/dashboard")
 }
 
+export const addTagToProject = async (
+    projectId: string,
+    tag: string
+) => {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    if (!projectId || !tag?.trim()) {
+        throw new Error("Missing project id or tag")
+    }
+
+    const tagName = tag.trim()
+
+    const assignment = await prisma.projectAssignment.findUnique({
+        where: {
+            userId_projectId: {
+                userId,
+                projectId
+            }
+        }
+    })
+
+    if (!assignment) {
+        throw new Error("Access denied")
+    }
+
+    const tagRecord = await prisma.tag.upsert({
+        where: {
+            name: tagName
+        },
+        update: {},
+        create: {
+            name: tagName
+        }
+    })
+
+    await prisma.projectTag.upsert({
+        where: {
+            projectId_tagId: {
+                projectId,
+                tagId: tagRecord.id
+            }
+        },
+        update: {},
+        create: {
+            projectId,
+            tagId: tagRecord.id
+        }
+    })
+
+    revalidatePath("/dashboard")
+
+    return {
+        success: true,
+        tag: tagRecord
+    }
+}
+
+
+export const removeTagFromProject = async (
+    projectId: string,
+    tag: string
+) => {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    if (!projectId || !tag?.trim()) {
+        throw new Error("Missing project id or tag")
+    }
+
+    const tagName = tag.trim()
+
+    const assignment = await prisma.projectAssignment.findUnique({
+        where: {
+            userId_projectId: {
+                userId,
+                projectId
+            }
+        }
+    })
+
+    if (!assignment) {
+        throw new Error("Access denied")
+    }
+
+    const tagRecord = await prisma.tag.findUnique({
+        where: {
+            name: tagName
+        }
+    })
+
+    if (!tagRecord) {
+        return {
+            success: true
+        }
+    }
+
+    await prisma.projectTag.deleteMany({
+        where: {
+            projectId,
+            tagId: tagRecord.id
+        }
+    })
+
+    const remainingProjects = await prisma.projectTag.count({
+        where: {
+            tagId: tagRecord.id
+        }
+    })
+
+    if (remainingProjects === 0) {
+        await prisma.tag.delete({
+            where: {
+                id: tagRecord.id
+            }
+        })
+    }
+
+    revalidatePath("/dashboard")
+
+    return {
+        success: true
+    }
+}
+
+
+export const getTagsByUser = async (
+    userId: string
+) => {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    if (session.user.id !== userId) {
+        throw new Error("Access denied")
+    }
+
+    const tags = await prisma.tag.findMany({
+        where: {
+            projects: {
+                some: {
+                    project: {
+                        userLinks: {
+                            some: {
+                                userId
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: {
+            name: "asc"
+        },
+        select: {
+            id: true,
+            name: true
+        }
+    })
+
+    return tags
+}
+
 export async function getUserStorage() {
 
     const session = await auth()
