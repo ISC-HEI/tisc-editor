@@ -3,7 +3,7 @@ import { prisma } from './prisma';
 
 /** * In-memory storage for active users per document.
  * Structure: { [docId]: { [socketId]: email } }
- * @type {Record<string, Record<string, string>>} 
+ * @type {Record<string, Record<string, string>>}
  */
 const activeUsers: Record<string, Record<string, string>> = {};
 
@@ -17,24 +17,24 @@ export const initSocket = (httpServer: any) => {
     path: '/api/ws',
     addTrailingSlash: false,
     cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
-    }
+      origin: '*',
+      methods: ['GET', 'POST'],
+    },
   });
 
   io.on('connection', (socket) => {
-    let session: { 
-      userId: string | null; 
-      docId: string | null; 
-      authorized: boolean; 
-      email: string | null 
+    let session: {
+      userId: string | null;
+      docId: string | null;
+      authorized: boolean;
+      email: string | null;
     } = { userId: null, docId: null, authorized: false, email: null };
 
     /**
-     * Handles the 'join-document' event. 
+     * Handles the 'join-document' event.
      * Verifies project ownership or shared access via Prisma before allowing the join.
      */
-    socket.on('join-document', async ({ docId, userId }: { docId: string, userId: string }) => {
+    socket.on('join-document', async ({ docId, userId }: { docId: string; userId: string }) => {
       if (!docId || !userId) return;
 
       try {
@@ -42,19 +42,19 @@ export const initSocket = (httpServer: any) => {
           where: {
             userId_projectId: {
               userId: userId,
-              projectId: docId
-            }
+              projectId: docId,
+            },
           },
           select: {
             role: true,
             user: {
-              select: { email: true }
-            }
-          }
+              select: { email: true },
+            },
+          },
         });
 
         if (assignment) {
-          const email = assignment.user?.email || "Unknown User";
+          const email = assignment.user?.email || 'Unknown User';
 
           socket.join(docId);
           session = { userId, docId, authorized: true, email };
@@ -71,7 +71,7 @@ export const initSocket = (httpServer: any) => {
           socket.emit('error', 'Unauthorized: You do not have access to this project');
         }
       } catch (err) {
-        console.error("Socket Auth Error:", err);
+        console.error('Socket Auth Error:', err);
         socket.emit('error', 'Auth error');
       }
     });
@@ -85,7 +85,7 @@ export const initSocket = (httpServer: any) => {
         socket.to(docId).emit('remote-edit', {
           filename,
           changes,
-          userId: session.userId
+          userId: session.userId,
         });
       }
     });
@@ -114,7 +114,7 @@ export const initSocket = (httpServer: any) => {
           filename,
           selection,
           userId: session.userId,
-          email: session.email
+          email: session.email,
         });
       }
     });

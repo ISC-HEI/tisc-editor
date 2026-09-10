@@ -1,75 +1,64 @@
-"use client"
+'use client';
 
-import { useEffect, useRef, useState } from "react"
-import { X, ChevronDown, Tag as TagIcon } from "lucide-react"
-import { ProjectCard } from "./ProjectCard"
-import { getTagsByUser } from "@/app/dashboard/actions"
+import { useEffect, useRef, useState } from 'react';
+import { X, ChevronDown, Tag as TagIcon } from 'lucide-react';
+import { ProjectCard } from './ProjectCard';
+import { getTagsByUser } from '@/app/dashboard/actions';
 
 export function ProjectList({ initialProjects }) {
-  const [search, setSearch] = useState("")
-  const [showShared, setShowShared] = useState(true)
+  const [search, setSearch] = useState('');
+  const [showShared, setShowShared] = useState(true);
 
-  const [selectedTags, setSelectedTags] = useState([])
-  const [availableTags, setAvailableTags] = useState([])
-  const [tagInput, setTagInput] = useState("")
-  const [showTagSuggestions, setShowTagSuggestions] = useState(false)
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
 
-  const tagInputRef = useRef(null)
-  const tagContainerRef = useRef(null)
+  const tagInputRef = useRef(null);
+  const tagContainerRef = useRef(null);
 
   // Load existing tags once
   useEffect(() => {
     const loadTags = async () => {
       try {
-        const tags = await getTagsByUser()
-        setAvailableTags(tags)
+        const tags = await getTagsByUser();
+        setAvailableTags(tags);
       } catch (error) {
-        console.error("Failed to load tags:", error)
+        console.error('Failed to load tags:', error);
       }
-    }
+    };
 
-    loadTags()
-  }, [])
+    loadTags();
+  }, []);
 
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        tagContainerRef.current &&
-        !tagContainerRef.current.contains(event.target)
-      ) {
-        setShowTagSuggestions(false)
+      if (tagContainerRef.current && !tagContainerRef.current.contains(event.target)) {
+        setShowTagSuggestions(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const addTag = (tag) => {
     const normalizedTag =
-      typeof tag === "string"
-        ? tag.trim().toLowerCase()
-        : tag.name.trim().toLowerCase()
+      typeof tag === 'string' ? tag.trim().toLowerCase() : tag.name.trim().toLowerCase();
 
-    if (!normalizedTag) return
+    if (!normalizedTag) return;
 
     // Don't add the same tag twice
-    if (
-      selectedTags.some(
-        (selectedTag) => selectedTag.name === normalizedTag
-      )
-    ) {
-      setTagInput("")
-      return
+    if (selectedTags.some((selectedTag) => selectedTag.name === normalizedTag)) {
+      setTagInput('');
+      return;
     }
 
-    const existingTag = availableTags.find(
-      (availableTag) => availableTag.name === normalizedTag
-    )
+    const existingTag = availableTags.find((availableTag) => availableTag.name === normalizedTag);
 
     setSelectedTags((current) => [
       ...current,
@@ -77,74 +66,62 @@ export function ProjectList({ initialProjects }) {
         id: `search-${normalizedTag}`,
         name: normalizedTag,
       },
-    ])
+    ]);
 
-    setTagInput("")
-    setShowTagSuggestions(false)
-  }
+    setTagInput('');
+    setShowTagSuggestions(false);
+  };
 
   const removeTag = (tagName) => {
-    setSelectedTags((current) =>
-      current.filter((tag) => tag.name !== tagName)
-    )
-  }
+    setSelectedTags((current) => current.filter((tag) => tag.name !== tagName));
+  };
 
   const handleTagKeyDown = (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault()
+    if (event.key === 'Enter') {
+      event.preventDefault();
 
-      const value = tagInput.trim()
+      const value = tagInput.trim();
 
-      if (!value) return
+      if (!value) return;
 
       // If there is an exact existing tag, select it
-      const exactTag = availableTags.find(
-        (tag) => tag.name.toLowerCase() === value.toLowerCase()
-      )
+      const exactTag = availableTags.find((tag) => tag.name.toLowerCase() === value.toLowerCase());
 
-      addTag(exactTag || value)
+      addTag(exactTag || value);
     }
 
-    if (event.key === "Backspace" && !tagInput && selectedTags.length > 0) {
-      removeTag(selectedTags[selectedTags.length - 1].name)
+    if (event.key === 'Backspace' && !tagInput && selectedTags.length > 0) {
+      removeTag(selectedTags[selectedTags.length - 1].name);
     }
 
-    if (event.key === "Escape") {
-      setShowTagSuggestions(false)
+    if (event.key === 'Escape') {
+      setShowTagSuggestions(false);
     }
-  }
+  };
 
   const filteredTagSuggestions = availableTags.filter((tag) => {
-    const alreadySelected = selectedTags.some(
-      (selectedTag) => selectedTag.name === tag.name
-    )
+    const alreadySelected = selectedTags.some((selectedTag) => selectedTag.name === tag.name);
 
-    if (alreadySelected) return false
+    if (alreadySelected) return false;
 
-    if (!tagInput.trim()) return true
+    if (!tagInput.trim()) return true;
 
-    return tag.name
-      .toLowerCase()
-      .includes(tagInput.trim().toLowerCase())
-  })
+    return tag.name.toLowerCase().includes(tagInput.trim().toLowerCase());
+  });
 
   const filteredProjects = initialProjects.filter((project) => {
-    const matchesName = project.title
-      .toLowerCase()
-      .includes(search.toLowerCase())
+    const matchesName = project.title.toLowerCase().includes(search.toLowerCase());
 
-    const matchesShared = !showShared ? project.isAuthor : true
+    const matchesShared = !showShared ? project.isAuthor : true;
 
     // AND filtering:
     // project must contain EVERY selected tag
     const matchesTags = selectedTags.every((selectedTag) =>
-      project.tags?.some(
-        (projectTag) => projectTag.name === selectedTag.name
-      )
-    )
+      project.tags?.some((projectTag) => projectTag.name === selectedTag.name),
+    );
 
-    return matchesName && matchesShared && matchesTags
-  })
+    return matchesName && matchesShared && matchesTags;
+  });
 
   return (
     <div className="space-y-6">
@@ -189,13 +166,13 @@ export function ProjectList({ initialProjects }) {
               transition
               ${
                 showTagSuggestions
-                  ? "border-blue-500 ring-2 ring-blue-100"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? 'border-blue-500 ring-2 ring-blue-100'
+                  : 'border-gray-200 hover:border-gray-300'
               }
             `}
             onClick={() => {
-              tagInputRef.current?.focus()
-              setShowTagSuggestions(true)
+              tagInputRef.current?.focus();
+              setShowTagSuggestions(true);
             }}
           >
             <TagIcon size={16} className="text-gray-400 shrink-0" />
@@ -207,12 +184,11 @@ export function ProjectList({ initialProjects }) {
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium"
               >
                 #{tag.name}
-
                 <button
                   type="button"
                   onClick={(event) => {
-                    event.stopPropagation()
-                    removeTag(tag.name)
+                    event.stopPropagation();
+                    removeTag(tag.name);
                   }}
                   className="text-blue-400 hover:text-blue-700"
                   aria-label={`Remove ${tag.name}`}
@@ -228,23 +204,19 @@ export function ProjectList({ initialProjects }) {
               type="text"
               value={tagInput}
               onChange={(event) => {
-                setTagInput(event.target.value)
-                setShowTagSuggestions(true)
+                setTagInput(event.target.value);
+                setShowTagSuggestions(true);
               }}
               onFocus={() => setShowTagSuggestions(true)}
               onKeyDown={handleTagKeyDown}
-              placeholder={
-                selectedTags.length === 0
-                  ? "Filter by tags..."
-                  : "Add another tag..."
-              }
+              placeholder={selectedTags.length === 0 ? 'Filter by tags...' : 'Add another tag...'}
               className="flex-1 min-w-[140px] py-1 bg-transparent outline-none text-sm text-gray-700 placeholder:text-gray-400"
             />
 
             <ChevronDown
               size={16}
               className={`text-gray-400 shrink-0 transition-transform ${
-                showTagSuggestions ? "rotate-180" : ""
+                showTagSuggestions ? 'rotate-180' : ''
               }`}
             />
           </div>
@@ -253,9 +225,7 @@ export function ProjectList({ initialProjects }) {
           {showTagSuggestions && (
             <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
               <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-100">
-                {tagInput.trim()
-                  ? "Matching tags"
-                  : "Available tags"}
+                {tagInput.trim() ? 'Matching tags' : 'Available tags'}
               </div>
 
               {filteredTagSuggestions.length > 0 ? (
@@ -271,32 +241,24 @@ export function ProjectList({ initialProjects }) {
                         <TagIcon size={14} />
                       </span>
 
-                      <span className="font-medium">
-                        #{tag.name}
-                      </span>
+                      <span className="font-medium">#{tag.name}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <div className="px-3 py-4 text-sm text-gray-400">
-                  No matching tag.
-                </div>
+                <div className="px-3 py-4 text-sm text-gray-400">No matching tag.</div>
               )}
 
               {tagInput.trim() &&
                 !availableTags.some(
-                  (tag) =>
-                    tag.name.toLowerCase() ===
-                    tagInput.trim().toLowerCase()
+                  (tag) => tag.name.toLowerCase() === tagInput.trim().toLowerCase(),
                 ) && (
                   <button
                     type="button"
                     onClick={() => addTag(tagInput)}
                     className="w-full px-3 py-2.5 border-t border-gray-100 flex items-center gap-2 text-left text-sm text-blue-600 hover:bg-blue-50"
                   >
-                    <span className="font-medium">
-                      Use #{tagInput.trim().toLowerCase()}
-                    </span>
+                    <span className="font-medium">Use #{tagInput.trim().toLowerCase()}</span>
                   </button>
                 )}
             </div>
@@ -307,8 +269,8 @@ export function ProjectList({ initialProjects }) {
         {(selectedTags.length > 0 || search) && (
           <div className="flex items-center justify-between text-xs text-gray-400">
             <span>
-              {filteredProjects.length}{" "}
-              {filteredProjects.length === 1 ? "project" : "projects"} found
+              {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'}{' '}
+              found
             </span>
 
             {selectedTags.length > 0 && (
@@ -330,11 +292,9 @@ export function ProjectList({ initialProjects }) {
             <p className="text-gray-400">No project found.</p>
           </div>
         ) : (
-          filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))
+          filteredProjects.map((project) => <ProjectCard key={project.id} project={project} />)
         )}
       </div>
     </div>
-  )
+  );
 }

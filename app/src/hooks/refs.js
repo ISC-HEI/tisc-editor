@@ -41,26 +41,26 @@ export let refs = {
   contextMenu: null,
 
   // Current editor font size in pixels (used to request scaled compilation)
-  editorFontSize: 14
+  editorFontSize: 14,
 };
 
 /**
  * State and configuration metadata for the current project session.
  */
 export let infos = {
-    currentProjectId: null,
-    defaultFileTree: null,
-    title: null,
-    logs: []
-}
+  currentProjectId: null,
+  defaultFileTree: null,
+  title: null,
+  logs: [],
+};
 
 /**
  * Shared utility functions that need to be accessible globally.
  */
 export let functions = {
   openCustomPrompt: null,
-  syncCollaboration: null
-}
+  syncCollaboration: null,
+};
 
 /**
  * Updates the global refs object with new DOM elements or instances.
@@ -76,7 +76,7 @@ export const initPreviewRefs = (elements) => {
  */
 export const initPreviewInfos = (elements) => {
   infos = { ...infos, ...elements };
-}
+};
 
 /**
  * Registers global callback functions.
@@ -84,7 +84,7 @@ export const initPreviewInfos = (elements) => {
  */
 export const initPreviewFunctions = (elements) => {
   functions = { ...functions, ...elements };
-}
+};
 
 export const applyLanguageToTypst = (langCode) => {
   if (!refs.editor) return;
@@ -93,9 +93,9 @@ export const applyLanguageToTypst = (langCode) => {
   const content = refs.editor.state?.doc?.toString() || refs.editor.getValue();
   const langRegex = /^#set text\(lang: ".*"\)\s*\n?/;
   const newRule = `#set text(lang: "${langCode}")\n`;
-  
-  let newContent = langRegex.test(content) 
-    ? content.replace(langRegex, newRule) 
+
+  let newContent = langRegex.test(content)
+    ? content.replace(langRegex, newRule)
     : newRule + content;
 
   // Update texte
@@ -106,7 +106,8 @@ export const applyLanguageToTypst = (langCode) => {
   }
 
   // 2. ACTIVER LE SPELLCHECK (Pour l'Issue #48)
-  const editorElement = document.querySelector('.cm-content') || document.querySelector('.monaco-editor textarea');
+  const editorElement =
+    document.querySelector('.cm-content') || document.querySelector('.monaco-editor textarea');
   if (editorElement) {
     editorElement.setAttribute('lang', langCode);
     editorElement.setAttribute('spellcheck', 'true');

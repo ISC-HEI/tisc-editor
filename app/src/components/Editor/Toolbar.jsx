@@ -1,14 +1,18 @@
-import { ArrowDownToLine, FolderOpen, Bold, Italic, Underline, Folders, Languages, Settings2 } from "lucide-react";
-import { useEditorWatcher } from "@/hooks/useEditor"
-import { useEffect, useRef, useState } from "react";
-import { functions, refs, initPreviewRefs, applyLanguageToTypst} from "@/hooks/refs";
+import {
+  ArrowDownToLine,
+  FolderOpen,
+  Bold,
+  Italic,
+  Underline,
+  Folders,
+  Languages,
+  Settings2,
+} from 'lucide-react';
+import { useEditorWatcher } from '@/hooks/useEditor';
+import { useEffect, useRef, useState } from 'react';
+import { functions, refs, initPreviewRefs, applyLanguageToTypst } from '@/hooks/refs';
 
-export function Toolbar({
-  fontSize,
-  onFontSizeChange,
-  wordWrap,
-  onWordWrapChange,
-}) {
+export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange }) {
   const btnSaveRef = useRef(null);
   const btnOpenRef = useRef(null);
   const btnBRef = useRef(null);
@@ -29,7 +33,7 @@ export function Toolbar({
     setIsFileExplorerOpen(false);
 
     if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = "none";
+      refs.imageExplorer.style.display = 'none';
     }
   };
 
@@ -39,7 +43,7 @@ export function Toolbar({
     setIsSettingsOpen(false);
 
     if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = "block";
+      refs.imageExplorer.style.display = 'block';
     }
   };
 
@@ -49,7 +53,7 @@ export function Toolbar({
     setIsFileExplorerOpen(false);
 
     if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = "none";
+      refs.imageExplorer.style.display = 'none';
     }
   };
 
@@ -59,7 +63,7 @@ export function Toolbar({
     setIsFileExplorerOpen(false);
 
     if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = "none";
+      refs.imageExplorer.style.display = 'none';
     }
   };
 
@@ -69,7 +73,7 @@ export function Toolbar({
     setIsFileExplorerOpen(false);
 
     if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = "none";
+      refs.imageExplorer.style.display = 'none';
     }
   };
 
@@ -160,8 +164,8 @@ export function Toolbar({
           }}
           className={`p-2.5 rounded-xl transition-all ${
             isFileExplorerOpen
-              ? "bg-blue-50 text-blue-600 shadow-inner"
-              : "hover:bg-white hover:shadow-sm hover:text-blue-600 text-slate-500"
+              ? 'bg-blue-50 text-blue-600 shadow-inner'
+              : 'hover:bg-white hover:shadow-sm hover:text-blue-600 text-slate-500'
           }`}
           title="Files Explorer"
         >
@@ -181,8 +185,8 @@ export function Toolbar({
           }}
           className={`p-2.5 rounded-xl transition-all ${
             isSettingsOpen
-              ? "bg-blue-50 text-blue-600 shadow-inner"
-              : "hover:bg-white hover:shadow-sm text-slate-500"
+              ? 'bg-blue-50 text-blue-600 shadow-inner'
+              : 'hover:bg-white hover:shadow-sm text-slate-500'
           }`}
           title="Editor Settings"
         >
@@ -200,8 +204,8 @@ export function Toolbar({
           }}
           className={`p-2.5 rounded-xl transition-all ${
             isLangOpen
-              ? "bg-blue-50 text-blue-600 shadow-inner"
-              : "hover:bg-white hover:shadow-sm text-slate-500"
+              ? 'bg-blue-50 text-blue-600 shadow-inner'
+              : 'hover:bg-white hover:shadow-sm text-slate-500'
           }`}
           title="Language"
         >
@@ -212,9 +216,7 @@ export function Toolbar({
       {isLangOpen && (
         <div className="fixed left-14 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-xl z-50 p-4 animate-in slide-in-from-left duration-200">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-700">
-              Traduire le document
-            </h3>
+            <h3 className="font-bold text-slate-700">Traduire le document</h3>
 
             <button
               onClick={() => setIsLangOpen(false)}
@@ -228,7 +230,7 @@ export function Toolbar({
             <button
               className="flex justify-between items-center text-left p-3 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-colors group"
               onClick={() => {
-                applyLanguageToTypst("fr");
+                applyLanguageToTypst('fr');
                 setIsLangOpen(false);
               }}
             >
@@ -239,7 +241,7 @@ export function Toolbar({
             <button
               className="flex justify-between items-center text-left p-3 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-colors group"
               onClick={() => {
-                applyLanguageToTypst("en");
+                applyLanguageToTypst('en');
                 setIsLangOpen(false);
               }}
             >
@@ -250,7 +252,7 @@ export function Toolbar({
             <button
               className="flex justify-between items-center text-left p-3 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-colors group"
               onClick={() => {
-                applyLanguageToTypst("de");
+                applyLanguageToTypst('de');
                 setIsLangOpen(false);
               }}
             >
@@ -265,8 +267,8 @@ export function Toolbar({
             </p>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              This option changes the structural language (headings, dates,
-              bibliography) of your Typst document.
+              This option changes the structural language (headings, dates, bibliography) of your
+              Typst document.
             </p>
           </div>
         </div>
@@ -275,9 +277,7 @@ export function Toolbar({
       {isSettingsOpen && (
         <div className="fixed left-14 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-xl z-50 p-4 animate-in slide-in-from-left duration-200">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-700">
-              Editor Settings
-            </h3>
+            <h3 className="font-bold text-slate-700">Editor Settings</h3>
 
             <button
               onClick={() => setIsSettingsOpen(false)}
@@ -298,9 +298,7 @@ export function Toolbar({
           </div>
 
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-[11px] text-slate-400 font-medium">
-              A
-            </span>
+            <span className="text-[11px] text-slate-400 font-medium">A</span>
 
             <input
               type="range"
@@ -308,15 +306,11 @@ export function Toolbar({
               max={28}
               step={1}
               value={fontSize}
-              onChange={(e) =>
-                onFontSizeChange?.(Number(e.target.value))
-              }
+              onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
               className="flex-1 h-1.5 rounded-full appearance-none bg-slate-200 accent-blue-600 cursor-pointer"
             />
 
-            <span className="text-lg text-slate-400 font-medium">
-              A
-            </span>
+            <span className="text-lg text-slate-400 font-medium">A</span>
           </div>
 
           <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">
@@ -327,22 +321,18 @@ export function Toolbar({
             onClick={() => onWordWrapChange?.(!wordWrap)}
             className="flex justify-between items-center w-full p-3 rounded-xl hover:bg-slate-50 transition-colors"
           >
-            <span className="font-medium text-sm text-slate-700">
-              Line Wrapping
-            </span>
+            <span className="font-medium text-sm text-slate-700">Line Wrapping</span>
 
             <span
               role="switch"
               aria-checked={wordWrap}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                wordWrap ? "bg-blue-600" : "bg-slate-300"
+                wordWrap ? 'bg-blue-600' : 'bg-slate-300'
               }`}
             >
               <span
                 className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                  wordWrap
-                    ? "translate-x-[18px]"
-                    : "translate-x-[3px]"
+                  wordWrap ? 'translate-x-[18px]' : 'translate-x-[3px]'
                 }`}
               />
             </span>

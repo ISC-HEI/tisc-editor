@@ -1,7 +1,7 @@
-"use server"
+'use server';
 
-import { signIn } from "@/lib/auth"
-import { AuthError } from "next-auth"
+import { signIn } from '@/lib/auth';
+import { AuthError } from 'next-auth';
 
 type ActionResponse = string | null | undefined;
 
@@ -14,19 +14,19 @@ type ActionResponse = string | null | undefined;
  */
 export async function loginAction(prevState: ActionResponse, formData: FormData) {
   try {
-    await signIn("credentials", { 
-      ...Object.fromEntries(formData), 
-      redirectTo: "/dashboard" 
-    })
+    await signIn('credentials', {
+      ...Object.fromEntries(formData),
+      redirectTo: '/dashboard',
+    });
   } catch (error) {
-    if (error instanceof Error && error.message?.includes("NEXT_REDIRECT")) {
-      throw error
+    if (error instanceof Error && error.message?.includes('NEXT_REDIRECT')) {
+      throw error;
     }
 
     if (error instanceof AuthError) {
-      return "Incorrect credentials."
+      return 'Incorrect credentials.';
     }
-    
-    return "An unexpected error has occurred."
+
+    return 'An unexpected error has occurred.';
   }
 }

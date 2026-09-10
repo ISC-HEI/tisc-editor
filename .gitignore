@@ -4,5 +4,3 @@
 node_modules
 package.json
 bun.lock
-
-cypress/screenshots

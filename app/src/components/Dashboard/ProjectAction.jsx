@@ -1,32 +1,49 @@
-"use client"
+'use client';
 
-import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { deleteProject, leaveProject, getUsersEmailFromId, getProjectAssignmentRole, transferProjectOwnership, getProjectMembers } from "@/app/dashboard/actions";
-import SharedUserWindows from "./SharedUserWindow"
-import EditProjectTagsModal from "./EditProjectTagsModal";
-import { Ellipsis, Link as LinkIcon, Share2, Trash, Crown, Loader2, X, LogOut, Tag } from "lucide-react"
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  deleteProject,
+  leaveProject,
+  getUsersEmailFromId,
+  getProjectAssignmentRole,
+  transferProjectOwnership,
+  getProjectMembers,
+} from '@/app/dashboard/actions';
+import SharedUserWindows from './SharedUserWindow';
+import EditProjectTagsModal from './EditProjectTagsModal';
+import {
+  Ellipsis,
+  Link as LinkIcon,
+  Share2,
+  Trash,
+  Crown,
+  Loader2,
+  X,
+  LogOut,
+  Tag,
+} from 'lucide-react';
 
 function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
-  const [selected, setSelected] = useState(null)
-  const [isPending, setIsPending] = useState(false)
-  const [error, setError] = useState("")
+  const [selected, setSelected] = useState(null);
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState('');
 
   const handleConfirm = async () => {
-    if (!selected) return
-    setIsPending(true)
-    setError("")
+    if (!selected) return;
+    setIsPending(true);
+    setError('');
     try {
-      await transferProjectOwnership(projectId, selected)
-      const formData = new FormData()
-      formData.append("id", projectId)
-      await leaveProject(formData)
-      onSuccess()
+      await transferProjectOwnership(projectId, selected);
+      const formData = new FormData();
+      formData.append('id', projectId);
+      await leaveProject(formData);
+      onSuccess();
     } catch (err) {
-      setError(err.message)
-      setIsPending(false)
+      setError(err.message);
+      setIsPending(false);
     }
-  }
+  };
 
   return (
     <div
@@ -47,14 +64,19 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
               <p className="text-xs text-slate-500">Required before leaving</p>
             </div>
           </div>
-          <button onClick={onClose} disabled={isPending} className="p-1.5 hover:bg-amber-100 rounded-full text-slate-400 transition-colors">
+          <button
+            onClick={onClose}
+            disabled={isPending}
+            className="p-1.5 hover:bg-amber-100 rounded-full text-slate-400 transition-colors"
+          >
             <X size={16} />
           </button>
         </div>
 
         <div className="p-6">
           <p className="text-sm text-slate-500 mb-5">
-            You are the owner of this shared project. Choose a new owner — they'll inherit full control and you'll leave as a member.
+            You are the owner of this shared project. Choose a new owner — they'll inherit full
+            control and you'll leave as a member.
           </p>
 
           <ul className="space-y-2 max-h-52 overflow-y-auto">
@@ -65,8 +87,8 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
                   onClick={() => setSelected(m.email)}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
                     selected === m.email
-                      ? "border-amber-400 bg-amber-50"
-                      : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
+                      ? 'border-amber-400 bg-amber-50'
+                      : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
                   }`}
                 >
                   <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shrink-0">
@@ -74,7 +96,9 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-700 truncate">{m.email}</p>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{m.role}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                      {m.role}
+                    </p>
                   </div>
                   {selected === m.email && <Crown size={14} className="text-amber-500 shrink-0" />}
                 </button>
@@ -108,104 +132,100 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
-  const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
-  const [isSharing, setIsSharing] = useState(false)
-  const [isTransferring, setIsTransferring] = useState(false)
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
   const [isEditingTags, setIsEditingTags] = useState(false);
-  const [emails, setEmails] = useState([])
-  const [members, setMembers] = useState([])
-  const [currentRole, setCurrentRole] = useState(isAuthor ? 'owner' : 'editor')
-  const isOwner = currentRole === 'owner'
-  const menuRef = useRef(null)
+  const [emails, setEmails] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [currentRole, setCurrentRole] = useState(isAuthor ? 'owner' : 'editor');
+  const isOwner = currentRole === 'owner';
+  const menuRef = useRef(null);
 
   useEffect(() => {
-    setCurrentRole(isAuthor ? 'owner' : 'editor')
-  }, [isAuthor])
+    setCurrentRole(isAuthor ? 'owner' : 'editor');
+  }, [isAuthor]);
 
   useEffect(() => {
     const fetchRole = async () => {
       try {
-        const role = await getProjectAssignmentRole(projectId)
-        if (role) setCurrentRole(role)
+        const role = await getProjectAssignmentRole(projectId);
+        if (role) setCurrentRole(role);
       } catch (err) {
-        console.error("Erreur rôle:", err)
+        console.error('Erreur rôle:', err);
       }
-    }
-    fetchRole()
-  }, [projectId])
+    };
+    fetchRole();
+  }, [projectId]);
 
   useEffect(() => {
-    if (!usersSharing || usersSharing.length === 0) return
+    if (!usersSharing || usersSharing.length === 0) return;
     const fetchEmails = async () => {
       try {
-        const data = await getUsersEmailFromId(usersSharing)
-        setEmails(data)
+        const data = await getUsersEmailFromId(usersSharing);
+        setEmails(data);
       } catch (err) {
-        console.error("Erreur emails:", err)
+        console.error('Erreur emails:', err);
       }
-    }
-    fetchEmails()
-  }, [usersSharing])
+    };
+    fetchEmails();
+  }, [usersSharing]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setIsOpen(false)
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+      if (menuRef.current && !menuRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleShare = (e) => {
-    e.preventDefault()
-    setIsSharing(true)
-    setIsOpen(false)
-  }
+    e.preventDefault();
+    setIsSharing(true);
+    setIsOpen(false);
+  };
 
   const handleRemoveUserSuccess = (emailToRemove) => {
-    setEmails((prev) => prev.filter((u) => u.email !== emailToRemove))
-  }
+    setEmails((prev) => prev.filter((u) => u.email !== emailToRemove));
+  };
 
   const handleLeaveClick = async (e) => {
-    e.preventDefault()
-    setIsOpen(false)
+    e.preventDefault();
+    setIsOpen(false);
 
     if (!isOwner) {
-      const formData = new FormData()
-      formData.append("id", projectId)
-      await leaveProject(formData)
-      router.refresh()
-      return
+      const formData = new FormData();
+      formData.append('id', projectId);
+      await leaveProject(formData);
+      router.refresh();
+      return;
     }
 
     try {
-      const otherMembers = await getProjectMembers(projectId)
+      const otherMembers = await getProjectMembers(projectId);
       if (otherMembers.length === 0) {
-
-        const formData = new FormData()
-        formData.append("id", projectId)
-        await leaveProject(formData)
-        router.refresh()
-
+        const formData = new FormData();
+        formData.append('id', projectId);
+        await leaveProject(formData);
+        router.refresh();
       } else {
-
-        setMembers(otherMembers)
-        setIsTransferring(true)
+        setMembers(otherMembers);
+        setIsTransferring(true);
       }
     } catch (err) {
-      console.error("Erreur leave:", err)
+      console.error('Erreur leave:', err);
     }
-  }
+  };
 
   const handleTransferSuccess = () => {
-    
-    setIsTransferring(false)
-    router.refresh()
-  }
+    setIsTransferring(false);
+    router.refresh();
+  };
 
   return (
     <>
@@ -229,17 +249,17 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
       )}
 
       {isEditingTags && (
-        <EditProjectTagsModal
-            projectId={projectId}
-            onClose={() => setIsEditingTags(false)}
-        />
+        <EditProjectTagsModal projectId={projectId} onClose={() => setIsEditingTags(false)} />
       )}
 
       {isOwner ? (
         <div className="relative" ref={menuRef}>
           <button
             type="button"
-            onClick={(e) => { e.preventDefault(); setIsOpen(!isOpen) }}
+            onClick={(e) => {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors font-bold text-gray-500"
           >
             <Ellipsis />
@@ -297,5 +317,5 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
         </button>
       )}
     </>
-  )
+  );
 }

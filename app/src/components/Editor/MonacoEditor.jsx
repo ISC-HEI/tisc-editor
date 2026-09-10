@@ -1,11 +1,18 @@
-"use client";
-import { useRef, useEffect } from "react";
-import * as monaco from "monaco-editor";
-import { typstSyntax, typstConfig } from "../../assets/typst-definition";
-import { refs } from "@/hooks/refs";
-import { currentFilePath } from "@/hooks/useEditor";
+'use client';
+import { useRef, useEffect } from 'react';
+import * as monaco from 'monaco-editor';
+import { typstSyntax, typstConfig } from '../../assets/typst-definition';
+import { refs } from '@/hooks/refs';
+import { currentFilePath } from '@/hooks/useEditor';
 
-export const MonacoEditor = ({ content, fontSize, wordWrap, onChange, onCursorChange, onInstanceReady }) => {
+export const MonacoEditor = ({
+  content,
+  fontSize,
+  wordWrap,
+  onChange,
+  onCursorChange,
+  onInstanceReady,
+}) => {
   const editorRef = useRef(null);
   const monacoInstance = useRef(null);
   const isRemoteChange = useRef(false);
@@ -13,9 +20,9 @@ export const MonacoEditor = ({ content, fontSize, wordWrap, onChange, onCursorCh
   useEffect(() => {
     if (!editorRef.current) return;
 
-    const langId = "typst";
-    const isRegistered = monaco.languages.getLanguages().some(l => l.id === langId);
-    
+    const langId = 'typst';
+    const isRegistered = monaco.languages.getLanguages().some((l) => l.id === langId);
+
     if (!isRegistered) {
       monaco.languages.register({ id: langId });
       monaco.languages.setLanguageConfiguration(langId, typstConfig);
@@ -23,19 +30,19 @@ export const MonacoEditor = ({ content, fontSize, wordWrap, onChange, onCursorCh
     }
 
     const editor = monaco.editor.create(editorRef.current, {
-      value: content || "",
+      value: content || '',
       language: langId,
-      theme: "vs-light",
+      theme: 'vs-light',
       automaticLayout: true,
       fontSize: fontSize || 14,
-      wordWrap: wordWrap ? "on" : "off",
+      wordWrap: wordWrap ? 'on' : 'off',
       fontFamily: "'Fira Code', monospace",
       minimap: { enabled: false },
-      lineNumbers: "on",
+      lineNumbers: 'on',
       roundedSelection: true,
       scrollBeyondLastLine: false,
       padding: { top: 16 },
-      lineNumbersMinChars: 3
+      lineNumbersMinChars: 3,
     });
 
     monacoInstance.current = editor;
@@ -47,7 +54,7 @@ export const MonacoEditor = ({ content, fontSize, wordWrap, onChange, onCursorCh
       if (!isRemoteChange.current && onChange) {
         onChange({
           filename: currentFilePath,
-          changes: event.changes 
+          changes: event.changes,
         });
       }
     });
@@ -57,7 +64,7 @@ export const MonacoEditor = ({ content, fontSize, wordWrap, onChange, onCursorCh
       if (!isRemoteChange.current && onCursorChange) {
         onCursorChange({
           filename: currentFilePath,
-          selection: event.selection
+          selection: event.selection,
         });
       }
     });
@@ -83,7 +90,7 @@ export const MonacoEditor = ({ content, fontSize, wordWrap, onChange, onCursorCh
 
   useEffect(() => {
     if (monacoInstance.current) {
-      monacoInstance.current.updateOptions({ wordWrap: wordWrap ? "on" : "off" });
+      monacoInstance.current.updateOptions({ wordWrap: wordWrap ? 'on' : 'off' });
     }
   }, [wordWrap]);
 
