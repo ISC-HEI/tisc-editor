@@ -79,7 +79,7 @@ export const PreviewPane = () => {
         <div 
           ref={pageRef}
           id="page"
-          className="shadow-2xl origin-top transition-transform duration-200 bg-white min-w-[400px] min-h-[600px]"
+          className="shadow-2xl origin-top transition-transform duration-200 min-w-[400px] min-h-[600px]"
         >
         </div>
       </div>

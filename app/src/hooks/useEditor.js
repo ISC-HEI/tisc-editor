@@ -264,6 +264,8 @@ function trySyncScrollToCursor() {
 function setPageContent(html, scrollState) {
     refs.page.innerHTML = html;
 
+    applyPageGaps(refs.page.querySelector('svg')); // NEW
+
     const container = refs.previewContainer;
     if (!container) return;
 
@@ -589,4 +591,51 @@ export async function persistFileTree(tree) {
         makeToast("Network error — could not save project.", "error");
         return false;
     }
+}
+
+/** Gap between rendered pages, in the SVG's own coordinate units. */
+const PAGE_GAP = 24;
+
+/**
+ * Visually separates rendered Typst pages by inserting a vertical gap
+ * between each page group and giving each one its own white "sheet"
+ * rectangle, instead of one continuous slab of white.
+ */
+function applyPageGaps(svg) {
+    if (!svg) return;
+
+    svg.style.background = 'transparent';
+
+    const pages = svg.querySelectorAll('g.typst-page');
+    if (pages.length === 0) return;
+
+    let cursorY = 0;
+    let maxWidth = 0;
+
+    pages.forEach((page) => {
+        const pageWidth = parseFloat(page.getAttribute('data-page-width')) || 0;
+        const pageHeight = parseFloat(page.getAttribute('data-page-height')) || 0;
+
+        page.setAttribute('transform', `translate(0, ${cursorY})`);
+
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('x', '0');
+        bg.setAttribute('y', '0');
+        bg.setAttribute('width', String(pageWidth));
+        bg.setAttribute('height', String(pageHeight));
+        bg.setAttribute('fill', 'white');
+        bg.setAttribute('stroke', '#e2e8f0');
+        bg.setAttribute('stroke-width', '1');
+        page.insertBefore(bg, page.firstChild);
+
+        cursorY += pageHeight + PAGE_GAP;
+        maxWidth = Math.max(maxWidth, pageWidth);
+    });
+
+    const totalHeight = Math.max(0, cursorY - PAGE_GAP);
+    svg.setAttribute('viewBox', `0 0 ${maxWidth} ${totalHeight}`);
+    svg.setAttribute('width', String(maxWidth));
+    svg.setAttribute('height', String(totalHeight));
+    svg.setAttribute('data-width', String(maxWidth));
+    svg.setAttribute('data-height', String(totalHeight));
 }
