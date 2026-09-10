@@ -23,6 +23,87 @@ function decodeContent(data: string) {
 }
 
 /**
+ * Inserts invisible position markers at safe top-level paragraph boundaries
+ * in a Typst source string, so we can later query their rendered position
+ * (page + x + y) and map source lines to preview coordinates for edit-sync.
+ *
+ * @param {string} content - Original .typ source.
+ * @returns {{ content: string, markerCount: number }} Source with injected
+ *   markers, and how many were inserted.
+ */
+function injectSyncMarkers(content: string) {
+    const lines = content.split('\n');
+    const out: string[] = [];
+    let bracketDepth = 0;
+    let inCodeFence = false;
+    let mathOpen = false;
+    let inParagraph = false;
+    let markerCount = 0;
+
+    const countBrackets = (line: string) => {
+        for (const ch of line) {
+            if (ch === '(' || ch === '[' || ch === '{') bracketDepth++;
+            else if (ch === ')' || ch === ']' || ch === '}') bracketDepth = Math.max(0, bracketDepth - 1);
+        }
+    };
+
+    lines.forEach((line, idx) => {
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('```')) {
+            inCodeFence = !inCodeFence;
+            out.push(line);
+            countBrackets(line);
+            return;
+        }
+
+        if (trimmed === '') {
+            inParagraph = false;
+            out.push(line);
+            return;
+        }
+
+        const isSafe = bracketDepth === 0 && !inCodeFence && !mathOpen;
+
+        if (!inParagraph && isSafe) {
+            out.push(`#context [#metadata((line: ${idx}, loc: here().position())) <tsync-marker>]`);
+            markerCount++;
+        }
+        inParagraph = true;
+
+        out.push(line);
+        countBrackets(line);
+
+        const dollarCount = (line.match(/(?<!\\)\$/g) || []).length;
+        if (dollarCount % 2 !== 0) mathOpen = !mathOpen;
+    });
+
+    return { content: out.join('\n'), markerCount };
+}
+
+/**
+ * Walks the JSON file tree to find the main file node and replace its
+ * text content in place (used to inject sync markers before compilation
+ * without touching what gets persisted or exported).
+ * @param {any} children - The fileTree's children object.
+ * @param {string} mainFileCleanPath - Path relative to root (no "root/" prefix).
+ * @param {(text: string) => string} patchFn - Transform applied to the file's decoded text.
+ * @returns {boolean} True if the main file was found and patched.
+ */
+function patchMainFileContent(children: any, mainFileCleanPath: string, patchFn: (text: string) => string): boolean {
+  const parts = mainFileCleanPath.split('/');
+  let node: any = { children };
+  for (const part of parts) {
+    if (!node.children || !node.children[part]) return false;
+    node = node.children[part];
+  }
+  if (node.type !== 'file') return false;
+  const original = decodeContent(node.data ?? node.content ?? '');
+  node.data = patchFn(original);
+  return true;
+}
+
+/**
  * Recursively traverses the JSON file tree to recreate the folder structure 
  * and write files to the server's temporary local storage.
  * @param {any} children - The nested object containing file/folder nodes.
@@ -108,6 +189,32 @@ function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>, workin
 }
 
 /**
+ * Parses the raw query() results for our sync markers into a clean array
+ * of { line, page, x, y } (x/y in pt, as numbers). Tolerant of missing or
+ * malformed entries - always returns an array, never throws.
+ * @param {any} rawResults - Return value of compiler.query(..., { selector: '<tsync-marker>' }).
+ * @returns {Array<{line: number, page: number, x: number, y: number}>}
+ */
+function parseSyncMarkers(rawResults: any) {
+  if (!Array.isArray(rawResults)) return [];
+  const parsePt = (v: any) => typeof v === 'string' ? parseFloat(v.replace('pt', '')) : NaN;
+
+  return rawResults
+    .map((r: any) => ({
+      line: r?.value?.line,
+      page: r?.value?.loc?.page,
+      x: parsePt(r?.value?.loc?.x),
+      y: parsePt(r?.value?.loc?.y),
+    }))
+    .filter((m: any) =>
+      typeof m.line === 'number' &&
+      typeof m.page === 'number' &&
+      !Number.isNaN(m.x) &&
+      !Number.isNaN(m.y)
+    );
+}
+
+/**
  * Main API Route Handler for Typst document compilation.
  * Manages session isolation, disk I/O, NodeCompiler execution, 
  * and automated resource cleanup.
@@ -123,9 +230,13 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { fileTree, mainFile, format = 'svg', documentFontSize } = body;
+    const { fileTree, mainFile, format = 'svg', documentFontSize, sync = false } = body;
 
     const mainFileCleanPath = mainFile.replace(/^root\//, "");
+
+    if (sync && format !== 'pdf') {
+      patchMainFileContent(fileTree.children, mainFileCleanPath, (text) => injectSyncMarkers(text).content);
+    }
     
     if (!fs.existsSync(workingDir)) {
       fs.mkdirSync(workingDir, { recursive: true });
@@ -162,9 +273,21 @@ export async function POST(req: Request) {
       
       else {
         const svg = localCompiler.svg(compileOptions);
+
+        let syncMarkers: any[] = [];
+        if (sync) {
+          try {
+            const rawResults = localCompiler.query(compileOptions, { selector: '<tsync-marker>' });
+            syncMarkers = parseSyncMarkers(rawResults);
+          } catch (syncErr: any) {
+            console.warn('Sync marker query failed (non-fatal):', syncErr.message || syncErr);
+          }
+        }
+
         return NextResponse.json({
           success: true,
           svg: svg,
+          syncMarkers,
           logs: [{ 
             type: 'success', 
             msg: 'Compilation successful', 
@@ -180,6 +303,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         svg: null,
+        syncMarkers: [],
         logs: [{ type: 'error', msg: cleanedError, time: new Date().toLocaleTimeString() }]
       }, { status: 200 });
 

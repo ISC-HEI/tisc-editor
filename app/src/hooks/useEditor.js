@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { refs, infos } from "./refs"
 import { addLogToPane, debounce, makeToast } from "./useUtils"
-import { fetchSvg, exportPdf, exportSvg } from "./useApi"
+import { fetchSvg, exportPdf, exportSvg, findMainFile } from "./useApi"
 
 export let currentProjectId;
 export let fileTree = { type: "folder", name: "root", children: {} };
@@ -11,6 +11,8 @@ export let isLoadingFile = false;
 
 let hasCompilationError = false;
 let onPathChangeCallback = null;
+
+let syncMarkers = [];
 
 const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
 const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh', 'scala'];
@@ -156,8 +158,131 @@ async function applyFormatting(type) {
     await autoSave();
 }
 
+/**
+ * Snapshot of the preview scroll container, taken right before #page is
+ * collapsed to the loading spinner (which would otherwise clamp scrollTop
+ * back to 0 and make the preview jump on every recompile).
+ */
+function captureScrollState() {
+    const container = refs.previewContainer;
+    if (!container) return null;
+    return {
+        scrollTop: container.scrollTop,
+        scrollHeight: container.scrollHeight
+    };
+}
+
+/**
+ * Returns true only when the file currently open in the editor is the
+ * document's main/entry file. Sync markers are line numbers within the
+ * main file's source, so trying to use them while editing an #include-d
+ * file would point at the wrong content entirely.
+ */
+function isEditingMainFile() {
+    const mainPath = findMainFile(fileTree) || "main.typ";
+    const normalizedCurrent = currentFilePath.replace(/^root\//, "");
+    const normalizedMain = mainPath.replace(/^root\//, "");
+    return normalizedCurrent === normalizedMain;
+}
+
+/**
+ * Picks the sync marker closest to (at or before) the cursor's line, since
+ * that's the most recently-rendered content above/at the edit point.
+ * Falls back to the first marker in the document if the cursor is above
+ * every marker (e.g. editing inside the very first paragraph).
+ */
+function findNearestSyncMarker(cursorLine) {
+    if (!syncMarkers || syncMarkers.length === 0) return null;
+
+    let best = null;
+    for (const marker of syncMarkers) {
+        if (marker.line <= cursorLine && (!best || marker.line > best.line)) {
+            best = marker;
+        }
+    }
+    return best || syncMarkers[0];
+}
+
+/**
+ * Converts a marker's (page, x, y) in pt into real screen coordinates using
+ * the rendered SVG's own page group transform (via getScreenCTM), then
+ * scrolls the preview container so that point sits near the top of the
+ * viewport (with a small margin), rather than centered. This works
+ * regardless of zoom level or page layout since it lets the browser's own
+ * SVG coordinate math do the conversion instead of us reimplementing it.
+ * @returns {boolean} True if the scroll was applied.
+ */
+function scrollToSyncMarker(marker) {
+    const TOP_MARGIN = 32;
+
+    const container = refs.previewContainer;
+    const svg = refs.page?.querySelector('svg');
+    if (!container || !svg || !marker) return false;
+
+    const pageGroups = svg.querySelectorAll('g.typst-page');
+    const pageGroup = pageGroups[marker.page - 1];
+    if (!pageGroup || typeof pageGroup.getScreenCTM !== 'function') return false;
+
+    const ctm = pageGroup.getScreenCTM();
+    if (!ctm) return false;
+
+    const point = svg.createSVGPoint();
+    point.x = marker.x;
+    point.y = marker.y;
+    const screenPoint = point.matrixTransform(ctm);
+
+    const containerRect = container.getBoundingClientRect();
+    const offset = (screenPoint.y - containerRect.top) - TOP_MARGIN + container.scrollTop;
+    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+    container.scrollTop = Math.min(Math.max(offset, 0), maxScroll);
+    return true;
+}
+
+/**
+ * Attempts to scroll the preview to the marker matching the current cursor
+ * position. Returns false (does nothing) when sync isn't applicable, so the
+ * caller can fall back to plain scroll preservation.
+ */
+function trySyncScrollToCursor() {
+    if (!refs.editor || isLoadingFile || !isEditingMainFile()) return false;
+
+    const position = refs.editor.getPosition();
+    if (!position) return false;
+
+    const marker = findNearestSyncMarker(position.lineNumber - 1);
+    if (!marker) return false;
+
+    return scrollToSyncMarker(marker);
+}
+
+/**
+ * Sets #page's HTML then scrolls the preview to match the edit location
+ * using the resolved sync markers. Falls back to preserving the previous
+ * relative scroll position when sync isn't applicable (no markers, editing
+ * a non-main file, etc.), so a recompile never silently snaps to the top.
+ */
+function setPageContent(html, scrollState) {
+    refs.page.innerHTML = html;
+
+    applyPageGaps(refs.page.querySelector('svg')); // NEW
+
+    const container = refs.previewContainer;
+    if (!container) return;
+
+    if (trySyncScrollToCursor()) return;
+
+    if (scrollState && scrollState.scrollHeight > 0) {
+        const newScrollHeight = container.scrollHeight;
+        const maxScroll = Math.max(0, newScrollHeight - container.clientHeight);
+        const targetTop = (scrollState.scrollTop / scrollState.scrollHeight) * newScrollHeight;
+        container.scrollTop = Math.min(Math.max(targetTop, 0), maxScroll);
+    }
+}
+
 export async function fetchCompile() {
     if (!refs.page) return;
+
+    const scrollState = captureScrollState();
 
     refs.page.innerHTML = `
         <div class="flex items-center justify-center h-full w-full bg-gray-50/50">
@@ -170,10 +295,11 @@ export async function fetchCompile() {
 
     try {
         
-        const raw = await fetchSvg(fileTree);
+        const raw = await fetchSvg(fileTree, { sync: true });
 
         if (!raw) {
-            refs.page.innerHTML = `<div class="flex items-center justify-center h-full text-slate-400 text-sm italic">Empty project — start typing to preview.</div>`;
+            syncMarkers = [];
+            setPageContent(`<div class="flex items-center justify-center h-full text-slate-400 text-sm italic">Empty project — start typing to preview.</div>`, scrollState);
             return;
         }
 
@@ -197,7 +323,8 @@ export async function fetchCompile() {
         if (result.success && result.svg) {
             hasCompilationError = false;
             updateExportButtons();
-            refs.page.innerHTML = result.svg;
+            syncMarkers = Array.isArray(result.syncMarkers) ? result.syncMarkers : [];
+            setPageContent(result.svg, scrollState);
         } else {
             let errorMessage = "Unknown compilation error";
             if (result.logs) {
@@ -207,8 +334,9 @@ export async function fetchCompile() {
 
             hasCompilationError = true;
             updateExportButtons();
+            syncMarkers = [];
 
-            refs.page.innerHTML = `
+            setPageContent(`
                 <div class="p-8 text-red-600 font-mono text-sm bg-red-50 h-full overflow-auto">
                     <div class="flex items-center gap-2 font-bold mb-4">
                         <span class="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] uppercase">Compilation Failed</span>
@@ -218,14 +346,15 @@ export async function fetchCompile() {
                     </div>
                     <p class="mt-4 text-red-400 text-xs italic">Check the System Logs for more details.</p>
                 </div>
-            `;
+            `, scrollState);
         }
     } catch (err) {
         console.error("Critical Fetch Error:", err);
         addLogToPane({ type: 'error', msg: `Network or Server Error: ${err.message}` });
         hasCompilationError = true;
         updateExportButtons();
-        refs.page.innerHTML = `
+        syncMarkers = [];
+        setPageContent(`
             <div class="p-8 text-red-600 font-mono text-sm bg-red-50 h-full overflow-auto">
                 <div class="flex items-center gap-2 font-bold mb-4">
                     <span class="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] uppercase">Compilation Error</span>
@@ -234,7 +363,7 @@ export async function fetchCompile() {
                     <pre class="whitespace-pre-wrap leading-relaxed">${err.message}</pre>
                 </div>
             </div>
-        `;
+        `, scrollState);
     }
 }
 
@@ -462,4 +591,51 @@ export async function persistFileTree(tree) {
         makeToast("Network error — could not save project.", "error");
         return false;
     }
+}
+
+/** Gap between rendered pages, in the SVG's own coordinate units. */
+const PAGE_GAP = 24;
+
+/**
+ * Visually separates rendered Typst pages by inserting a vertical gap
+ * between each page group and giving each one its own white "sheet"
+ * rectangle, instead of one continuous slab of white.
+ */
+function applyPageGaps(svg) {
+    if (!svg) return;
+
+    svg.style.background = 'transparent';
+
+    const pages = svg.querySelectorAll('g.typst-page');
+    if (pages.length === 0) return;
+
+    let cursorY = 0;
+    let maxWidth = 0;
+
+    pages.forEach((page) => {
+        const pageWidth = parseFloat(page.getAttribute('data-page-width')) || 0;
+        const pageHeight = parseFloat(page.getAttribute('data-page-height')) || 0;
+
+        page.setAttribute('transform', `translate(0, ${cursorY})`);
+
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('x', '0');
+        bg.setAttribute('y', '0');
+        bg.setAttribute('width', String(pageWidth));
+        bg.setAttribute('height', String(pageHeight));
+        bg.setAttribute('fill', 'white');
+        bg.setAttribute('stroke', '#e2e8f0');
+        bg.setAttribute('stroke-width', '1');
+        page.insertBefore(bg, page.firstChild);
+
+        cursorY += pageHeight + PAGE_GAP;
+        maxWidth = Math.max(maxWidth, pageWidth);
+    });
+
+    const totalHeight = Math.max(0, cursorY - PAGE_GAP);
+    svg.setAttribute('viewBox', `0 0 ${maxWidth} ${totalHeight}`);
+    svg.setAttribute('width', String(maxWidth));
+    svg.setAttribute('height', String(totalHeight));
+    svg.setAttribute('data-width', String(maxWidth));
+    svg.setAttribute('data-height', String(totalHeight));
 }
