@@ -62,7 +62,12 @@ export async function getUserProjects() {
         include: {
             project: {
                 include: {
-                    userLinks: true
+                    userLinks: true,
+                    tags: {
+                        include: {
+                            tag: true
+                        }
+                    }
                 }
             }
         },
@@ -77,6 +82,11 @@ export async function getUserProjects() {
         ...a.project,
         isAuthor: a.role === 'owner',
         role: a.role,
+
+        tags: a.project.tags.map(
+            (projectTag: any) => projectTag.tag
+        ),
+
         usersSharing: a.project.userLinks
             .filter((link: any) => link.userId !== userId)
             .map((link: any) => link.userId)
@@ -104,22 +114,36 @@ export async function getProjectAssignmentRole(projectId: string) {
 
 
 export async function createProject(formData: FormData) {
-
-    const session = await auth()
+    const session = await auth();
 
     if (!session?.user?.id) {
-        throw new Error("No authorization")
+        throw new Error("No authorization");
     }
 
-    const userId = session.user.id
+    const userId = session.user.id;
 
-    const title = formData.get("title") as string
-    const packageBase = formData.get("packageBase") as string
-    const packageSubPath = formData.get("packageSubPath") as string
-    const entryFile = formData.get("entryFile") as string
+    const title = formData.get("title") as string;
+    const packageBase = formData.get("packageBase") as string;
+    const packageSubPath = formData.get("packageSubPath") as string;
+    const entryFile = formData.get("entryFile") as string;
+
+    const tags = formData
+        .getAll("tags")
+        .map((tag) => String(tag).trim().toLowerCase())
+        .filter(Boolean);
+
+    const uniqueTags = [...new Set(tags)];
 
     if (!title || !packageBase) {
-        return
+        throw new Error("Missing project information");
+    }
+
+    if (uniqueTags.length > 10) {
+        throw new Error("Maximum 10 tags allowed");
+    }
+
+    if (uniqueTags.some((tag) => tag.length > 50)) {
+        throw new Error("Tags must be 50 characters or fewer");
     }
 
     let projectData = {
@@ -128,60 +152,330 @@ export async function createProject(formData: FormData) {
             name: "root",
             children: {} as Record<string, FileNode>
         }
-    }
+    };
 
     if (packageBase !== "blank") {
+        const latestVersion = await getLatestVersion(packageBase);
 
-        const latestVersion = await getLatestVersion(packageBase)
-        const packageId = `${packageBase}/${latestVersion}${packageSubPath ? `/${packageSubPath}` : ""}`
+        const packageId = `${packageBase}/${latestVersion}${
+            packageSubPath ? `/${packageSubPath}` : ""
+        }`;
 
-        const imported = await importPackageAsTree(packageId, entryFile)
+        const imported = await importPackageAsTree(
+            packageId,
+            entryFile
+        );
 
         if (imported) {
-            projectData.fileTree = imported.fileTree as any
+            projectData.fileTree = imported.fileTree as any;
         } else {
-            throw new Error("Template import failed.")
+            throw new Error("Template import failed.");
         }
-
     } else {
-
         projectData.fileTree.children["main.typ"] = {
-            type: 'file',
+            type: "file",
             name: "main.typ",
             fullPath: "main.typ",
             isMain: true,
             data: ""
-        }
+        };
     }
 
-    const dataSize = Buffer.byteLength(JSON.stringify(projectData.fileTree), 'utf8');
-    const quota = await checkUserQuota(userId, dataSize);
+    const dataSize = Buffer.byteLength(
+        JSON.stringify(projectData.fileTree),
+        "utf8"
+    );
+
+    const quota = await checkUserQuota(
+        userId,
+        dataSize
+    );
 
     if (!quota.allowed) {
         throw new Error(
-            `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(quota.limit! / 1024 / 1024).toFixed(2)}MB). Cannot create project.`
+            `Quota exceeded (${(
+                quota.usage /
+                1024 /
+                1024
+            ).toFixed(2)}MB / ${(
+                quota.limit! /
+                1024 /
+                1024
+            ).toFixed(2)}MB). Cannot create project.`
         );
     }
 
-    await prisma.project.create({
-        data: {
-            title,
-            fileTree: projectData.fileTree as any,
-            userLinks: {
-                create: {
-                    user: {
-                        connect: {
-                            id: userId
-                        }
-                    },
-                    role: "owner"
+    const project = await prisma.$transaction(async (tx) => {
+        const project = await tx.project.create({
+            data: {
+                title,
+                fileTree: projectData.fileTree as any,
+
+                userLinks: {
+                    create: {
+                        user: {
+                            connect: {
+                                id: userId
+                            }
+                        },
+                        role: "owner"
+                    }
                 }
+            }
+        });
+
+        for (const tagName of uniqueTags) {
+            const tagRecord = await tx.tag.upsert({
+                where: {
+                    name: tagName
+                },
+                update: {},
+                create: {
+                    name: tagName
+                }
+            });
+
+            await tx.projectTag.create({
+                data: {
+                    projectId: project.id,
+                    tagId: tagRecord.id
+                }
+            });
+        }
+
+        return project;
+    });
+
+    revalidatePath("/dashboard");
+
+    return project;
+}
+
+export const addTagToProject = async (
+    projectId: string,
+    tag: string
+) => {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    if (!projectId || !tag?.trim()) {
+        throw new Error("Missing project id or tag")
+    }
+
+    const tagName = tag.trim()
+
+    const assignment = await prisma.projectAssignment.findUnique({
+        where: {
+            userId_projectId: {
+                userId,
+                projectId
             }
         }
     })
 
+    if (!assignment) {
+        throw new Error("Access denied")
+    }
+
+    const tagRecord = await prisma.tag.upsert({
+        where: {
+            name: tagName
+        },
+        update: {},
+        create: {
+            name: tagName
+        }
+    })
+
+    await prisma.projectTag.upsert({
+        where: {
+            projectId_tagId: {
+                projectId,
+                tagId: tagRecord.id
+            }
+        },
+        update: {},
+        create: {
+            projectId,
+            tagId: tagRecord.id
+        }
+    })
+
     revalidatePath("/dashboard")
+
+    return {
+        success: true,
+        tag: tagRecord
+    }
 }
+
+
+export const removeTagFromProject = async (
+    projectId: string,
+    tag: string
+) => {
+    const session = await auth()
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized")
+    }
+
+    const userId = session.user.id
+
+    if (!projectId || !tag?.trim()) {
+        throw new Error("Missing project id or tag")
+    }
+
+    const tagName = tag.trim()
+
+    const assignment = await prisma.projectAssignment.findUnique({
+        where: {
+            userId_projectId: {
+                userId,
+                projectId
+            }
+        }
+    })
+
+    if (!assignment) {
+        throw new Error("Access denied")
+    }
+
+    const tagRecord = await prisma.tag.findUnique({
+        where: {
+            name: tagName
+        }
+    })
+
+    if (!tagRecord) {
+        return {
+            success: true
+        }
+    }
+
+    await prisma.projectTag.deleteMany({
+        where: {
+            projectId,
+            tagId: tagRecord.id
+        }
+    })
+
+    const remainingProjects = await prisma.projectTag.count({
+        where: {
+            tagId: tagRecord.id
+        }
+    })
+
+    if (remainingProjects === 0) {
+        await prisma.tag.delete({
+            where: {
+                id: tagRecord.id
+            }
+        })
+    }
+
+    revalidatePath("/dashboard")
+
+    return {
+        success: true
+    }
+}
+
+
+export const getTagsByUser = async () => {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+
+    const userId = session.user.id;
+
+    return prisma.tag.findMany({
+        where: {
+            projects: {
+                some: {
+                    project: {
+                        userLinks: {
+                            some: {
+                                userId,
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        orderBy: {
+            name: "asc",
+        },
+        select: {
+            id: true,
+            name: true,
+        },
+    });
+};
+
+export const getProjectTags = async (projectId: string) => {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+
+    const userId = session.user.id;
+
+    const assignment = await prisma.projectAssignment.findUnique({
+        where: {
+            userId_projectId: {
+                userId,
+                projectId
+            }
+        }
+    });
+
+    if (!assignment) {
+        throw new Error("Access denied");
+    }
+
+    const projectTags = await prisma.projectTag.findMany({
+        where: {
+            projectId
+        },
+        include: {
+            tag: {
+                select: {
+                    id: true,
+                    name: true
+                }
+            }
+        },
+        orderBy: {
+            tag: {
+                name: "asc"
+            }
+        }
+    });
+
+    const availableTags = await prisma.tag.findMany({
+        orderBy: {
+            name: "asc"
+        },
+        select: {
+            id: true,
+            name: true
+        }
+    });
+
+    return {
+        projectTags: projectTags.map((item) => item.tag),
+        availableTags
+    };
+};
 
 export async function getUserStorage() {
 
@@ -583,7 +877,6 @@ async function getProjectById(
     projectId: string,
     userId: string
 ) {
-
     const assignment =
         await prisma.projectAssignment.findUnique({
             where: {
@@ -593,7 +886,15 @@ async function getProjectById(
                 }
             },
             include: {
-                project: true
+                project: {
+                    include: {
+                        tags: {
+                            include: {
+                                tag: true
+                            }
+                        }
+                    }
+                }
             }
         })
 
@@ -601,7 +902,12 @@ async function getProjectById(
         return null
     }
 
-    return assignment.project
+    return {
+        ...assignment.project,
+        tags: assignment.project.tags.map(
+            (projectTag) => projectTag.tag
+        )
+    }
 }
 
 

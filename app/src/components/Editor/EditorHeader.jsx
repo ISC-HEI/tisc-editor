@@ -3,7 +3,7 @@ import { SignOutButton } from "../SignOutButton";
 import { useEffect, useRef } from "react";
 import { initPreviewRefs } from "@/hooks/refs";
 
-export const EditorHeader = ({ title }) => {
+export const EditorHeader = ({ title, tags = [] }) => {
   const userCountRef = useRef(null);
   const userListContainerRef = useRef(null);
 
@@ -28,6 +28,23 @@ export const EditorHeader = ({ title }) => {
             <FileText size={16} />
           </div>
           <h1 className="font-semibold text-sm tracking-tight" data-test="editor-title">{title}</h1>
+          <div className="flex items-center gap-1.5 ml-2">
+            {tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag.id}
+                className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md"
+              >
+                #{tag.name}
+              </span>
+            ))}
+
+            {tags.length > 3 && (
+              <span className="text-[10px] font-semibold text-slate-400">
+                +{tags.length - 3}
+              </span>
+            )}
+          </div>
+
         </div>
       </div>
       <div className="flex items-center justify-center flex-1 relative group">

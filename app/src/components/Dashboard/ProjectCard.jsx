@@ -3,7 +3,6 @@ import { ProjectActions } from "./ProjectAction"
 import { Folder, Users, ChevronRight } from "lucide-react"
 
 export function ProjectCard({ project }) {
-  // On utilise les propriétés injectées par notre action getUserProjects
   const isAuthor = project.isAuthor; 
   const isSharedWithMe = !isAuthor;
 
@@ -54,6 +53,24 @@ export function ProjectCard({ project }) {
             </span>
             <ChevronRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
           </div>
+          {project.tags?.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2">
+                {project.tags.slice(0, 3).map((tag) => (
+                    <span
+                        key={tag.id}
+                        className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md"
+                    >
+                        #{tag.name}
+                    </span>
+                ))}
+
+                {project.tags.length > 3 && (
+                    <span className="text-[10px] font-semibold text-slate-400">
+                        +{project.tags.length - 3}
+                    </span>
+                )}
+            </div>
+        )}
         </div>
       </Link>
 

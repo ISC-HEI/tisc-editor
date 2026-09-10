@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { deleteProject, leaveProject, getUsersEmailFromId, getProjectAssignmentRole, transferProjectOwnership, getProjectMembers } from "@/app/dashboard/actions";
 import SharedUserWindows from "./SharedUserWindow"
-import { Ellipsis, Link as LinkIcon, Share2, Trash, Crown, Loader2, X, LogOut } from "lucide-react"
+import EditProjectTagsModal from "./EditProjectTagsModal";
+import { Ellipsis, Link as LinkIcon, Share2, Trash, Crown, Loader2, X, LogOut, Tag } from "lucide-react"
 
 function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
   const [selected, setSelected] = useState(null)
@@ -115,6 +116,7 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
   const [isTransferring, setIsTransferring] = useState(false)
+  const [isEditingTags, setIsEditingTags] = useState(false);
   const [emails, setEmails] = useState([])
   const [members, setMembers] = useState([])
   const [currentRole, setCurrentRole] = useState(isAuthor ? 'owner' : 'editor')
@@ -226,6 +228,13 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
         />
       )}
 
+      {isEditingTags && (
+        <EditProjectTagsModal
+            projectId={projectId}
+            onClose={() => setIsEditingTags(false)}
+        />
+      )}
+
       {isOwner ? (
         <div className="relative" ref={menuRef}>
           <button
@@ -244,6 +253,17 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
               >
                 <Share2 size={16} /> Share
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditingTags(true);
+                  setIsOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+              >
+                <Tag size={16} /> Edit Tags
               </button>
 
               <button
