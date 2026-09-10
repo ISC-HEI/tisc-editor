@@ -4,9 +4,14 @@ import { refs } from "./refs";
 /**
  * Sends the project file tree to the server to compile it into an SVG string.
  * @param {Object} fileTree - The hierarchical structure of the project files.
+ * @param {Object} [options] - Compile options.
+ * @param {boolean} [options.sync=false] - When true, asks the backend to inject
+ *   invisible position markers into the main file and return their resolved
+ *   preview coordinates (syncMarkers), used to scroll the preview to match
+ *   the editor cursor. Left false for exports so the exported SVG stays clean.
  * @returns {Promise<string>} The SVG content as a string, or an empty string if compilation fails.
  */
-export async function fetchSvg(fileTree) {
+export async function fetchSvg(fileTree, { sync = false } = {}) {
     if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return "";
 
 
@@ -35,7 +40,8 @@ export async function fetchSvg(fileTree) {
                 fileTree: fileTree,
                 mainFile: mainPath,
                 format: "svg",
-                documentFontSize: refs?.editorFontSize || undefined
+                documentFontSize: refs?.editorFontSize || undefined,
+                sync
             })
         });
 
