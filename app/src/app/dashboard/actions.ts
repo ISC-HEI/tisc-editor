@@ -62,7 +62,12 @@ export async function getUserProjects() {
         include: {
             project: {
                 include: {
-                    userLinks: true
+                    userLinks: true,
+                    tags: {
+                        include: {
+                            tag: true
+                        }
+                    }
                 }
             }
         },
@@ -77,6 +82,11 @@ export async function getUserProjects() {
         ...a.project,
         isAuthor: a.role === 'owner',
         role: a.role,
+
+        tags: a.project.tags.map(
+            (projectTag: any) => projectTag.tag
+        ),
+
         usersSharing: a.project.userLinks
             .filter((link: any) => link.userId !== userId)
             .map((link: any) => link.userId)
@@ -408,6 +418,63 @@ export const getTagsByUser = async () => {
             name: true,
         },
     });
+};
+
+export const getProjectTags = async (projectId: string) => {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        throw new Error("Unauthorized");
+    }
+
+    const userId = session.user.id;
+
+    const assignment = await prisma.projectAssignment.findUnique({
+        where: {
+            userId_projectId: {
+                userId,
+                projectId
+            }
+        }
+    });
+
+    if (!assignment) {
+        throw new Error("Access denied");
+    }
+
+    const projectTags = await prisma.projectTag.findMany({
+        where: {
+            projectId
+        },
+        include: {
+            tag: {
+                select: {
+                    id: true,
+                    name: true
+                }
+            }
+        },
+        orderBy: {
+            tag: {
+                name: "asc"
+            }
+        }
+    });
+
+    const availableTags = await prisma.tag.findMany({
+        orderBy: {
+            name: "asc"
+        },
+        select: {
+            id: true,
+            name: true
+        }
+    });
+
+    return {
+        projectTags: projectTags.map((item) => item.tag),
+        availableTags
+    };
 };
 
 export async function getUserStorage() {
