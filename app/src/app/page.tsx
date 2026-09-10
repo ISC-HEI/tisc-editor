@@ -72,6 +72,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
     id: project.id,
     title: project.title,
     fileTree: normalizeFileTree(project.fileTree),
+    tags: project.tags || [],
   };
 
   return (
@@ -80,6 +81,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
       title={projectData.title}
       fileTree={projectData.fileTree}
       userId={session.user.id}
+      tags={projectData.tags}
     />
   );
 }

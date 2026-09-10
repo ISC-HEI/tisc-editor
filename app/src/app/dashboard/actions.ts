@@ -877,7 +877,6 @@ async function getProjectById(
     projectId: string,
     userId: string
 ) {
-
     const assignment =
         await prisma.projectAssignment.findUnique({
             where: {
@@ -887,7 +886,15 @@ async function getProjectById(
                 }
             },
             include: {
-                project: true
+                project: {
+                    include: {
+                        tags: {
+                            include: {
+                                tag: true
+                            }
+                        }
+                    }
+                }
             }
         })
 
@@ -895,7 +902,12 @@ async function getProjectById(
         return null
     }
 
-    return assignment.project
+    return {
+        ...assignment.project,
+        tags: assignment.project.tags.map(
+            (projectTag) => projectTag.tag
+        )
+    }
 }
 
 

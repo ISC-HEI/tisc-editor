@@ -19,7 +19,7 @@ const MonacoEditor = dynamic(
   { ssr: false }
 );
 
-export default function Editor({ projectId, title, fileTree, userId }) {
+export default function Editor({ projectId, title, fileTree, userId, tags }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: "", callback: null });
   const [inputValue, setInputValue] = useState("");
@@ -217,7 +217,7 @@ export default function Editor({ projectId, title, fileTree, userId }) {
         </div>
       </div>
     )}
-      <EditorHeader title={title} />
+      <EditorHeader title={title} tags={tags} />
 
 
       <div className="flex flex-1 overflow-hidden relative">
