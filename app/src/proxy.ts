@@ -1,5 +1,5 @@
-import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
+import NextAuth from 'next-auth';
+import { authConfig } from '@/lib/auth.config';
 
 export default NextAuth(authConfig).auth;
 
@@ -13,5 +13,5 @@ export default NextAuth(authConfig).auth;
  * - Public auth pages (login, signup)
  */
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login|signup).*)"],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login|signup).*)'],
 };

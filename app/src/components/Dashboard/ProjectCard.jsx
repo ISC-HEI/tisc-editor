@@ -1,23 +1,21 @@
-import Link from "next/link"
-import { ProjectActions } from "./ProjectAction"
-import { Folder, Users, ChevronRight } from "lucide-react"
+import Link from 'next/link';
+import { ProjectActions } from './ProjectAction';
+import { Folder, Users, ChevronRight } from 'lucide-react';
 
 export function ProjectCard({ project }) {
-  const isAuthor = project.isAuthor; 
+  const isAuthor = project.isAuthor;
   const isSharedWithMe = !isAuthor;
 
   return (
     <div className="group relative bg-white border border-slate-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex items-center justify-between">
-      
-      <Link 
-        href={`/?projectId=${project.id}`} 
-        className="flex-grow flex items-center gap-4"
-      >
-        <div className={`p-3 rounded-xl transition-colors ${
-          isSharedWithMe 
-            ? "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100" 
-            : "bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600"
-        }`}>
+      <Link href={`/?projectId=${project.id}`} className="flex-grow flex items-center gap-4">
+        <div
+          className={`p-3 rounded-xl transition-colors ${
+            isSharedWithMe
+              ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100'
+              : 'bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
+          }`}
+        >
           {isSharedWithMe ? <Users size={22} /> : <Folder size={22} />}
         </div>
 
@@ -26,7 +24,7 @@ export function ProjectCard({ project }) {
             <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
               {project.title}
             </span>
-            
+
             {isSharedWithMe && (
               <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-md">
                 Guest
@@ -46,31 +44,32 @@ export function ProjectCard({ project }) {
               </>
             )}
           </div>
-          
+
           <div className="flex items-center text-xs text-slate-400 mt-1 font-medium">
-            <span className="group-hover:text-blue-500 transition-colors">
-              Open editor
-            </span>
-            <ChevronRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+            <span className="group-hover:text-blue-500 transition-colors">Open editor</span>
+            <ChevronRight
+              size={14}
+              className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+            />
           </div>
           {project.tags?.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2">
-                {project.tags.slice(0, 3).map((tag) => (
-                    <span
-                        key={tag.id}
-                        className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md"
-                    >
-                        #{tag.name}
-                    </span>
-                ))}
+              {project.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag.id}
+                  className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md"
+                >
+                  #{tag.name}
+                </span>
+              ))}
 
-                {project.tags.length > 3 && (
-                    <span className="text-[10px] font-semibold text-slate-400">
-                        +{project.tags.length - 3}
-                    </span>
-                )}
+              {project.tags.length > 3 && (
+                <span className="text-[10px] font-semibold text-slate-400">
+                  +{project.tags.length - 3}
+                </span>
+              )}
             </div>
-        )}
+          )}
         </div>
       </Link>
 
@@ -83,5 +82,5 @@ export function ProjectCard({ project }) {
         />
       </div>
     </div>
-  )
+  );
 }

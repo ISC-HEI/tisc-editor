@@ -1,38 +1,38 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from '@/lib/prisma';
 
 export function calcFileTreeSize(node: any): number {
-    if (!node) return 0;
-    let size = 0;
+  if (!node) return 0;
+  let size = 0;
 
-    if (node.type === 'file' && node.data) {
-        const data = node.data as string;
-        if (data.startsWith('data:')) {
-            const base64 = data.split(',')[1] ?? '';
-            const padding = (base64.match(/=+$/) || [''])[0].length;
-            size += Math.round((base64.length * 3) / 4) - padding;
-        } else {
-            size += new TextEncoder().encode(data).length;
-        }
+  if (node.type === 'file' && node.data) {
+    const data = node.data as string;
+    if (data.startsWith('data:')) {
+      const base64 = data.split(',')[1] ?? '';
+      const padding = (base64.match(/=+$/) || [''])[0].length;
+      size += Math.round((base64.length * 3) / 4) - padding;
+    } else {
+      size += new TextEncoder().encode(data).length;
     }
+  }
 
-    if (node.children) {
-        for (const child of Object.values(node.children) as any[]) {
-            size += calcFileTreeSize(child);
-        }
+  if (node.children) {
+    for (const child of Object.values(node.children) as any[]) {
+      size += calcFileTreeSize(child);
     }
+  }
 
-    return size;
+  return size;
 }
 
 export async function getOwnedStorageUsage(userId: string, excludeProjectId?: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { projectLinks: { include: { project: true } } }
+    include: { projectLinks: { include: { project: true } } },
   });
 
-  if (!user) throw new Error("User not found");
+  if (!user) throw new Error('User not found');
 
-  const ownedLinks = user.projectLinks.filter(link => link.role === "owner");
+  const ownedLinks = user.projectLinks.filter((link) => link.role === 'owner');
 
   const usage = ownedLinks.reduce((acc: number, link) => {
     if (excludeProjectId && link.project.id === excludeProjectId) return acc;
@@ -42,7 +42,11 @@ export async function getOwnedStorageUsage(userId: string, excludeProjectId?: st
   return { usage, limit: user.storageQuota, ownedLinks };
 }
 
-export async function checkUserQuota(userId: string, newDataSize: number = 0, excludeProjectId?: string) {
+export async function checkUserQuota(
+  userId: string,
+  newDataSize: number = 0,
+  excludeProjectId?: string,
+) {
   const { usage, limit } = await getOwnedStorageUsage(userId, excludeProjectId);
 
   const totalAttempted = usage + newDataSize;

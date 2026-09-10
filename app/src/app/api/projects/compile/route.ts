@@ -6,11 +6,10 @@ import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; 
-
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
- * Decodes file content, converting Base64 encoded strings into 
+ * Decodes file content, converting Base64 encoded strings into
  * UTF-8 text if a data URI prefix is detected.
  * @param {string} data - The raw file data (potentially base64 encoded).
  * @returns {string} The decoded plain text content.
@@ -32,53 +31,53 @@ function decodeContent(data: string) {
  *   markers, and how many were inserted.
  */
 function injectSyncMarkers(content: string) {
-    const lines = content.split('\n');
-    const out: string[] = [];
-    let bracketDepth = 0;
-    let inCodeFence = false;
-    let mathOpen = false;
-    let inParagraph = false;
-    let markerCount = 0;
+  const lines = content.split('\n');
+  const out: string[] = [];
+  let bracketDepth = 0;
+  let inCodeFence = false;
+  let mathOpen = false;
+  let inParagraph = false;
+  let markerCount = 0;
 
-    const countBrackets = (line: string) => {
-        for (const ch of line) {
-            if (ch === '(' || ch === '[' || ch === '{') bracketDepth++;
-            else if (ch === ')' || ch === ']' || ch === '}') bracketDepth = Math.max(0, bracketDepth - 1);
-        }
-    };
+  const countBrackets = (line: string) => {
+    for (const ch of line) {
+      if (ch === '(' || ch === '[' || ch === '{') bracketDepth++;
+      else if (ch === ')' || ch === ']' || ch === '}') bracketDepth = Math.max(0, bracketDepth - 1);
+    }
+  };
 
-    lines.forEach((line, idx) => {
-        const trimmed = line.trim();
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
 
-        if (trimmed.startsWith('```')) {
-            inCodeFence = !inCodeFence;
-            out.push(line);
-            countBrackets(line);
-            return;
-        }
+    if (trimmed.startsWith('```')) {
+      inCodeFence = !inCodeFence;
+      out.push(line);
+      countBrackets(line);
+      return;
+    }
 
-        if (trimmed === '') {
-            inParagraph = false;
-            out.push(line);
-            return;
-        }
+    if (trimmed === '') {
+      inParagraph = false;
+      out.push(line);
+      return;
+    }
 
-        const isSafe = bracketDepth === 0 && !inCodeFence && !mathOpen;
+    const isSafe = bracketDepth === 0 && !inCodeFence && !mathOpen;
 
-        if (!inParagraph && isSafe) {
-            out.push(`#context [#metadata((line: ${idx}, loc: here().position())) <tsync-marker>]`);
-            markerCount++;
-        }
-        inParagraph = true;
+    if (!inParagraph && isSafe) {
+      out.push(`#context [#metadata((line: ${idx}, loc: here().position())) <tsync-marker>]`);
+      markerCount++;
+    }
+    inParagraph = true;
 
-        out.push(line);
-        countBrackets(line);
+    out.push(line);
+    countBrackets(line);
 
-        const dollarCount = (line.match(/(?<!\\)\$/g) || []).length;
-        if (dollarCount % 2 !== 0) mathOpen = !mathOpen;
-    });
+    const dollarCount = (line.match(/(?<!\\)\$/g) || []).length;
+    if (dollarCount % 2 !== 0) mathOpen = !mathOpen;
+  });
 
-    return { content: out.join('\n'), markerCount };
+  return { content: out.join('\n'), markerCount };
 }
 
 /**
@@ -90,7 +89,11 @@ function injectSyncMarkers(content: string) {
  * @param {(text: string) => string} patchFn - Transform applied to the file's decoded text.
  * @returns {boolean} True if the main file was found and patched.
  */
-function patchMainFileContent(children: any, mainFileCleanPath: string, patchFn: (text: string) => string): boolean {
+function patchMainFileContent(
+  children: any,
+  mainFileCleanPath: string,
+  patchFn: (text: string) => string,
+): boolean {
   const parts = mainFileCleanPath.split('/');
   let node: any = { children };
   for (const part of parts) {
@@ -104,14 +107,19 @@ function patchMainFileContent(children: any, mainFileCleanPath: string, patchFn:
 }
 
 /**
- * Recursively traverses the JSON file tree to recreate the folder structure 
+ * Recursively traverses the JSON file tree to recreate the folder structure
  * and write files to the server's temporary local storage.
  * @param {any} children - The nested object containing file/folder nodes.
  * @param {string} baseDir - The target destination path on the disk.
  * @param {Object} accumulator - Tracking object to store created paths for cleanup.
  * @returns {Object} An object containing Sets of created file and directory paths.
  */
-function writeImages(children: any = {}, baseDir: string, accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 }, options: { documentFontSize?: number } = {}) {
+function writeImages(
+  children: any = {},
+  baseDir: string,
+  accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 },
+  options: { documentFontSize?: number } = {},
+) {
   for (const fileName in children) {
     const node = children[fileName];
     const currentPath = path.join(baseDir, node.name || fileName);
@@ -128,21 +136,23 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
         let buffer: Buffer;
 
         if (fileName.endsWith('.typ')) {
-            let textContent = decodeContent(node.data);
+          let textContent = decodeContent(node.data);
 
-        if (fileName.endsWith('.typ') && options?.documentFontSize) {
+          if (fileName.endsWith('.typ') && options?.documentFontSize) {
             textContent = `#set text(size: ${options?.documentFontSize}pt)\n` + textContent;
+          }
+
+          buffer = Buffer.from(textContent, 'utf-8');
+        } else {
+          const base64Data = node.data.includes(',') ? node.data.split(',')[1] : node.data;
+          buffer = Buffer.from(base64Data, 'base64');
         }
 
-            buffer = Buffer.from(textContent, 'utf-8');
-        } else {
-            const base64Data = node.data.includes(',') ? node.data.split(',')[1] : node.data;
-            buffer = Buffer.from(base64Data, 'base64');
-        }
-        
         const fileSize = buffer.length;
         if (fileSize > MAX_FILE_SIZE) {
-          throw new Error(`File ${fileName} is too heavy (${(fileSize / 1024 / 1024).toFixed(2)}MB). Max 5MB.`);
+          throw new Error(
+            `File ${fileName} is too heavy (${(fileSize / 1024 / 1024).toFixed(2)}MB). Max 5MB.`,
+          );
         }
 
         accumulator.totalSize += fileSize;
@@ -167,7 +177,7 @@ function writeImages(children: any = {}, baseDir: string, accumulator = { files:
 }
 
 /**
- * Recursively deletes temporary files and empty directories created 
+ * Recursively deletes temporary files and empty directories created
  * during the compilation process to prevent disk space saturation.
  * @param {Set<string>} createdFiles - Set of absolute file paths to remove.
  * @param {Set<string>} createdDirs - Set of absolute directory paths to clean up.
@@ -197,7 +207,7 @@ function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>, workin
  */
 function parseSyncMarkers(rawResults: any) {
   if (!Array.isArray(rawResults)) return [];
-  const parsePt = (v: any) => typeof v === 'string' ? parseFloat(v.replace('pt', '')) : NaN;
+  const parsePt = (v: any) => (typeof v === 'string' ? parseFloat(v.replace('pt', '')) : NaN);
 
   return rawResults
     .map((r: any) => ({
@@ -206,17 +216,18 @@ function parseSyncMarkers(rawResults: any) {
       x: parsePt(r?.value?.loc?.x),
       y: parsePt(r?.value?.loc?.y),
     }))
-    .filter((m: any) =>
-      typeof m.line === 'number' &&
-      typeof m.page === 'number' &&
-      !Number.isNaN(m.x) &&
-      !Number.isNaN(m.y)
+    .filter(
+      (m: any) =>
+        typeof m.line === 'number' &&
+        typeof m.page === 'number' &&
+        !Number.isNaN(m.x) &&
+        !Number.isNaN(m.y),
     );
 }
 
 /**
  * Main API Route Handler for Typst document compilation.
- * Manages session isolation, disk I/O, NodeCompiler execution, 
+ * Manages session isolation, disk I/O, NodeCompiler execution,
  * and automated resource cleanup.
  * @param {Request} req - The incoming request containing fileTree, mainFile, and format.
  * @returns {Promise<NextResponse>} The compiled PDF blob or a JSON response (SVG/Logs).
@@ -224,7 +235,7 @@ function parseSyncMarkers(rawResults: any) {
 export async function POST(req: Request) {
   const sessionId = crypto.randomBytes(8).toString('hex');
   const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
-  
+
   let createdFiles = new Set<string>();
   let createdDirs = new Set<string>();
 
@@ -232,12 +243,16 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { fileTree, mainFile, format = 'svg', documentFontSize, sync = false } = body;
 
-    const mainFileCleanPath = mainFile.replace(/^root\//, "");
+    const mainFileCleanPath = mainFile.replace(/^root\//, '');
 
     if (sync && format !== 'pdf') {
-      patchMainFileContent(fileTree.children, mainFileCleanPath, (text) => injectSyncMarkers(text).content);
+      patchMainFileContent(
+        fileTree.children,
+        mainFileCleanPath,
+        (text) => injectSyncMarkers(text).content,
+      );
     }
-    
+
     if (!fs.existsSync(workingDir)) {
       fs.mkdirSync(workingDir, { recursive: true });
     }
@@ -246,32 +261,28 @@ export async function POST(req: Request) {
       fileTree.children,
       workingDir,
       undefined,
-      { documentFontSize }
+      { documentFontSize },
     );
 
     const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
 
-    const localCompiler = NodeCompiler.create({ 
-        workspace: workingDir,
-        inputs: { 'X': 'u' },
-        fontArgs: [
-          { fontPaths: ['/usr/local/share/fonts'] }
-        ]
+    const localCompiler = NodeCompiler.create({
+      workspace: workingDir,
+      inputs: { X: 'u' },
+      fontArgs: [{ fontPaths: ['/usr/local/share/fonts'] }],
     });
 
     try {
-      const compileOptions = { 
-        mainFilePath: absoluteMainPath
+      const compileOptions = {
+        mainFilePath: absoluteMainPath,
       };
 
       if (format === 'pdf') {
         const pdfBuffer = localCompiler.pdf(compileOptions);
-        return new NextResponse(new Uint8Array(pdfBuffer), { 
-            headers: { 'Content-Type': 'application/pdf' } 
+        return new NextResponse(new Uint8Array(pdfBuffer), {
+          headers: { 'Content-Type': 'application/pdf' },
         });
-      } 
-      
-      else {
+      } else {
         const svg = localCompiler.svg(compileOptions);
 
         let syncMarkers: any[] = [];
@@ -288,33 +299,39 @@ export async function POST(req: Request) {
           success: true,
           svg: svg,
           syncMarkers,
-          logs: [{ 
-            type: 'success', 
-            msg: 'Compilation successful', 
-            time: new Date().toLocaleTimeString() 
-          }]
+          logs: [
+            {
+              type: 'success',
+              msg: 'Compilation successful',
+              time: new Date().toLocaleTimeString(),
+            },
+          ],
         });
       }
-
     } catch (err: any) {
-      const errorMsg = err.message || err.code || (typeof err === 'string' ? err : "Compilation error");
-      const cleanedError = errorMsg.replace(new RegExp(workingDir, 'g'), "root");
+      const errorMsg =
+        err.message || err.code || (typeof err === 'string' ? err : 'Compilation error');
+      const cleanedError = errorMsg.replace(new RegExp(workingDir, 'g'), 'root');
 
-      return NextResponse.json({
-        success: false,
-        svg: null,
-        syncMarkers: [],
-        logs: [{ type: 'error', msg: cleanedError, time: new Date().toLocaleTimeString() }]
-      }, { status: 200 });
-
+      return NextResponse.json(
+        {
+          success: false,
+          svg: null,
+          syncMarkers: [],
+          logs: [{ type: 'error', msg: cleanedError, time: new Date().toLocaleTimeString() }],
+        },
+        { status: 200 },
+      );
     } finally {
       cleanupTemp(createdFiles, createdDirs, workingDir);
     }
-
   } catch (error: any) {
-    return NextResponse.json({ 
-        success: false, 
-        logs: [{ type: 'error', msg: error.message || "Request error"}]  
-    }, { status: 400 });
+    return NextResponse.json(
+      {
+        success: false,
+        logs: [{ type: 'error', msg: error.message || 'Request error' }],
+      },
+      { status: 400 },
+    );
   }
 }

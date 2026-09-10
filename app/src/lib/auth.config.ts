@@ -1,4 +1,4 @@
-import type { NextAuthConfig } from "next-auth"
+import type { NextAuthConfig } from 'next-auth';
 
 /**
  * NextAuth shared configuration.
@@ -6,20 +6,21 @@ import type { NextAuthConfig } from "next-auth"
  */
 export const authConfig = {
   pages: {
-    signIn: "/login",
+    signIn: '/login',
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const isApiRoute = nextUrl.pathname.startsWith("/api");
-      const isAuthPage = nextUrl.pathname.startsWith("/login") || nextUrl.pathname.startsWith("/signup");
+      const isApiRoute = nextUrl.pathname.startsWith('/api');
+      const isAuthPage =
+        nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup');
 
       if (!isAuthPage && !isApiRoute && !isLoggedIn) {
-        return false; 
+        return false;
       }
-      
+
       if (isLoggedIn && isAuthPage) {
-        return Response.redirect(new URL("/dashboard", nextUrl));
+        return Response.redirect(new URL('/dashboard', nextUrl));
       }
 
       return true;

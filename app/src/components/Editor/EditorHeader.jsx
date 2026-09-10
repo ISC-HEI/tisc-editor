@@ -1,7 +1,7 @@
-import { ChevronLeft, FileText, Users } from "lucide-react";
-import { SignOutButton } from "../SignOutButton";
-import { useEffect, useRef } from "react";
-import { initPreviewRefs } from "@/hooks/refs";
+import { ChevronLeft, FileText, Users } from 'lucide-react';
+import { SignOutButton } from '../SignOutButton';
+import { useEffect, useRef } from 'react';
+import { initPreviewRefs } from '@/hooks/refs';
 
 export const EditorHeader = ({ title, tags = [] }) => {
   const userCountRef = useRef(null);
@@ -11,7 +11,7 @@ export const EditorHeader = ({ title, tags = [] }) => {
     if (userCountRef.current && userListContainerRef.current) {
       initPreviewRefs({
         userCount: userCountRef.current,
-        userListContainer: userListContainerRef.current
+        userListContainer: userListContainerRef.current,
       });
     }
   }, []);
@@ -19,7 +19,11 @@ export const EditorHeader = ({ title, tags = [] }) => {
   return (
     <header className="h-14 border-b border-slate-200 flex items-center justify-between px-4 shrink-0 bg-white z-10">
       <div className="flex items-center gap-4 flex-1">
-        <a href="/dashboard" className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="Back to Dashboard">
+        <a
+          href="/dashboard"
+          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+          title="Back to Dashboard"
+        >
           <ChevronLeft size={20} />
         </a>
         <div className="h-6 w-[1px] bg-slate-200 mx-1" />
@@ -27,7 +31,9 @@ export const EditorHeader = ({ title, tags = [] }) => {
           <div className="bg-blue-50 text-blue-600 p-1.5 rounded">
             <FileText size={16} />
           </div>
-          <h1 className="font-semibold text-sm tracking-tight" data-test="editor-title">{title}</h1>
+          <h1 className="font-semibold text-sm tracking-tight" data-test="editor-title">
+            {title}
+          </h1>
           <div className="flex items-center gap-1.5 ml-2">
             {tags.slice(0, 3).map((tag) => (
               <span
@@ -39,12 +45,9 @@ export const EditorHeader = ({ title, tags = [] }) => {
             ))}
 
             {tags.length > 3 && (
-              <span className="text-[10px] font-semibold text-slate-400">
-                +{tags.length - 3}
-              </span>
+              <span className="text-[10px] font-semibold text-slate-400">+{tags.length - 3}</span>
             )}
           </div>
-
         </div>
       </div>
       <div className="flex items-center justify-center flex-1 relative group">
@@ -63,8 +66,10 @@ export const EditorHeader = ({ title, tags = [] }) => {
           <div className="px-3 py-1 border-b border-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             Users online
           </div>
-          <div ref={userListContainerRef} className="max-h-48 overflow-y-auto px-1 py-1 flex flex-col gap-0.5">
-          </div>
+          <div
+            ref={userListContainerRef}
+            className="max-h-48 overflow-y-auto px-1 py-1 flex flex-col gap-0.5"
+          ></div>
         </div>
       </div>
       <div className="flex items-center justify-end gap-3 flex-1">

@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 const { execSync } = require('child_process');
 
 const getGitVersion = () => {
@@ -7,19 +7,19 @@ const getGitVersion = () => {
   }
 
   try {
-    const version = execSync('git describe --tags --always --first-parent --dirty=.dev', { 
+    const version = execSync('git describe --tags --always --first-parent --dirty=.dev', {
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'] 
+      stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
-    
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', { 
+
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'] 
+      stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
-    
-    return (branch === 'main' || branch === 'master') ? version : `${version}-${branch}`;
+
+    return branch === 'main' || branch === 'master' ? version : `${version}-${branch}`;
   } catch (error) {
-    return "v0.0.0-local";
+    return 'v0.0.0-local';
   }
 };
 

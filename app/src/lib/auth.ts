@@ -1,42 +1,41 @@
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
+import NextAuth from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 /**
  * Main NextAuth configuration and initialization.
- * This file handles the database adapter, credential validation, 
+ * This file handles the database adapter, credential validation,
  * and session augmentation (JWT/Session callbacks).
  */
-
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   pages: {
-    signIn: "/login"
+    signIn: '/login',
   },
   providers: [
     Credentials({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-            return null;
+          return null;
         }
 
         try {
           const user = await prisma.user.findUnique({
-            where: { email: String(credentials.email) }
-          })
-          
+            where: { email: String(credentials.email) },
+          });
+
           if (user && user.password) {
             const passwordsMatch = await bcrypt.compare(
-              String(credentials.password), 
-              user.password
+              String(credentials.password),
+              user.password,
             );
 
             if (passwordsMatch) {
@@ -46,40 +45,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               };
             }
           }
-          console.log("Invalid credentials");
-          return null
+          console.log('Invalid credentials');
+          return null;
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error('Auth error:', error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
   session: {
-    strategy: "jwt"
+    strategy: 'jwt',
   },
   callbacks: {
-    async jwt({token, user}) {
+    async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
+        token.id = user.id;
       }
-      return token
+      return token;
     },
-    async session({session, token}) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string
+        session.user.id = token.id as string;
       }
-      return session
+      return session;
     },
-    authorized({auth, request: { nextUrl }}) {
-      const isLoggedIn = !!auth?.user
-      const isOnDashboard = !nextUrl.pathname.startsWith("/login")
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth?.user;
+      const isOnDashboard = !nextUrl.pathname.startsWith('/login');
 
       if (isOnDashboard) {
-        if (isLoggedIn) return true
-        return false
+        if (isLoggedIn) return true;
+        return false;
       }
-      return true
-    }
-  }
-})
+      return true;
+    },
+  },
+});

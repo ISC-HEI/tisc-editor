@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -34,6 +36,7 @@
     "@types/react": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "prettier": "^3.9.6",
     "prisma": "^7.2.0",
     "typescript": "^5"
   }

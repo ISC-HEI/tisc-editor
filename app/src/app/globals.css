@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
@@ -34,7 +34,7 @@ button {
 }
 
 .tree-item-row.selected-item {
-    background-color: #f1f5f9;
-    outline: 1px solid #cbd5e1;
-    border-radius: 4px;
+  background-color: #f1f5f9;
+  outline: 1px solid #cbd5e1;
+  border-radius: 4px;
 }
