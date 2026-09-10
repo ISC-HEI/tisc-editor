@@ -15,7 +15,6 @@
     <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
     <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
     <img src="https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white" />
-    <img src="https://img.shields.io/badge/Cypress-69D3A7?logo=cypress&logoColor=fff&style=for-the-badge" />
     <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white" />
   </div>
 
@@ -31,7 +30,7 @@ TISC Editor is a **Dockerized repo** providing a professional environment for cl
 - **Web Editor:** VSCode-like interface, live preview, template gallery, collaboration.
 - **Compilation API:** Stateless Typst to PDF/SVG rendering, Base64 asset handling.
 - **Database Layer:** PostgreSQL managed with Prisma ORM.
-- **Testing & CI/CD:** Full E2E coverage with Cypress, integrated in Docker lifecycle.
+- **CI/CD:** Automated build and formatting checks on every push and pull request via GitHub Actions.
 
 
 ## Tech Stack
@@ -42,7 +41,6 @@ TISC Editor is a **Dockerized repo** providing a professional environment for cl
 | Backend    | Node.js API with Typst binary integration, Socket.io-server |
 | Database   | PostgreSQL, Prisma ORM |
 | DevOps     | Docker Compose, GitHub Actions |
-| Testing    | Cypress E2E |
 
 
 ## Key Features
@@ -52,7 +50,6 @@ TISC Editor is a **Dockerized repo** providing a professional environment for cl
 | **Web Editor** | Multi-user editing with content synchronization, active users presence, and live notifications (Toasts). |
 | **Compilation API** | Typst to PDF/SVG rendering, isolated environments, Base64 image processing |
 | **Architecture** | Dockerized monorepo, Prisma ORM, Next.js Server Actions |
-| **Testing** | Automated End-to-End testing with Cypress integrated into Docker |
 
 
 ## Real-time Collaboration & Sync
@@ -111,14 +108,13 @@ AUTH_SECRET=your_auth_secret_here
 - **Node.js / Bun** (Optional, for local development outside Docker)
 
 ### Development Deployment Docker
-To launch the entire stack (App, API, Database) and see the tests run automatically:
+To launch the entire stack (App, API, Database):
 > Make sure you completed the [Configuration](#configuration--environment) before.
 ```bash
 git clone https://github.com/ISC-HEI/tisc-editor.git
 cd tisc-editor
 docker compose -f docker-compose-dev.yml up -d --build
 ```
-> Note: The test container will launch, execute the suite, and exit. The App, API, and Database will remain running in the background for you to work on.
 
 * Editor UI: http://localhost:3000
 
@@ -186,12 +182,6 @@ docker run -d \
 docker exec tisc-app-prod npx prisma db push --url="postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db"
 ```
 
-5. If you want to run the test, execute this (required bun or npm)
-```bash
-bun i cypress
-bun x cypress run --config baseUrl=https://tisc.isc-vs.dev,screenshotOnRunFailure=false
-```
-
 ### Script Automation
 The `publish_new_version.sh` script automates the deployment process. After pushing your changes to the repository, run the following on the server:
 ```bash
@@ -206,23 +196,18 @@ To reset or start the database container along with the application, use the `--
 
 > All infos is configurable in this script.
 
-## Testing
-The project includes a robust End-to-End (E2E) testing suite powered by **Cypress**. These tests ensure that critical user flows remain stable and functional.
+## CI/CD
 
-**Tested Scenarios:**
-- **Authentication:** Sign-up, Login, and Logout flows.
-- **Project Lifecycle:** Creating projects using various templates (Blank, Thesis, Report).
-- **Collaboration:** Sharing projects, handling non-existent users, self-sharing prevention, and managing permissions.
+The project uses **GitHub Actions** to automatically validate every push and pull request to `main`. Workflows live under `.github/workflows/`.
 
-### Running Tests
-To run the full suite and shut down the environment automatically (ideal for CI):
-```bash
-docker compose -f docker-compose-dev.yml up --build --exit-code-from test
-```
-To run tests while the application is already running in development mode:
-```bash
-docker compose -f docker-compose-dev.yml run test
-```
+| Workflow | File | What it checks |
+| :--- | :--- | :--- |
+| **Build** | `build.yml` | Installs dependencies and runs `bun run build` from `app/` to make sure the project compiles. |
+| **Format** | `format.yml` | Installs dependencies and runs `bun run format:check` (Prettier) from `app/` to make sure the codebase is consistently formatted. |
+
+A local **pre-commit hook** (via Husky) also runs `bun run format:check` before each commit, so formatting issues are caught before code even reaches CI.
+
+> More checks (linting, tests) will be added to the pipeline over time.
 
 ## Diagram
 
