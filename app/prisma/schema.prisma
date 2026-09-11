@@ -27,6 +27,7 @@ model Project {
   id        String              @id @default(uuid()) @db.Uuid
   title     String              @db.VarChar(60)
   fileTree  Json                @map("file_tree")
+  isActive  Boolean             @default(true)
 
   userLinks ProjectAssignment[]
   tags      ProjectTag[]

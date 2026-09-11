@@ -8,21 +8,12 @@ import {
   getUsersEmailFromId,
   getProjectAssignmentRole,
   transferProjectOwnership,
+  setProjectActiveStatus,
   getProjectMembers,
 } from '@/app/dashboard/actions';
 import SharedUserWindows from './SharedUserWindow';
 import EditProjectTagsModal from './EditProjectTagsModal';
-import {
-  Ellipsis,
-  Link as LinkIcon,
-  Share2,
-  Trash,
-  Crown,
-  Loader2,
-  X,
-  LogOut,
-  Tag,
-} from 'lucide-react';
+import { Ellipsis, Share2, Trash, Crown, Loader2, X, LogOut, Tag, Archive } from 'lucide-react';
 
 function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
   const [selected, setSelected] = useState(null);
@@ -135,7 +126,7 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
   );
 }
 
-export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
+export function ProjectActions({ projectId, title, usersSharing, isAuthor, isActive = true }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -227,6 +218,24 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
     router.refresh();
   };
 
+  const handleArchiveClick = async (e) => {
+    e.preventDefault();
+    setIsOpen(false);
+
+    if (!isOwner) {
+      alert('Only the owner can archive the project.');
+      return;
+    }
+
+    setProjectActiveStatus(projectId, !isActive)
+      .then(() => {
+        router.refresh();
+      })
+      .catch((err) => {
+        console.error('Archiving Error:', err);
+      });
+  };
+
   return (
     <>
       {isOwner && isSharing && (
@@ -284,6 +293,14 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor }) {
                 className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
               >
                 <Tag size={16} /> Edit Tags
+              </button>
+
+              <button
+                type="button"
+                onClick={handleArchiveClick}
+                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+              >
+                <Archive size={16} /> {isActive ? 'Archive' : 'Unarchive'}
               </button>
 
               <button

@@ -451,6 +451,44 @@ export const getProjectTags = async (projectId: string) => {
   };
 };
 
+export const setProjectActiveStatus = async (projectId: string, isActive: boolean) => {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  const assignment = await prisma.projectAssignment.findUnique({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+
+  if (!assignment) {
+    throw new Error('Access denied');
+  }
+
+  if (assignment.role !== 'owner') {
+    throw new Error('Only project owners can change the active status');
+  }
+
+  await prisma.project.update({
+    where: {
+      id: projectId,
+    },
+    data: {
+      isActive,
+    },
+  });
+
+  revalidatePath('/dashboard');
+};
+
 export async function getUserStorage() {
   const session = await auth();
 

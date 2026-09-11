@@ -23,7 +23,7 @@ export default async function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
-      <main className="py-12 px-6 overflow-y-auto">
+      <main className="py-12 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <div>
