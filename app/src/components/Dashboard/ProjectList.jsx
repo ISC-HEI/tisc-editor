@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, ChevronDown, Tag as TagIcon } from 'lucide-react';
+import { X, ChevronDown, Tag as TagIcon, Archive } from 'lucide-react';
 import { ProjectCard } from './ProjectCard';
 import { getTagsByUser } from '@/app/dashboard/actions';
 
@@ -13,6 +13,8 @@ export function ProjectList({ initialProjects }) {
   const [availableTags, setAvailableTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+
+  const [showInactive, setShowInactive] = useState(false);
 
   const tagInputRef = useRef(null);
   const tagContainerRef = useRef(null);
@@ -122,6 +124,9 @@ export function ProjectList({ initialProjects }) {
 
     return matchesName && matchesShared && matchesTags;
   });
+
+  const activeProjects = filteredProjects.filter((project) => project.isActive !== false);
+  const inactiveProjects = filteredProjects.filter((project) => project.isActive === false);
 
   return (
     <div className="space-y-6">
@@ -287,14 +292,45 @@ export function ProjectList({ initialProjects }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3" data-test="project-list">
-        {filteredProjects.length === 0 ? (
+        {activeProjects.length === 0 ? (
           <div className="text-center py-20 bg-white border-2 border-dashed border-gray-200 rounded-2xl">
             <p className="text-gray-400">No project found.</p>
           </div>
         ) : (
-          filteredProjects.map((project) => <ProjectCard key={project.id} project={project} />)
+          activeProjects.map((project) => <ProjectCard key={project.id} project={project} />)
         )}
       </div>
+
+      {inactiveProjects.length > 0 && (
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => setShowInactive((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition"
+          >
+            <span className="flex items-center gap-2 text-sm font-medium text-gray-500">
+              <Archive size={16} className="text-gray-400" />
+              Inactive projects
+              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs font-semibold">
+                {inactiveProjects.length}
+              </span>
+            </span>
+
+            <ChevronDown
+              size={16}
+              className={`text-gray-400 transition-transform ${showInactive ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {showInactive && (
+            <div className="grid grid-cols-1 gap-3 mt-3 opacity-70">
+              {inactiveProjects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
