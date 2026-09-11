@@ -79,6 +79,7 @@ export function ProjectCard({ project }) {
           title={project.title}
           isAuthor={isAuthor}
           usersSharing={project.usersSharing}
+          isActive={project.isActive}
         />
       </div>
     </div>
