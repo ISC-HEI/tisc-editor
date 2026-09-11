@@ -141,7 +141,7 @@ export async function createProject(formData: FormData) {
     throw new Error('Tags must be 50 characters or fewer');
   }
 
-  let projectData = {
+  const projectData = {
     fileTree: {
       type: 'folder' as const,
       name: 'root',

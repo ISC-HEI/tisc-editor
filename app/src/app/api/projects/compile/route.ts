@@ -236,8 +236,8 @@ export async function POST(req: Request) {
   const sessionId = crypto.randomBytes(8).toString('hex');
   const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
 
-  let createdFiles = new Set<string>();
-  let createdDirs = new Set<string>();
+  const createdFiles = new Set<string>();
+  const createdDirs = new Set<string>();
 
   try {
     const body = await req.json();
