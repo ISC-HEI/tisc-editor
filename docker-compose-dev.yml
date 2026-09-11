@@ -40,10 +40,10 @@ services:
       - ./.git:/app/.git:ro
     networks:
       - tisc-network
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - AUTH_SECRET=${AUTH_SECRET}
     command: >
       sh -c "
       git config --global --add safe.directory /app &&

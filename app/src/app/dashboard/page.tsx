@@ -1,3 +1,4 @@
+import { auth } from '@/lib/auth';
 import { getUserProjects, getUserStorage } from './actions';
 import { ProjectList } from '../../components/Dashboard/ProjectList';
 import Footer from '../../components/Footer';
@@ -7,6 +8,8 @@ import { LayoutGrid, Users, HandshakeIcon } from 'lucide-react';
 import StorageBar from '@/components/Dashboard/StorageBar';
 
 export default async function Dashboard() {
+  const session = await auth();
+
   const projects = await getUserProjects();
   const storage = await getUserStorage();
 
@@ -15,6 +18,8 @@ export default async function Dashboard() {
     (p: any) => p.usersSharing?.length > 0 && p.isAuthor,
   ).length;
   const guest_projects = projects.filter((p: any) => !p.isAuthor).length;
+
+  const userName = session?.user?.name || 'there';
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
@@ -28,7 +33,11 @@ export default async function Dashboard() {
                   Workspace
                 </span>
               </div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h1>
+
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                Welcome back, {userName}
+              </h1>
+
               <p className="text-slate-500 mt-2 text-lg">
                 Manage your projects and collaborations.
               </p>
@@ -89,6 +98,7 @@ function StatCard({ icon, label, value, color }: any) {
     purple: 'bg-purple-50 text-purple-600',
     emerald: 'bg-emerald-50 text-emerald-600',
   };
+
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
       <div className="flex items-center gap-4">

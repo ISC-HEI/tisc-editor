@@ -10,8 +10,8 @@ export default NextAuth(authConfig).auth;
  * - API routes (/api)
  * - Static files (_next/static, _next/image)
  * - Metadata (favicon.ico)
- * - Public auth pages (login, signup)
+ * - Public auth pages (login)
  */
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login|signup).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login).*)'],
 };

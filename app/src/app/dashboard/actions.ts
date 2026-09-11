@@ -4,6 +4,7 @@ import { auth, signOut } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { checkUserQuota, calcFileTreeSize } from '@/lib/quota-service';
+import { redirect } from 'next/navigation';
 
 interface FileNode {
   type: 'file' | 'folder';
@@ -1169,5 +1170,12 @@ export async function getProjectMembers(projectId: string) {
 }
 
 export async function handleSignOut() {
-  await signOut();
+  const issuer = process.env.AUTH_KEYCLOAK_ISSUER;
+  const postLogoutRedirectUri = process.env.AUTH_URL ?? 'http://localhost:3000';
+
+  await signOut({ redirect: false });
+
+  const logoutUrl = `${issuer}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}&client_id=${process.env.AUTH_KEYCLOAK_ID}`;
+
+  redirect(logoutUrl);
 }

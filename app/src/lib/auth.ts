@@ -1,14 +1,7 @@
 import NextAuth from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
+import Keycloak from 'next-auth/providers/keycloak';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
-
-/**
- * Main NextAuth configuration and initialization.
- * This file handles the database adapter, credential validation,
- * and session augmentation (JWT/Session callbacks).
- */
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -16,57 +9,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: '/login',
   },
   providers: [
-    Credentials({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        try {
-          const user = await prisma.user.findUnique({
-            where: { email: String(credentials.email) },
-          });
-
-          if (user && user.password) {
-            const passwordsMatch = await bcrypt.compare(
-              String(credentials.password),
-              user.password,
-            );
-
-            if (passwordsMatch) {
-              return {
-                id: user.id.toString(),
-                email: user.email,
-              };
-            }
-          }
-          console.log('Invalid credentials');
-          return null;
-        } catch (error) {
-          console.error('Auth error:', error);
-          return null;
-        }
-      },
+    Keycloak({
+      clientId: process.env.AUTH_KEYCLOAK_ID,
+      clientSecret: process.env.AUTH_KEYCLOAK_SECRET,
+      issuer: process.env.AUTH_KEYCLOAK_ISSUER,
     }),
   ],
   session: {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, account, profile, user }) {
+      if (account && user) {
         token.id = user.id;
+        token.groups = (profile as any)?.groups ?? [];
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        (session.user as any).groups = token.groups;
       }
       return session;
     },
