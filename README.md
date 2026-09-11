@@ -101,6 +101,16 @@ GITHUB_TOKEN=your_github_token_here
 AUTH_SECRET=your_auth_secret_here
 ```
 
+### SSO Configuration
+
+1. Add required variables in your `.env`
+
+```env
+AUTH_KEYCLOAK_ID=app-id
+AUTH_KEYCLOAK_SECRET=app-secret
+AUTH_KEYCLOAK_ISSUER=https://sso.isc-vs.ch/realms/isc
+```
+
 ## Getting Started
 
 ### Prerequisites
