@@ -14,8 +14,11 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
  */
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
-     { type: 'doc', id: 'tutorial/intro', label: 'Getting Started' },
+    { type: 'doc', id: 'tutorial/intro', label: 'Getting Started' },
     'tutorial/login',
+    { type: 'category', label: 'Projects Management', items: [
+      'tutorial/projects/create',
+    ]}
   ],
   techdocsSidebar: [
     'techdocs/intro',
