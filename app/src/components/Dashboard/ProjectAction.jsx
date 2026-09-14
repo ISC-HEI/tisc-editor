@@ -66,8 +66,8 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
 
         <div className="p-6">
           <p className="text-sm text-slate-500 mb-5">
-            You are the owner of this shared project. Choose a new owner — they'll inherit full
-            control and you'll leave as a member.
+            You are the owner of this shared project. Choose a new owner — they&apos;ll inherit full
+            control and you&apos;ll leave as a member.
           </p>
 
           <ul className="space-y-2 max-h-52 overflow-y-auto">
@@ -137,10 +137,12 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
   const [currentRole, setCurrentRole] = useState(isAuthor ? 'owner' : 'editor');
   const isOwner = currentRole === 'owner';
   const menuRef = useRef(null);
+  const [prevIsAuthor, setPrevIsAuthor] = useState(isAuthor);
 
-  useEffect(() => {
+  if (isAuthor !== prevIsAuthor) {
+    setPrevIsAuthor(isAuthor);
     setCurrentRole(isAuthor ? 'owner' : 'editor');
-  }, [isAuthor]);
+  }
 
   useEffect(() => {
     const fetchRole = async () => {
