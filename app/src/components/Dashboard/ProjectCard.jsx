@@ -8,14 +8,17 @@ export function ProjectCard({ project }) {
 
   return (
     <div className="group relative bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex items-center justify-between">
-      <Link href={`/?projectId=${project.id}`} className="flex-grow flex items-center gap-5 min-w-0">
+      <Link
+        href={`/?projectId=${project.id}`}
+        className="flex-grow flex items-center gap-5 min-w-0"
+      >
         <div
           className={`group/thumb relative w-16 h-20 shrink-0 rounded-lg overflow-visible border transition-colors z-0 hover:z-20 ${
             project.hasThumbnail
               ? 'border-slate-200 bg-white shadow-sm'
               : isSharedWithMe
-              ? 'border-emerald-100 bg-emerald-50'
-              : 'border-slate-200 bg-slate-50 group-hover:border-blue-200 group-hover:bg-blue-50'
+                ? 'border-emerald-100 bg-emerald-50'
+                : 'border-slate-200 bg-slate-50 group-hover:border-blue-200 group-hover:bg-blue-50'
           }`}
         >
           {project.hasThumbnail ? (
@@ -40,7 +43,10 @@ export function ProjectCard({ project }) {
               {isSharedWithMe ? (
                 <Users size={24} className="text-emerald-500" />
               ) : (
-                <Folder size={24} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
+                <Folder
+                  size={24}
+                  className="text-slate-300 group-hover:text-blue-400 transition-colors"
+                />
               )}
             </div>
           )}

@@ -314,7 +314,7 @@ export async function POST(req: Request) {
                 select: { updatedAt: true },
               });
 
-              const THROTTLE_MS = 20_000;
+              const THROTTLE_MS = 120_000;
               const stale = !existing || Date.now() - existing.updatedAt.getTime() > THROTTLE_MS;
               if (!stale) return;
 
