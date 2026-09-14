@@ -56,7 +56,7 @@ export function useZoomWatcher() {
       if (refs.btnZoomIn) refs.btnZoomIn.onclick = null;
       if (refs.btnZoomOut) refs.btnZoomOut.onclick = null;
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 // ----------------------------------------
