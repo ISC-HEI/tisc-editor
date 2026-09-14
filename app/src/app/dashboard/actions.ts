@@ -919,13 +919,13 @@ export async function shareProject(projectId: string, sharedUserEmail: string) {
 
   if (!sharedUser) {
     return {
-      error: 'Utilisateur non trouvé',
+      error: 'User not found',
     };
   }
 
   if (sharedUser.id === userId) {
     return {
-      error: 'Vous avez déjà accès à ce projet',
+      error: 'You already have access to this project',
     };
   }
 
@@ -941,7 +941,7 @@ export async function shareProject(projectId: string, sharedUserEmail: string) {
 
   if (existing) {
     return {
-      error: "L'utilisateur a déjà accès",
+      error: 'The user already has access to this project',
     };
   }
 
@@ -993,7 +993,7 @@ export async function transferProjectOwnership(projectId: string, newOwnerEmail:
   });
 
   if (!newOwner) {
-    throw new Error('Utilisateur introuvable');
+    throw new Error('User not found');
   }
 
   const newOwnerAssignment = await prisma.projectAssignment.findUnique({
@@ -1006,7 +1006,9 @@ export async function transferProjectOwnership(projectId: string, newOwnerEmail:
   });
 
   if (!newOwnerAssignment) {
-    throw new Error("L'utilisateur n'a pas accès à ce projet");
+    throw new Error(
+      "The user doesn't have access to this project. Please share the project with them first.",
+    );
   }
 
   await prisma.$transaction([
