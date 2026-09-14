@@ -1,0 +1,33 @@
+/**
+ * TISC Editor color palette
+ */
+
+:root {
+  /* Primary — TISC blue */
+  --ifm-color-primary: #6a8aff;
+  --ifm-color-primary-dark: #5276ff;
+  --ifm-color-primary-darker: #466cff;
+  --ifm-color-primary-darkest: #2f59ff;
+
+  --ifm-color-primary-light: #829dff;
+  --ifm-color-primary-lighter: #99b0ff;
+  --ifm-color-primary-lightest: #b3c5ff;
+
+  --ifm-code-font-size: 95%;
+
+  --docusaurus-highlighted-code-line-bg: rgba(106, 138, 255, 0.12);
+}
+
+/* Dark mode */
+[data-theme='dark'] {
+  --ifm-color-primary: #8eaaff;
+  --ifm-color-primary-dark: #7a99ff;
+  --ifm-color-primary-darker: #6e8fff;
+  --ifm-color-primary-darkest: #5276ff;
+
+  --ifm-color-primary-light: #a3b9ff;
+  --ifm-color-primary-lighter: #b8c9ff;
+  --ifm-color-primary-lightest: #cbd8ff;
+
+  --docusaurus-highlighted-code-line-bg: rgba(142, 170, 255, 0.18);
+}
