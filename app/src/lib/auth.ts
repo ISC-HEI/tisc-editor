@@ -20,16 +20,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async jwt({ token, account, profile, user }) {
-      if (account && user) {
+      if (account && user?.id) {
         token.id = user.id;
-        token.groups = (profile as any)?.groups ?? [];
+        token.groups = profile?.groups ?? [];
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        (session.user as any).groups = token.groups;
+        session.user.id = token.id;
+        session.user.groups = token.groups;
       }
       return session;
     },
@@ -38,8 +38,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const isOnDashboard = !nextUrl.pathname.startsWith('/login');
 
       if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false;
+        return isLoggedIn;
       }
       return true;
     },

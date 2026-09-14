@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 const getGitVersion = () => {
   if (process.env.NEXT_PUBLIC_APP_VERSION) {
@@ -18,7 +18,7 @@ const getGitVersion = () => {
     }).trim();
 
     return branch === 'main' || branch === 'master' ? version : `${version}-${branch}`;
-  } catch (error) {
+  } catch {
     return 'v0.0.0-local';
   }
 };

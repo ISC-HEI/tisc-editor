@@ -2,47 +2,48 @@ import { loadProject } from '@/app/dashboard/actions';
 import { redirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { auth } from '@/lib/auth';
+import type { Prisma } from '@prisma/client';
+import { FileNode } from '@/types/filetree';
 
 const Editor = dynamic(() => import('../components/Editor/Editor'), {
   loading: () => <h2>The editor is loading</h2>,
 });
 
-type FileNode = {
-  type: 'folder' | 'file';
-  name: string;
-  fullPath?: string;
-  data?: string;
-  content?: string;
-  isMain?: boolean;
-  children?: Record<string, FileNode>;
-};
+function asString(value: Prisma.JsonValue | undefined, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
 
-function normalizeFileTree(value: any): FileNode {
-  if (!value || typeof value !== 'object') {
+function normalizeFileTree(value: Prisma.JsonValue): FileNode {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return { type: 'folder', name: 'root', children: {} };
   }
 
-  if (value.type === 'file') {
+  const obj = value as Prisma.JsonObject;
+
+  if (obj.type === 'file') {
     return {
       type: 'file',
-      name: String(value.name ?? ''),
-      fullPath: value.fullPath ?? value.name ?? '',
-      data: value.data ?? '',
-      content: value.content ?? undefined,
-      isMain: value.isMain === true,
+      name: asString(obj.name),
+      fullPath: asString(obj.fullPath, asString(obj.name)),
+      data: asString(obj.data),
+      content: typeof obj.content === 'string' ? obj.content : undefined,
+      isMain: obj.isMain === true,
     };
   }
 
   const normalizedChildren: Record<string, FileNode> = {};
-  if (value.children && typeof value.children === 'object') {
-    for (const [key, child] of Object.entries(value.children)) {
-      normalizedChildren[key] = normalizeFileTree(child);
+  const children = obj.children;
+  if (children && typeof children === 'object' && !Array.isArray(children)) {
+    for (const [key, child] of Object.entries(children as Prisma.JsonObject)) {
+      if (child !== undefined) {
+        normalizedChildren[key] = normalizeFileTree(child);
+      }
     }
   }
 
   return {
     type: 'folder',
-    name: String(value.name ?? 'root'),
+    name: asString(obj.name, 'root'),
     children: normalizedChildren,
   };
 }

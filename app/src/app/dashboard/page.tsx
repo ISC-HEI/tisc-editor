@@ -6,6 +6,9 @@ import CreateProjectModal from '../../components/Dashboard/CreateProjectModal';
 import { SignOutButton } from '@/components/SignOutButton';
 import { LayoutGrid, Users, HandshakeIcon } from 'lucide-react';
 import StorageBar from '@/components/Dashboard/StorageBar';
+import { StatCardColor, StatCardProps } from '@/types/statsCard';
+
+type Project = Awaited<ReturnType<typeof getUserProjects>>[number];
 
 export default async function Dashboard() {
   const session = await auth();
@@ -15,9 +18,9 @@ export default async function Dashboard() {
 
   const totalProjects = projects.length;
   const sharedProjects = projects.filter(
-    (p: any) => p.usersSharing?.length > 0 && p.isAuthor,
+    (p: Project) => p.usersSharing?.length > 0 && p.isAuthor,
   ).length;
-  const guest_projects = projects.filter((p: any) => !p.isAuthor).length;
+  const guest_projects = projects.filter((p: Project) => !p.isAuthor).length;
 
   const userName = session?.user?.name || 'there';
 
@@ -92,8 +95,8 @@ export default async function Dashboard() {
   );
 }
 
-function StatCard({ icon, label, value, color }: any) {
-  const colors: any = {
+function StatCard({ icon, label, value, color }: StatCardProps) {
+  const colors: Record<StatCardColor, string> = {
     blue: 'bg-blue-50 text-blue-600',
     purple: 'bg-purple-50 text-purple-600',
     emerald: 'bg-emerald-50 text-emerald-600',

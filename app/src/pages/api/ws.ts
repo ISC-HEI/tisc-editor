@@ -1,14 +1,15 @@
-import { NextApiRequest } from 'next';
+import type { NextApiRequest } from 'next';
 import { initSocket } from '@/lib/socketServer';
+import { NextApiResponseWithSocket } from '@/types/socket';
 
 /**
  * API route handler to initialize the WebSocket server.
  * This is a workaround for Next.js API routes to support persistent Socket.IO connections.
  * It ensures the Socket.IO server is attached to the HTTP server instance only once.
- * * @param {NextApiRequest} req - The incoming HTTP request.
- * @param {any} res - The response object, augmented with the underlying socket server.
+ * @param {NextApiRequest} req - The incoming HTTP request.
+ * @param {NextApiResponseWithSocket} res - The response object, augmented with the underlying socket server.
  */
-export default function handler(req: NextApiRequest, res: any) {
+export default function handler(req: NextApiRequest, res: NextApiResponseWithSocket) {
   if (!res.socket.server.io) {
     initSocket(res.socket.server);
   }

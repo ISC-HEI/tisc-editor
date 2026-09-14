@@ -1,6 +1,9 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { prisma } from './prisma';
 
+import { Server as HTTPServer } from 'http';
+import { Server as HTTPSServer } from 'https';
+
 /** * In-memory storage for active users per document.
  * Structure: { [docId]: { [socketId]: email } }
  * @type {Record<string, Record<string, string>>}
@@ -9,10 +12,10 @@ const activeUsers: Record<string, Record<string, string>> = {};
 
 /**
  * Initializes the Socket.IO server with CORS and custom path.
- * @param {any} httpServer - The underlying Node.js HTTP server.
+ * @param {HTTPServer | HTTPSServer} httpServer - The underlying Node.js HTTP server.
  * @returns {SocketIOServer} The initialized IO server instance.
  */
-export const initSocket = (httpServer: any) => {
+export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
   const io = new SocketIOServer(httpServer, {
     path: '/api/ws',
     addTrailingSlash: false,

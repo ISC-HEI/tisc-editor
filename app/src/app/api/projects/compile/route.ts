@@ -4,6 +4,8 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
+import { FileTreeNode } from '@/types/filetree';
+import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -90,17 +92,21 @@ function injectSyncMarkers(content: string) {
  * @returns {boolean} True if the main file was found and patched.
  */
 function patchMainFileContent(
-  children: any,
+  children: Record<string, FileTreeNode> | undefined,
   mainFileCleanPath: string,
   patchFn: (text: string) => string,
 ): boolean {
   const parts = mainFileCleanPath.split('/');
-  let node: any = { children };
+  let currentChildren = children;
+  let node: FileTreeNode | undefined;
+
   for (const part of parts) {
-    if (!node.children || !node.children[part]) return false;
-    node = node.children[part];
+    if (!currentChildren || !currentChildren[part]) return false;
+    node = currentChildren[part];
+    currentChildren = node.children;
   }
-  if (node.type !== 'file') return false;
+
+  if (!node || node.type !== 'file') return false;
   const original = decodeContent(node.data ?? node.content ?? '');
   node.data = patchFn(original);
   return true;
@@ -115,7 +121,7 @@ function patchMainFileContent(
  * @returns {Object} An object containing Sets of created file and directory paths.
  */
 function writeImages(
-  children: any = {},
+  children: Record<string, FileTreeNode> = {},
   baseDir: string,
   accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 },
   options: { documentFontSize?: number } = {},
@@ -202,22 +208,22 @@ function cleanupTemp(createdFiles: Set<string>, createdDirs: Set<string>, workin
  * Parses the raw query() results for our sync markers into a clean array
  * of { line, page, x, y } (x/y in pt, as numbers). Tolerant of missing or
  * malformed entries - always returns an array, never throws.
- * @param {any} rawResults - Return value of compiler.query(..., { selector: '<tsync-marker>' }).
+ * @param {unknown} rawResults - Return value of compiler.query(..., { selector: '<tsync-marker>' }).
  * @returns {Array<{line: number, page: number, x: number, y: number}>}
  */
-function parseSyncMarkers(rawResults: any) {
+function parseSyncMarkers(rawResults: unknown) {
   if (!Array.isArray(rawResults)) return [];
-  const parsePt = (v: any) => (typeof v === 'string' ? parseFloat(v.replace('pt', '')) : NaN);
+  const parsePt = (v: unknown) => (typeof v === 'string' ? parseFloat(v.replace('pt', '')) : NaN);
 
-  return rawResults
-    .map((r: any) => ({
+  return (rawResults as RawSyncMarkerEntry[])
+    .map((r) => ({
       line: r?.value?.line,
       page: r?.value?.loc?.page,
       x: parsePt(r?.value?.loc?.x),
       y: parsePt(r?.value?.loc?.y),
     }))
     .filter(
-      (m: any) =>
+      (m): m is { line: number; page: number; x: number; y: number } =>
         typeof m.line === 'number' &&
         typeof m.page === 'number' &&
         !Number.isNaN(m.x) &&
@@ -236,8 +242,8 @@ export async function POST(req: Request) {
   const sessionId = crypto.randomBytes(8).toString('hex');
   const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
 
-  let createdFiles = new Set<string>();
-  let createdDirs = new Set<string>();
+  const createdFiles = new Set<string>();
+  const createdDirs = new Set<string>();
 
   try {
     const body = await req.json();
@@ -257,10 +263,10 @@ export async function POST(req: Request) {
       fs.mkdirSync(workingDir, { recursive: true });
     }
 
-    const { createdFiles: files, createdDirs: dirs } = writeImages(
+    writeImages(
       fileTree.children,
       workingDir,
-      undefined,
+      { files: createdFiles, dirs: createdDirs, totalSize: 0 },
       { documentFontSize },
     );
 
@@ -285,13 +291,16 @@ export async function POST(req: Request) {
       } else {
         const svg = localCompiler.svg(compileOptions);
 
-        let syncMarkers: any[] = [];
+        let syncMarkers: SyncMarker[] = [];
         if (sync) {
           try {
             const rawResults = localCompiler.query(compileOptions, { selector: '<tsync-marker>' });
             syncMarkers = parseSyncMarkers(rawResults);
-          } catch (syncErr: any) {
-            console.warn('Sync marker query failed (non-fatal):', syncErr.message || syncErr);
+          } catch (syncErr) {
+            const e = syncErr as { message?: string; code?: string } | string;
+            const errorMsg =
+              typeof e === 'string' ? e : e?.message || e?.code || 'Compilation error';
+            console.warn('Sync marker query failed (non-fatal):', errorMsg);
           }
         }
 
@@ -308,9 +317,9 @@ export async function POST(req: Request) {
           ],
         });
       }
-    } catch (err: any) {
-      const errorMsg =
-        err.message || err.code || (typeof err === 'string' ? err : 'Compilation error');
+    } catch (err) {
+      const e = err as { message?: string; code?: string } | string;
+      const errorMsg = typeof e === 'string' ? e : e?.message || e?.code || 'Compilation error';
       const cleanedError = errorMsg.replace(new RegExp(workingDir, 'g'), 'root');
 
       return NextResponse.json(
@@ -325,11 +334,13 @@ export async function POST(req: Request) {
     } finally {
       cleanupTemp(createdFiles, createdDirs, workingDir);
     }
-  } catch (error: any) {
+  } catch (error) {
+    const e = error as { message?: string; code?: string } | string;
+    const errorMsg = typeof e === 'string' ? e : e?.message || e?.code || 'Compilation error';
     return NextResponse.json(
       {
         success: false,
-        logs: [{ type: 'error', msg: error.message || 'Request error' }],
+        logs: [{ type: 'error', msg: errorMsg }],
       },
       { status: 400 },
     );

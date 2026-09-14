@@ -140,7 +140,7 @@ export function useEditorWatcher() {
         refs.btnExportSvg.removeEventListener('click', handleExportSvg);
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 async function applyFormatting(type) {
@@ -322,7 +322,7 @@ export async function fetchCompile() {
     let result;
     try {
       result = JSON.parse(raw);
-    } catch (parseError) {
+    } catch {
       throw new Error(`Compilation API response is not valid JSON:\n${raw}`);
     }
 
@@ -428,7 +428,7 @@ function setupResizable() {
   if (!refs.separator) return;
   container = refs.separator.parentElement;
 
-  refs.separator.addEventListener('mousedown', (e) => {
+  refs.separator.addEventListener('mousedown', () => {
     isDragging = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
