@@ -10,13 +10,24 @@ export function ProjectCard({ project }) {
     <div className="group relative bg-white border border-slate-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex items-center justify-between">
       <Link href={`/?projectId=${project.id}`} className="flex-grow flex items-center gap-4">
         <div
-          className={`p-3 rounded-xl transition-colors ${
+          className={`p-3 rounded-xl overflow-hidden transition-colors ${
             isSharedWithMe
               ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100'
               : 'bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
           }`}
         >
-          {isSharedWithMe ? <Users size={22} /> : <Folder size={22} />}
+          {project.hasThumbnail ? (
+            <img
+              src={`/api/projects/${project.id}/thumbnail`}
+              alt=""
+              className="w-full h-full object-cover rounded-lg"
+              loading="lazy"
+            />
+          ) : isSharedWithMe ? (
+            <Users size={22} />
+          ) : (
+            <Folder size={22} />
+          )}
         </div>
 
         <div className="flex flex-col">
