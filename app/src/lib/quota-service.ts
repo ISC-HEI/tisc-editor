@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/prisma';
 
-export function calcFileTreeSize(node: any): number {
+interface FileTreeNode {
+  type?: string;
+  data?: string;
+  children?: Record<string, FileTreeNode>;
+}
+
+export function calcFileTreeSize(node: FileTreeNode | null | undefined): number {
   if (!node) return 0;
   let size = 0;
 
@@ -16,7 +22,7 @@ export function calcFileTreeSize(node: any): number {
   }
 
   if (node.children) {
-    for (const child of Object.values(node.children) as any[]) {
+    for (const child of Object.values(node.children) as FileTreeNode[]) {
       size += calcFileTreeSize(child);
     }
   }
