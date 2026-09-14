@@ -51,12 +51,18 @@ export async function getUserProjects() {
     },
     include: {
       project: {
-        include: {
+        select: {
+          id: true,
+          title: true,
+          isActive: true,
           userLinks: true,
           tags: {
             include: {
               tag: true,
             },
+          },
+          thumbnail: {
+            select: { projectId: true },
           },
         },
       },
@@ -72,16 +78,21 @@ export async function getUserProjects() {
   type ProjectTagWithTag = AssignmentWithProject['project']['tags'][number];
   type UserLinkEntry = AssignmentWithProject['project']['userLinks'][number];
 
-  return assignments.map((a: AssignmentWithProject) => ({
-    ...a.project,
-    isAuthor: a.role === 'owner',
-    role: a.role,
+  return assignments.map((a: AssignmentWithProject) => {
+    const { thumbnail, ...project } = a.project;
 
-    tags: a.project.tags.map((projectTag: ProjectTagWithTag) => projectTag.tag),
-    usersSharing: a.project.userLinks
-      .filter((link: UserLinkEntry) => link.userId !== userId)
-      .map((link: UserLinkEntry) => link.userId),
-  }));
+    return {
+      ...project,
+      isAuthor: a.role === 'owner',
+      role: a.role,
+      hasThumbnail: !!thumbnail,
+
+      tags: a.project.tags.map((projectTag: ProjectTagWithTag) => projectTag.tag),
+      usersSharing: a.project.userLinks
+        .filter((link: UserLinkEntry) => link.userId !== userId)
+        .map((link: UserLinkEntry) => link.userId),
+    };
+  });
 }
 
 export async function getProjectAssignmentRole(projectId: string) {

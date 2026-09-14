@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 import { FileTreeNode } from '@/types/filetree';
 import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
+import { prisma } from '@/lib/prisma';
+import sharp from 'sharp';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -247,7 +249,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { fileTree, mainFile, format = 'svg', documentFontSize, sync = false } = body;
+    const { fileTree, mainFile, format = 'svg', documentFontSize, sync = false, projectId } = body;
 
     const mainFileCleanPath = mainFile.replace(/^root\//, '');
 
@@ -302,6 +304,32 @@ export async function POST(req: Request) {
               typeof e === 'string' ? e : e?.message || e?.code || 'Compilation error';
             console.warn('Sync marker query failed (non-fatal):', errorMsg);
           }
+        }
+
+        if (projectId) {
+          after(async () => {
+            try {
+              const existing = await prisma.projectThumbnail.findUnique({
+                where: { projectId },
+                select: { updatedAt: true },
+              });
+
+              const THROTTLE_MS = 120_000;
+              const stale = !existing || Date.now() - existing.updatedAt.getTime() > THROTTLE_MS;
+              if (!stale) return;
+
+              const pngBuffer = await sharp(Buffer.from(svg)).resize(400).png().toBuffer();
+              const pngData = Uint8Array.from(pngBuffer);
+
+              await prisma.projectThumbnail.upsert({
+                where: { projectId },
+                create: { projectId, data: pngData },
+                update: { data: pngData },
+              });
+            } catch (e) {
+              console.warn('Thumbnail generation failed (non-fatal):', e);
+            }
+          });
         }
 
         return NextResponse.json({
