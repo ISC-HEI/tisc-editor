@@ -47,13 +47,13 @@ export default function Home(): React.ReactNode {
             accent="blue"
             title="User Tutorial"
             description="For end users: installing the editor, writing your first document and using the core features."
-            to="/docs/tutorial/intro"
+            to="/docs/docs/tutorial/intro"
           />
           <SectionCard
             accent="purple"
             title="Technical Documentation"
             description="Architecture, internals and configuration for anyone extending or building on TISC Editor."
-            to="/docs/techdocs/intro"
+            to="/docs/docs/techdocs/intro"
           />
         </div>
 

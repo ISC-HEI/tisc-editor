@@ -14,7 +14,20 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
  */
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
-    'tutorial/intro',
+    { type: 'doc', id: 'tutorial/intro', label: 'Getting Started' },
+    { type: 'doc', id: 'tutorial/login', label: 'Access the editor' },
+    { type: 'category', label: 'Projects Management', items: [
+      { type: 'doc', id: 'tutorial/projects/create', label: 'Create Project' },
+      { type: 'doc', id: 'tutorial/projects/sharing', label: 'Collaborate on Project' },
+      { type: 'doc', id: 'tutorial/projects/archive', label: 'Archive Project' },
+    ]},
+    { type: 'category', label: 'Using the Editor', items: [
+      { type: 'doc', id: 'tutorial/editor/compilation', label: 'Code Compilation' },
+      { type: 'doc', id: 'tutorial/editor/files', label: 'Files Management' },
+      { type: 'doc', id: 'tutorial/editor/export', label: 'Export Files' },
+      { type: 'doc', id: 'tutorial/editor/multi-editing', label: 'Multi-Editing' },
+    ]},
+    { type: 'doc', id: 'tutorial/storage', label: 'Storage Management' },
   ],
   techdocsSidebar: [
     'techdocs/intro',
