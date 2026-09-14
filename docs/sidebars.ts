@@ -25,6 +25,7 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'tutorial/editor/compilation', label: 'Code Compilation' },
       { type: 'doc', id: 'tutorial/editor/files', label: 'Files Management' },
       { type: 'doc', id: 'tutorial/editor/export', label: 'Export Files' },
+      { type: 'doc', id: 'tutorial/editor/multi-editing', label: 'Multi-Editing' },
     ]}
 
   ],
