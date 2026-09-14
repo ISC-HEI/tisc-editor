@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { calcFileTreeSize } from '@/lib/quota-service';
+import { Prisma } from '@prisma/client';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     const { id, fileTree } = await req.json();
     const dataSize = calcFileTreeSize(fileTree);
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
         include: { projectLinks: { include: { project: true } } },

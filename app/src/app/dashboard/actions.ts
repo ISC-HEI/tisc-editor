@@ -17,34 +17,6 @@ interface FileNode {
   children?: { [key: string]: FileNode };
 }
 
-interface ProjectTag {
-  tag: Tag;
-}
-
-interface Tag {
-  id: string;
-  name: string;
-}
-
-interface UserLink {
-  userId: string;
-  projectId: string;
-  role: string;
-}
-
-interface Project {
-  id: string;
-  title: string;
-  fileTree: ProjectFileTree;
-  isActive: boolean;
-  userLinks: UserLink[];
-  tags: ProjectTag[];
-}
-
-interface Assignment {
-  project: Project;
-  role: string;
-}
 interface ProjectFileTree {
   type: 'folder';
   name: string;
@@ -111,15 +83,19 @@ export async function getUserProjects() {
     },
   });
 
-  return assignments.map((a: Assignment) => ({
+  type AssignmentWithProject = (typeof assignments)[number];
+  type ProjectTagWithTag = AssignmentWithProject['project']['tags'][number];
+  type UserLinkEntry = AssignmentWithProject['project']['userLinks'][number];
+
+  return assignments.map((a: AssignmentWithProject) => ({
     ...a.project,
     isAuthor: a.role === 'owner',
     role: a.role,
 
-    tags: a.project.tags.map((projectTag: ProjectTag) => projectTag.tag),
+    tags: a.project.tags.map((projectTag: ProjectTagWithTag) => projectTag.tag),
     usersSharing: a.project.userLinks
-      .filter((link: UserLink) => link.userId !== userId)
-      .map((link: UserLink) => link.userId),
+      .filter((link: UserLinkEntry) => link.userId !== userId)
+      .map((link: UserLinkEntry) => link.userId),
   }));
 }
 
@@ -554,14 +530,13 @@ export async function getUserStorage() {
     return null;
   }
 
-  const ownedLinks = user.projectLinks.filter((link: UserLink) => link.role === 'owner');
+  type ProjectLink = (typeof user.projectLinks)[number];
 
-  const usage = ownedLinks.reduce(
-    (acc: number, link: { project: { fileTree: Prisma.JsonValue } }) => {
-      return acc + calcFileTreeSize(link.project.fileTree);
-    },
-    0,
-  );
+  const ownedLinks = user.projectLinks.filter((link: ProjectLink) => link.role === 'owner');
+
+  const usage = ownedLinks.reduce((acc: number, link: ProjectLink) => {
+    return acc + calcFileTreeSize(link.project.fileTree);
+  }, 0);
 
   return {
     usage,

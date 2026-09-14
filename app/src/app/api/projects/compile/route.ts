@@ -121,12 +121,16 @@ function patchMainFileContent(
   patchFn: (text: string) => string,
 ): boolean {
   const parts = mainFileCleanPath.split('/');
-  let node: { children?: Record<string, FileTreeNode> } | FileTreeNode = { children };
+  let currentChildren = children;
+  let node: FileTreeNode | undefined;
+
   for (const part of parts) {
-    if (!node.children || !node.children[part]) return false;
-    node = node.children[part];
+    if (!currentChildren || !currentChildren[part]) return false;
+    node = currentChildren[part];
+    currentChildren = node.children;
   }
-  if (node.type !== 'file') return false;
+
+  if (!node || node.type !== 'file') return false;
   const original = decodeContent(node.data ?? node.content ?? '');
   node.data = patchFn(original);
   return true;

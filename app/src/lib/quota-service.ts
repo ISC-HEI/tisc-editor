@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 
 interface FileTreeNode {
   type?: string;
@@ -6,12 +7,14 @@ interface FileTreeNode {
   children?: Record<string, FileTreeNode>;
 }
 
-export function calcFileTreeSize(node: FileTreeNode | null | undefined): number {
-  if (!node) return 0;
+export function calcFileTreeSize(node: Prisma.JsonValue | null | undefined): number {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return 0;
+
+  const typedNode = node as FileTreeNode;
   let size = 0;
 
-  if (node.type === 'file' && node.data) {
-    const data = node.data as string;
+  if (typedNode.type === 'file' && typedNode.data) {
+    const data = typedNode.data;
     if (data.startsWith('data:')) {
       const base64 = data.split(',')[1] ?? '';
       const padding = (base64.match(/=+$/) || [''])[0].length;
@@ -21,9 +24,9 @@ export function calcFileTreeSize(node: FileTreeNode | null | undefined): number 
     }
   }
 
-  if (node.children) {
-    for (const child of Object.values(node.children) as FileTreeNode[]) {
-      size += calcFileTreeSize(child);
+  if (typedNode.children) {
+    for (const child of Object.values(typedNode.children)) {
+      size += calcFileTreeSize(child as unknown as Prisma.JsonValue);
     }
   }
 
