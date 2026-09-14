@@ -15,12 +15,16 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     { type: 'doc', id: 'tutorial/intro', label: 'Getting Started' },
-    'tutorial/login',
+    { type: 'doc', id: 'tutorial/login', label: 'Access the editor' },
     { type: 'category', label: 'Projects Management', items: [
       { type: 'doc', id: 'tutorial/projects/create', label: 'Create Project' },
       { type: 'doc', id: 'tutorial/projects/sharing', label: 'Collaborate on Project' },
       { type: 'doc', id: 'tutorial/projects/archive', label: 'Archive Project' },
+    ]},
+    { type: 'category', label: 'Using the Editor', items: [
+      { type: 'doc', id: 'tutorial/editor/compilation', label: 'Code Compilation' },
     ]}
+
   ],
   techdocsSidebar: [
     'techdocs/intro',
