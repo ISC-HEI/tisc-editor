@@ -11,7 +11,7 @@ import { refs } from './refs';
  *   the editor cursor. Left false for exports so the exported SVG stays clean.
  * @returns {Promise<string>} The SVG content as a string, or an empty string if compilation fails.
  */
-export async function fetchSvg(fileTree, { sync = false } = {}) {
+export async function fetchSvg(fileTree, { sync = false, projectId } = {}) {
   if (!fileTree || !fileTree.children || Object.keys(fileTree.children).length === 0) return '';
 
   const mainPath = findMainFile(fileTree) || findFirstFile(fileTree) || 'main.typ';
@@ -41,6 +41,7 @@ export async function fetchSvg(fileTree, { sync = false } = {}) {
         format: 'svg',
         documentFontSize: refs?.editorFontSize || undefined,
         sync,
+        projectId,
       }),
     });
 

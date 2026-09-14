@@ -308,7 +308,7 @@ export async function fetchCompile() {
     `;
 
   try {
-    const raw = await fetchSvg(fileTree, { sync: true });
+    const raw = await fetchSvg(fileTree, { sync: true, projectId: currentProjectId });
 
     if (!raw) {
       syncMarkers = [];
