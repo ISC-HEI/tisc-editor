@@ -1,4 +1,4 @@
-# Project Creation
+# Create a project
 
 :::tip[Good to see you here]
 
