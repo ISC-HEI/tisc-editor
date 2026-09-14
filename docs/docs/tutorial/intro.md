@@ -32,7 +32,6 @@ Master the core features of the TISC Editor.
 
 - **[Code compilation](./editor/compilation)** — Compile your Typst code and preview the result
 - **[File management](./editor/files)** — Organize files within your project
-- **[Parameters](./editor/params)** — Configure your editor settings
 - **[Export](./editor/export)** — Export your document to PDF and other formats
 - **[Multi-editing](./editor/multi-editing)** — Work simultaneously with other users
 
