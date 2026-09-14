@@ -12,7 +12,7 @@ const config: Config = {
   },
 
   url: 'https://tisc-editor.isc-vs.ch',
-  baseUrl: '/',
+  baseUrl: '/docs/',
 
   organizationName: 'isc-hei',
   projectName: 'tisc-editor',

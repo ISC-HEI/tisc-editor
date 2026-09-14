@@ -32,8 +32,8 @@ services:
       timeout: 5s
       retries: 5
     restart: always
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - ./app:/app
       - /app/node_modules
@@ -65,6 +65,45 @@ services:
           memory: 1.5G  # If request > 1.5Go, the container will be killed
         reservations:
           memory: 512M
+
+  docs:
+    image: node:20-slim
+    container_name: tisc-docs
+    userns_mode: "host"
+    working_dir: /docs
+    restart: always
+    expose:
+      - "3001"
+    volumes:
+      - ./docs:/docs
+      - /docs/node_modules
+    networks:
+      - tisc-network
+    command: >
+      sh -c "
+      corepack enable &&
+      (npm install) &&
+      (npx docusaurus start --host 0.0.0.0 --port 3001 --no-open)
+      "
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tisc-nginx
+    depends_on:
+      - app
+      - docs
+    restart: always
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - tisc-network
 
 networks:
   tisc-network:
