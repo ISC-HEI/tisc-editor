@@ -18,6 +18,7 @@ const sidebars: SidebarsConfig = {
     'tutorial/login',
     { type: 'category', label: 'Projects Management', items: [
       'tutorial/projects/create',
+      'tutorial/projects/sharing',
     ]}
   ],
   techdocsSidebar: [
