@@ -49,11 +49,14 @@ const config: Config = {
     },
 
     navbar: {
+      hideOnScroll: true,
       title: 'TISC Editor',
 
       logo: {
         alt: 'TISC Editor Logo',
         src: 'img/logo.png',
+        width: 36,
+        height: 36,
       },
 
       items: [
@@ -71,8 +74,9 @@ const config: Config = {
         },
         {
           href: 'https://github.com/isc-hei/tisc-editor',
-          label: 'GitHub',
           position: 'right',
+          className: 'header-github-link',
+          'aria-label': 'GitHub repository',
         },
       ],
     },
