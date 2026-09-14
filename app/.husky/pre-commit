@@ -1,1 +1,1 @@
-cd app && bun run format:check
+cd app && bun run format:check && bun run lint
