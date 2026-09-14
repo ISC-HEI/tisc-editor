@@ -18,7 +18,7 @@ const sidebars: SidebarsConfig = {
     'tutorial/login',
     { type: 'category', label: 'Projects Management', items: [
       { type: 'doc', id: 'tutorial/projects/create', label: 'Create Project' },
-      { type: 'doc', id: 'tutorial/projects/sharing', label: 'Share Project' },
+      { type: 'doc', id: 'tutorial/projects/sharing', label: 'Collaborate on Project' },
       { type: 'doc', id: 'tutorial/projects/archive', label: 'Archive Project' },
     ]}
   ],

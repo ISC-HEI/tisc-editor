@@ -23,7 +23,6 @@ Everything you need to create, organize, and share your projects.
 - **[Creating a project](./projects/create)** — Start a new project from scratch or a template
 - **[Sharing a project](./projects/sharing)** — Collaborate with your team
 - **[Archiving a project](./projects/archive)** — Keep your workspace clean
-- **[Transferring ownership](./projects/ownership)** — Hand off a project to another user
 
 ---
 
