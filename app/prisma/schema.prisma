@@ -30,10 +30,22 @@ model Project {
   fileTree  Json                @map("file_tree")
   isActive  Boolean             @default(true)
 
+  thumbnail ProjectThumbnail?
   userLinks ProjectAssignment[]
   tags      ProjectTag[]
 
   @@map("projects")
+}
+
+model ProjectThumbnail {
+  projectId String   @id @map("project_id") @db.Uuid
+  data      Bytes
+  mimeType  String   @default("image/png") @map("mime_type")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_thumbnails")
 }
 
 model Tag {
