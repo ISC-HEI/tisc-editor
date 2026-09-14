@@ -10,7 +10,7 @@ function PaneLog() {
     if (isOpen && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [isOpen, infos.logs]);
+  }, [isOpen, infos.logs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClear = (e) => {
     e.stopPropagation();
