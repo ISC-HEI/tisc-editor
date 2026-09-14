@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { checkUserQuota, calcFileTreeSize } from '@/lib/quota-service';
 import { redirect } from 'next/navigation';
+import { Prisma } from '@prisma/client';
 
 interface FileNode {
   type: 'file' | 'folder';
@@ -14,6 +15,40 @@ interface FileNode {
   content?: string;
   isMain?: boolean;
   children?: { [key: string]: FileNode };
+}
+
+interface ProjectTag {
+  tag: Tag;
+}
+
+interface Tag {
+  id: string;
+  name: string;
+}
+
+interface UserLink {
+  userId: string;
+  projectId: string;
+  role: string;
+}
+
+interface Project {
+  id: string;
+  title: string;
+  fileTree: ProjectFileTree;
+  isActive: boolean;
+  userLinks: UserLink[];
+  tags: ProjectTag[];
+}
+
+interface Assignment {
+  project: Project;
+  role: string;
+}
+interface ProjectFileTree {
+  type: 'folder';
+  name: string;
+  children: { [key: string]: FileNode };
 }
 
 function getFetchOptions(useAuth = true) {
@@ -76,16 +111,15 @@ export async function getUserProjects() {
     },
   });
 
-  return assignments.map((a: { project: any; role: string }) => ({
+  return assignments.map((a: Assignment) => ({
     ...a.project,
     isAuthor: a.role === 'owner',
     role: a.role,
 
-    tags: a.project.tags.map((projectTag: any) => projectTag.tag),
-
+    tags: a.project.tags.map((projectTag: ProjectTag) => projectTag.tag),
     usersSharing: a.project.userLinks
-      .filter((link: any) => link.userId !== userId)
-      .map((link: any) => link.userId),
+      .filter((link: UserLink) => link.userId !== userId)
+      .map((link: UserLink) => link.userId),
   }));
 }
 
@@ -159,7 +193,7 @@ export async function createProject(formData: FormData) {
     const imported = await importPackageAsTree(packageId, entryFile);
 
     if (imported) {
-      projectData.fileTree = imported.fileTree as any;
+      projectData.fileTree = imported.fileTree;
     } else {
       throw new Error('Template import failed.');
     }
@@ -191,7 +225,7 @@ export async function createProject(formData: FormData) {
     const project = await tx.project.create({
       data: {
         title,
-        fileTree: projectData.fileTree as any,
+        fileTree: projectData.fileTree as unknown as Prisma.InputJsonValue,
 
         userLinks: {
           create: {
@@ -520,11 +554,14 @@ export async function getUserStorage() {
     return null;
   }
 
-  const ownedLinks = user.projectLinks.filter((link: any) => link.role === 'owner');
+  const ownedLinks = user.projectLinks.filter((link: UserLink) => link.role === 'owner');
 
-  const usage = ownedLinks.reduce((acc: number, link: { project: { fileTree: any } }) => {
-    return acc + calcFileTreeSize(link.project.fileTree);
-  }, 0);
+  const usage = ownedLinks.reduce(
+    (acc: number, link: { project: { fileTree: Prisma.JsonValue } }) => {
+      return acc + calcFileTreeSize(link.project.fileTree);
+    },
+    0,
+  );
 
   return {
     usage,
@@ -622,8 +659,8 @@ async function getLatestVersion(packageBaseName: string): Promise<string> {
   }
 
   const versions = items
-    .filter((item: any) => item.type === 'dir')
-    .map((item: any) => item.name as string)
+    .filter((item) => item.type === 'dir')
+    .map((item) => item.name as string)
     .filter((name: string) => /^\d+\.\d+\.\d+$/.test(name));
 
   if (versions.length === 0) {
@@ -642,7 +679,10 @@ async function getLatestVersion(packageBaseName: string): Promise<string> {
   return versions[0];
 }
 
-export const importPackageAsTree = async (packageName: string, templateFile: string) => {
+export const importPackageAsTree = async (
+  packageName: string,
+  templateFile: string,
+): Promise<{ fileTree: ProjectFileTree }> => {
   if (!packageName || !templateFile) {
     throw new Error('Invalid package name or template file.');
   }
@@ -707,48 +747,36 @@ export async function deleteProject(formData: FormData) {
     throw new Error('Missing project id');
   }
 
-  return await prisma.$transaction(
-    async (tx: {
-      projectAssignment: {
-        findUnique: (arg0: {
-          where: { userId_projectId: { userId: string; projectId: string } };
-        }) => any;
-        delete: (arg0: {
-          where: { userId_projectId: { userId: string; projectId: string } };
-        }) => any;
-      };
-      project: { delete: (arg0: { where: { id: string } }) => any };
-    }) => {
-      const assignment = await tx.projectAssignment.findUnique({
-        where: {
-          userId_projectId: {
-            userId,
-            projectId,
-          },
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const assignment = await tx.projectAssignment.findUnique({
+      where: {
+        userId_projectId: {
+          userId,
+          projectId,
         },
-      });
+      },
+    });
 
-      if (!assignment) {
-        throw new Error('Unauthorized');
-      }
+    if (!assignment) {
+      throw new Error('Unauthorized');
+    }
 
-      if (assignment.role !== 'owner') {
-        throw new Error('Only project owners can delete the project');
-      }
+    if (assignment.role !== 'owner') {
+      throw new Error('Only project owners can delete the project');
+    }
 
-      await tx.project.delete({
-        where: {
-          id: projectId,
-        },
-      });
+    await tx.project.delete({
+      where: {
+        id: projectId,
+      },
+    });
 
-      revalidatePath('/dashboard');
+    revalidatePath('/dashboard');
 
-      return {
-        action: 'deleted',
-      };
-    },
-  );
+    return {
+      action: 'deleted',
+    };
+  });
 }
 
 export async function leaveProject(formData: FormData) {
@@ -820,7 +848,11 @@ export async function leaveProject(formData: FormData) {
   };
 }
 
-export async function saveProjectData(projectId: string, content: string, fileTree: any) {
+export async function saveProjectData(
+  projectId: string,
+  content: string,
+  fileTree: Prisma.InputJsonValue,
+) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -1122,7 +1154,7 @@ export async function getProjectUsers(projectId: string) {
     },
   });
 
-  return users.map((u: { user: { id: any; email: any }; role: any }) => ({
+  return users.map((u: { user: { id: string; email: string }; role: string }) => ({
     id: u.user.id,
     email: u.user.email,
     role: u.role,
@@ -1162,7 +1194,7 @@ export async function getProjectMembers(projectId: string) {
     },
   });
 
-  return members.map((m: { user: { id: any; email: any }; role: any }) => ({
+  return members.map((m: { user: { id: string; email: string }; role: string }) => ({
     id: m.user.id,
     email: m.user.email,
     role: m.role,
