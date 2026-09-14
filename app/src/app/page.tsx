@@ -17,7 +17,7 @@ type FileNode = {
   children?: Record<string, FileNode>;
 };
 
-function normalizeFileTree(value: any): FileNode {
+function normalizeFileTree(value: FileNode): FileNode {
   if (!value || typeof value !== 'object') {
     return { type: 'folder', name: 'root', children: {} };
   }
