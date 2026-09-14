@@ -3,20 +3,11 @@ import { redirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { auth } from '@/lib/auth';
 import type { Prisma } from '@prisma/client';
+import { FileNode } from '@/types/filetree';
 
 const Editor = dynamic(() => import('../components/Editor/Editor'), {
   loading: () => <h2>The editor is loading</h2>,
 });
-
-type FileNode = {
-  type: 'folder' | 'file';
-  name: string;
-  fullPath?: string;
-  data?: string;
-  content?: string;
-  isMain?: boolean;
-  children?: Record<string, FileNode>;
-};
 
 function asString(value: Prisma.JsonValue | undefined, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;

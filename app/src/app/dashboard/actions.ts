@@ -6,22 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { checkUserQuota, calcFileTreeSize } from '@/lib/quota-service';
 import { redirect } from 'next/navigation';
 import { Prisma } from '@prisma/client';
-
-interface FileNode {
-  type: 'file' | 'folder';
-  name: string;
-  fullPath?: string;
-  data?: string;
-  content?: string;
-  isMain?: boolean;
-  children?: { [key: string]: FileNode };
-}
-
-interface ProjectFileTree {
-  type: 'folder';
-  name: string;
-  children: { [key: string]: FileNode };
-}
+import { FileNode, ProjectFileTree } from '@/types/filetree';
 
 function getFetchOptions(useAuth = true) {
   const headers: Record<string, string> = {

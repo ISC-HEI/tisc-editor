@@ -1,4 +1,3 @@
-import { ReactNode } from 'react';
 import { auth } from '@/lib/auth';
 import { getUserProjects, getUserStorage } from './actions';
 import { ProjectList } from '../../components/Dashboard/ProjectList';
@@ -7,6 +6,7 @@ import CreateProjectModal from '../../components/Dashboard/CreateProjectModal';
 import { SignOutButton } from '@/components/SignOutButton';
 import { LayoutGrid, Users, HandshakeIcon } from 'lucide-react';
 import StorageBar from '@/components/Dashboard/StorageBar';
+import { StatCardColor, StatCardProps } from '@/types/statsCard';
 
 type Project = Awaited<ReturnType<typeof getUserProjects>>[number];
 
@@ -93,15 +93,6 @@ export default async function Dashboard() {
       </main>
     </div>
   );
-}
-
-type StatCardColor = 'blue' | 'purple' | 'emerald';
-
-interface StatCardProps {
-  icon: ReactNode;
-  label: string;
-  value: number;
-  color: StatCardColor;
 }
 
 function StatCard({ icon, label, value, color }: StatCardProps) {

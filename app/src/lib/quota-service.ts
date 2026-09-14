@@ -1,11 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import { FileTreeNode } from '@/types/filetree';
 import type { Prisma } from '@prisma/client';
-
-interface FileTreeNode {
-  type?: string;
-  data?: string;
-  children?: Record<string, FileTreeNode>;
-}
 
 export function calcFileTreeSize(node: Prisma.JsonValue | null | undefined): number {
   if (!node || typeof node !== 'object' || Array.isArray(node)) return 0;

@@ -4,35 +4,11 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
+import { FileTreeNode } from '@/types/filetree';
+import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-interface FileTreeNode {
-  type: 'file' | 'folder';
-  name?: string;
-  data?: string;
-  content?: string;
-  children?: Record<string, FileTreeNode>;
-}
-
-interface SyncMarker {
-  line: number;
-  page: number;
-  x: number;
-  y: number;
-}
-
-interface RawSyncMarkerEntry {
-  value?: {
-    line?: number;
-    loc?: {
-      page?: number;
-      x?: string;
-      y?: string;
-    };
-  };
-}
 
 /**
  * Decodes file content, converting Base64 encoded strings into

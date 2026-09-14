@@ -1,20 +1,6 @@
-import type { Server as HTTPServer } from 'http';
-import type { Server as IOServer } from 'socket.io';
-import type { Socket as NetSocket } from 'net';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest } from 'next';
 import { initSocket } from '@/lib/socketServer';
-
-interface SocketServer extends HTTPServer {
-  io?: IOServer;
-}
-
-interface SocketWithIO extends NetSocket {
-  server: SocketServer;
-}
-
-interface NextApiResponseWithSocket extends NextApiResponse {
-  socket: SocketWithIO;
-}
+import { NextApiResponseWithSocket } from '@/types/socket';
 
 /**
  * API route handler to initialize the WebSocket server.
