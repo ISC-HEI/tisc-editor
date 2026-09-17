@@ -30,7 +30,9 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'tutorial/storage', label: 'Storage Management' },
   ],
   techdocsSidebar: [
-    'techdocs/intro',
+    { type: 'doc', id: 'techdocs/intro', label: 'Getting Started' },
+    { type: 'doc', id: 'techdocs/installation', label: 'Start the project' },
+
   ],
 };
 
