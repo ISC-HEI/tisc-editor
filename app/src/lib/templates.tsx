@@ -1,0 +1,75 @@
+'use client';
+
+import {
+  FileText,
+  GraduationCap,
+  BookOpen,
+  ClipboardList,
+  File,
+  FileSignature,
+  Presentation,
+} from 'lucide-react';
+
+export const TEMPLATES = [
+  {
+    id: 'blank',
+    packageBase: 'blank',
+    name: 'Blank Project',
+    description: 'Empty document',
+    icon: <File className="text-gray-400" size={32} />,
+  },
+  {
+    id: 'isc-hei-exec-summary',
+    packageBase: 'isc-hei-exec-summary',
+    packageSubPath: 'src',
+    name: 'ISC-HEI Exec Summary',
+    description: 'Executive summary for the bachelor thesis',
+    templateFile: 'exec_summary.typ',
+    icon: <GraduationCap className="text-blue-500" size={32} />,
+  },
+  {
+    id: 'isc-hei-bthesis',
+    packageBase: 'isc-hei-bthesis',
+    packageSubPath: 'src',
+    name: 'ISC-HEI BThesis',
+    description: 'Official bachelor thesis document',
+    templateFile: 'bachelor_thesis.typ',
+    icon: <BookOpen className="text-purple-500" size={32} />,
+  },
+  {
+    id: 'isc-hei-report',
+    packageBase: 'isc-hei-report',
+    packageSubPath: 'src',
+    name: 'ISC-HEI Report',
+    description: 'Official template for project report',
+    templateFile: 'report.typ',
+    icon: <ClipboardList className="text-amber-500" size={32} />,
+  },
+  {
+    id: 'isc-hei-document',
+    packageBase: 'isc-hei-document',
+    packageSubPath: 'src',
+    name: 'ISC-HEI Document',
+    description: 'Official template for small documents',
+    templateFile: 'document.typ',
+    icon: <FileText className="text-cyan-500" size={32} />,
+  },
+  {
+    id: 'isc-hei-tb-assignment',
+    packageBase: 'isc-hei-tb-assignment',
+    packageSubPath: 'src',
+    name: 'ISC-HEI TB Assignment',
+    description: 'Template for bachelor thesis assignment',
+    templateFile: 'tb_assignment.typ',
+    icon: <FileSignature className="text-rose-500" size={32} />,
+  },
+  {
+    id: 'isc-hei-poster',
+    packageBase: 'isc-hei-poster',
+    packageSubPath: 'src',
+    name: 'ISC-HEI Poster',
+    description: 'Template for academic posters',
+    templateFile: 'poster.typ',
+    icon: <Presentation className="text-indigo-500" size={32} />,
+  },
+];

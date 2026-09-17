@@ -5,51 +5,11 @@ import {
   Plus,
   X,
   LayoutTemplate,
-  FileText,
-  GraduationCap,
-  BookOpen,
-  ClipboardList,
   Loader2,
   AlertCircle,
 } from 'lucide-react';
 import { createProject, getTagsByUser } from '@/app/dashboard/actions';
-
-const TEMPLATES = [
-  {
-    id: 'blank',
-    packageBase: 'blank',
-    name: 'Blank Project',
-    description: 'Empty document',
-    icon: <FileText className="text-gray-400" size={32} />,
-  },
-  {
-    id: 'isc-hei-exec-summary',
-    packageBase: 'isc-hei-exec-summary',
-    packageSubPath: 'src',
-    name: 'ISC-HEI Exec Summary',
-    description: 'Executive summary for the bachelor thesis',
-    templateFile: 'exec_summary.typ',
-    icon: <GraduationCap className="text-blue-500" size={32} />,
-  },
-  {
-    id: 'isc-hei-bthesis',
-    packageBase: 'isc-hei-bthesis',
-    packageSubPath: 'src',
-    name: 'ISC-HEI BThesis',
-    description: 'Official bachelor thesis document',
-    templateFile: 'bachelor_thesis.typ',
-    icon: <BookOpen className="text-purple-500" size={32} />,
-  },
-  {
-    id: 'isc-hei-report',
-    packageBase: 'isc-hei-report',
-    packageSubPath: 'src',
-    name: 'ISC-HEI Report',
-    description: 'Official template for project report',
-    templateFile: 'report.typ',
-    icon: <ClipboardList className="text-emerald-500" size={32} />,
-  },
-];
+import { TEMPLATES } from '@/lib/templates'
 
 export default function CreateProjectModal() {
   const [isOpen, setIsOpen] = useState(false);
