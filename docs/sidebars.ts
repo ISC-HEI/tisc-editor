@@ -44,6 +44,7 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'techdocs/core-systems/collaboration', label: 'Real-time Collaboration' },
     ]},
     { type: 'doc', id: 'techdocs/devops/ci', label: 'Continuous Integration' },
+    { type: 'doc', id: 'techdocs/troubleshooting', label: 'Troubleshooting' },
   ],
 };
 
