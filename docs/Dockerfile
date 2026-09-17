@@ -17,6 +17,8 @@ ENV NODE_ENV=production
 COPY --from=builder /docs/build ./build
 COPY --from=builder /docs/package.json ./package.json
 COPY --from=builder /docs/node_modules ./node_modules
+COPY --from=builder /docs/docusaurus.config.ts ./docusaurus.config.ts
+COPY --from=builder /docs/sidebars.ts ./sidebars.ts
 
 EXPOSE 3001
 

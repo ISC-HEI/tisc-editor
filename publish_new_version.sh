@@ -83,7 +83,11 @@ docker run -d \
   isc-hei/tis-editor:latest
 
 echo "==> Waiting for the app to be ready..."
-until docker exec tisc-app-prod wget -q -T 2 -O /dev/null http://127.0.0.1:3000/api/ws 2>&1 | grep -qv "Connection refused"; do
+until docker exec tisc-app-prod sh -c '
+  wget -q -T 2 -O /dev/null http://127.0.0.1:3000/api/ws
+  status=$?
+  [ "$status" -eq 0 ] || [ "$status" -eq 8 ]
+'; do
   sleep 1
 done
 echo "==> App ready."
@@ -104,7 +108,11 @@ docker run -d \
   isc-hei/tisc-docs:latest
 
 echo "==> Waiting for the docs to be ready..."
-until docker exec tisc-docs wget -q -O /dev/null http://127.0.0.1:3001/docs/ >/dev/null 2>&1; do
+until docker exec tisc-docs sh -c '
+  wget -q -T 2 -O /dev/null http://127.0.0.1:3001/docs/
+  status=$?
+  [ "$status" -eq 0 ] || [ "$status" -eq 8 ]
+'; do
   sleep 1
 done
 echo "==> Docs ready."
