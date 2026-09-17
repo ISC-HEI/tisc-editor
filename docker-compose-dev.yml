@@ -32,8 +32,8 @@ services:
       timeout: 5s
       retries: 5
     restart: always
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - ./app:/app
       - /app/node_modules
@@ -65,6 +65,52 @@ services:
           memory: 1.5G  # If request > 1.5Go, the container will be killed
         reservations:
           memory: 512M
+
+  docs:
+    image: oven/bun:1-slim
+    container_name: tisc-docs
+    userns_mode: "host"
+    working_dir: /docs
+    restart: always
+    expose:
+      - "3001"
+    volumes:
+      - ./docs:/docs
+      - /docs/node_modules
+    networks:
+      - tisc-network
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/docs/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
+    command: >
+      sh -c "
+      bun install &&
+      bunx docusaurus start --host 0.0.0.0 --port 3001 --no-open
+      "
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tisc-nginx
+    depends_on:
+      app:
+        condition: service_healthy
+      docs:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - tisc-network
 
 networks:
   tisc-network:

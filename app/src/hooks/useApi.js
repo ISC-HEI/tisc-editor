@@ -1,5 +1,4 @@
 import { downloadBlob, formatDateNow } from './useUtils';
-import { refs } from './refs';
 
 /**
  * Sends the project file tree to the server to compile it into an SVG string.
@@ -39,7 +38,6 @@ export async function fetchSvg(fileTree, { sync = false, projectId } = {}) {
         fileTree: fileTree,
         mainFile: mainPath,
         format: 'svg',
-        documentFontSize: refs?.editorFontSize || undefined,
         sync,
         projectId,
       }),
@@ -90,7 +88,6 @@ export async function exportPdf(fileTree) {
         fileTree: fileTree,
         mainFile: mainPath,
         format: 'pdf',
-        documentFontSize: refs?.editorFontSize || undefined,
       }),
     });
 

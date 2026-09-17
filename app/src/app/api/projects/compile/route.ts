@@ -126,7 +126,6 @@ function writeImages(
   children: Record<string, FileTreeNode> = {},
   baseDir: string,
   accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 },
-  options: { documentFontSize?: number } = {},
 ) {
   for (const fileName in children) {
     const node = children[fileName];
@@ -137,18 +136,14 @@ function writeImages(
         fs.mkdirSync(currentPath, { recursive: true });
         accumulator.dirs.add(currentPath);
       }
-      writeImages(node.children, currentPath, accumulator, options);
+      writeImages(node.children, currentPath, accumulator);
     } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
         let buffer: Buffer;
 
         if (fileName.endsWith('.typ')) {
-          let textContent = decodeContent(node.data);
-
-          if (fileName.endsWith('.typ') && options?.documentFontSize) {
-            textContent = `#set text(size: ${options?.documentFontSize}pt)\n` + textContent;
-          }
+          const textContent = decodeContent(node.data);
 
           buffer = Buffer.from(textContent, 'utf-8');
         } else {
@@ -249,7 +244,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { fileTree, mainFile, format = 'svg', documentFontSize, sync = false, projectId } = body;
+    const { fileTree, mainFile, format = 'svg', sync = false, projectId } = body;
 
     const mainFileCleanPath = mainFile.replace(/^root\//, '');
 
@@ -265,12 +260,11 @@ export async function POST(req: Request) {
       fs.mkdirSync(workingDir, { recursive: true });
     }
 
-    writeImages(
-      fileTree.children,
-      workingDir,
-      { files: createdFiles, dirs: createdDirs, totalSize: 0 },
-      { documentFontSize },
-    );
+    writeImages(fileTree.children, workingDir, {
+      files: createdFiles,
+      dirs: createdDirs,
+      totalSize: 0,
+    });
 
     const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
 

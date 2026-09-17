@@ -2,5 +2,4 @@
 .env.local
 
 node_modules
-package.json
 bun.lock
