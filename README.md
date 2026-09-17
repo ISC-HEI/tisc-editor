@@ -21,7 +21,7 @@
 
   <br />
 
-  [Documentation](https://tisc.isc-vs.dev/docs/) • [Dev URL](https://tisc.isc-vs.dev) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
+  [Documentation](https://tisc.isc-vs.ch/docs/) • [Website URL](https://tisc.isc-vs.ch) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
 </div>
 
 ## Overview
@@ -38,8 +38,8 @@ TISC Editor is a **Dockerized repo** providing a professional environment for cl
 
 The project ships with a full **Docusaurus documentation site**, covering both the user-facing features and the technical internals of the project.
 
-- **[User Tutorial](https://tisc.isc-vs.dev/docs/)** — How to use the editor: login, project management, collaboration, file management, compilation, export.
-- **[Technical Documentation](https://tisc.isc-vs.dev/docs/techdocs)** — Architecture, project structure, database schema, authentication, API reference, real-time collaboration, CI, and troubleshooting.
+- **[User Tutorial](https://tisc.isc-vs.ch/docs/)** — How to use the editor: login, project management, collaboration, file management, compilation, export.
+- **[Technical Documentation](https://tisc.isc-vs.ch/docs/techdocs)** — Architecture, project structure, database schema, authentication, API reference, real-time collaboration, CI, and troubleshooting.
 
 The documentation source lives under [`docs/`](./docs) and is deployed alongside the app (see [Production Deployment](#production-deployment)).
 
@@ -164,75 +164,12 @@ docker compose -f docker-compose-dev.yml up --build
 </details>
 
 <details>
-<summary><strong>Option B - Manual start (advanced)</strong></summary>
+<summary><strong>Option A - Docker Compose (recommended)</strong></summary>
 
-#### Database
-First you need to start a PostgreSQL instance, with docker or on your device.
-
-#### App With API
-To start the App and the API, see [here](app/README.md).
-
-#### Documentation
-To start the documentation site, see [Running the docs locally](#running-the-docs-locally).
+Please see the [official documentation](https://tisc.isc-vs.ch/docs/techdocs/installation)
 
 </details>
 
-## Production Deployment
-
-1. You need to build the editor image
-```bash
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)$([ "$BRANCH" != "main" ] && echo "-$BRANCH")
-docker build --build-arg NEXT_PUBLIC_APP_VERSION=$APP_VER -t isc-hei/tis-editor:latest ./app
-docker network create tisc-network
-```
-
-2. If you don't already have a database, you can start one here
-```bash
-docker run -d \
-  --name tisc-db \
-  --network tisc-network \
-  -e POSTGRES_USER=tisc_user \
-  -e POSTGRES_PASSWORD=YOUR_PASSWORD \
-  -e POSTGRES_DB=tisc_db \
-  -v tisc_db_data:/var/lib/postgresql/data \
-  postgres:15
-```
-
-3. Start your app on local
-```bash
-docker run -d \
-  --name tisc-app-prod \
-  --network tisc-network \
-  -p 8082:3000 \
-  -e DATABASE_URL=postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db \
-  -e AUTH_SECRET=YOUR_SECRET  \
-  -e AUTH_URL=https://tisc.isc-vs.dev \
-  -e GITHUB_TOKEN=YOUR_TOKEN \
-  --restart unless-stopped \
-  isc-hei/tis-editor:latest
-```
-
-4. Initialize the tables in the db
-```bash
-docker exec tisc-app-prod npx prisma db push --url="postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db"
-```
-
-> The documentation site is served through the same Nginx reverse proxy, bound to the `/docs/` path — no separate deployment step is required beyond what `publish_new_version.sh` already handles.
-
-### Script Automation
-The `publish_new_version.sh` script automates the deployment process. After pushing your changes to the repository, run the following on the server:
-```bash
-./publish_new_version.sh
-```
-
-**Options:**
-To reset or start the database container along with the application, use the `--db` flag:
-```bash
-./publish_new_version.sh --db
-```
-
-> All infos is configurable in this script.
 
 ## CI/CD
 
