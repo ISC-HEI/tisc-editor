@@ -6,7 +6,7 @@ This page documents the internal API routes used by the app.
 
 ### `GET / POST /api/[auth]/[...nextauth]`
 
-Catch-all route handled directly by NextAuth's `handlers`. Manages the entire OIDC flow with Keycloak (sign-in, callback, sign-out, session, CSRF, etc.). See [Authentication & SSO](./authentication) for details on the underlying configuration.
+Catch-all route handled directly by NextAuth's `handlers`. Manages the entire OIDC flow with Keycloak (sign-in, callback, sign-out, session, CSRF, etc.). See [Authentication & SSO](./authentication.md) for details on the underlying configuration.
 
 ```typescript
 import { handlers } from '@/lib/auth';
@@ -89,7 +89,7 @@ Persists a project's file tree, enforcing the user's storage quota.
 
 **How it works**
 
-The quota check only applies when the new file tree is **larger** than the project's previous size. It computes the combined size of the user's other owned projects plus the new size of the current one; if that total exceeds `storageQuota` (see [Database Schema](./database)), the save is rejected before anything is written. The check and the update run inside a single Prisma transaction to avoid race conditions between concurrent saves.
+The quota check only applies when the new file tree is **larger** than the project's previous size. It computes the combined size of the user's other owned projects plus the new size of the current one; if that total exceeds `storageQuota` (see [Database Schema](../architecture/database)), the save is rejected before anything is written. The check and the update run inside a single Prisma transaction to avoid race conditions between concurrent saves.
 
 ### `GET /api/projects/[id]/thumbnail`
 

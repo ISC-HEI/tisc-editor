@@ -33,13 +33,17 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'techdocs/intro', label: 'Getting Started' },
     { type: 'doc', id: 'techdocs/installation', label: 'Start the project' },
     { type: 'doc', id: 'techdocs/configuration', label: 'Configure your setup' },
-    { type: 'doc', id: 'techdocs/architecture', label: 'Architecture Overview' },
-    { type: 'doc', id: 'techdocs/structure', label: 'Project Structure' },
-    { type: 'doc', id: 'techdocs/database', label: 'Database Schema' },
-    { type: 'doc', id: 'techdocs/authentication', label: 'Authentication & SSO' },
-    { type: 'doc', id: 'techdocs/api-endpoints', label: 'API Endpoints' },
-    { type: 'doc', id: 'techdocs/collaboration', label: 'Real-time Collaboration' },
-    { type: 'doc', id: 'techdocs/ci', label: 'Continuous Integration' },
+    { type: 'category', label: 'Architecture & Data', items: [
+      { type: 'doc', id: 'techdocs/architecture/architecture', label: 'Architecture Overview' },
+      { type: 'doc', id: 'techdocs/architecture/structure', label: 'Project Structure' },
+      { type: 'doc', id: 'techdocs/architecture/database', label: 'Database Schema' },
+    ]},
+    { type: 'category', label: 'Core Systems', items: [
+      { type: 'doc', id: 'techdocs/core-systems/authentication', label: 'Authentication & SSO' },
+      { type: 'doc', id: 'techdocs/core-systems/api-endpoints', label: 'API Endpoints' },
+      { type: 'doc', id: 'techdocs/core-systems/collaboration', label: 'Real-time Collaboration' },
+    ]},
+    { type: 'doc', id: 'techdocs/devops/ci', label: 'Continuous Integration' },
   ],
 };
 

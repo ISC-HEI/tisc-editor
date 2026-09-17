@@ -6,7 +6,7 @@ Welcome to the documentation of **TISC Editor** — the official ISC Typst edito
 This section is dedicated to the **user guide**: everything you need to know to log in, manage your projects, and get the most out of the editor.
 
 :::tip[Quick start]
-New here? Jump straight to [How to log in](./login) or explore [Project management](./projects).
+New here? Jump straight to [How to log in](./login) or explore [Project management](./projects/create).
 :::
 ---
 

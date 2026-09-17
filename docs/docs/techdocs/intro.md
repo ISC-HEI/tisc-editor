@@ -3,21 +3,32 @@
 
 Welcome to the documentation of **TISC Editor** — the official ISC Typst editor.
 
-This section is dedicated to the **technical part**: everything you need to know as a developper or a maintainer of the project
+This section is dedicated to the **technical part**: everything you need to know as a developer or a maintainer of the project.
 
 ---
 
 ## Getting Started
 
 **[Installation](./installation)** — Learn how to clone and start the project.  
-**[Configuration](./configuration)** — Configure your environment variables.  
-**[Architecture](./architecture)** — Understand the project's structure and tech stack.  
-**[Structure](./structure)** — Understand the files structure.  
-**[Database](./database)** — Understand the database schema.  
-**[Authentication](./authentication)** — Learn how to the SSO is integrate in the project.  
-**[API Endpoints](./api-endpoints)** — Understand the API endpoints use.  
-**[Real-time Collaboration](./collaboration)** — Learn how the websocket work.  
-**[Continuous Integration](./ci.md)** — Understand the CI.
+**[Configuration](./configuration)** — Configure your environment variables.
+
+## Architecture & Data
+
+**[Architecture](./architecture/)** — Understand the project's structure and tech stack.  
+**[Structure](./architecture/structure)** — Understand the file structure.  
+**[Database](./architecture/database)** — Understand the database schema.
+
+## Core Systems
+
+**[Authentication](./core-systems/authentication)** — Learn how SSO is integrated into the project.  
+**[API Endpoints](./core-systems/api-endpoints)** — Understand the available API endpoints.  
+**[Real-time Collaboration](./core-systems/collaboration)** — Learn how the WebSocket integration works.
+
+## DevOps
+
+**[Continuous Integration](./devops/ci)** — Understand the CI workflows.
+
+---
 
 :::info[Need help?]
 Can't find what you're looking for? Make en [issue](https://github.com/isc-hei/tisc-editor/issues) on Github.
