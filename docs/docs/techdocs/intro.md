@@ -9,7 +9,8 @@ This section is dedicated to the **technical part**: everything you need to know
 
 ## Getting Started
 
-**[Installation](./installation)** — Learn how to clone and start the project.
+**[Installation](./installation)** — Learn how to clone and start the project.  
+**[Configuration](./configuration)** — Configure your environment variables.  
 
 :::info[Need help?]
 Can't find what you're looking for? Make en [issue](https://github.com/isc-hei/tisc-editor/issues) on Github.
