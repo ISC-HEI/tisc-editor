@@ -14,7 +14,8 @@ This section is dedicated to the **technical part**: everything you need to know
 **[Architecture](./architecture)** — Understand the project's structure and tech stack.  
 **[Structure](./structure)** — Understand the files structure.  
 **[Database](./database)** — Understand the database schema.  
-**[Authentication](./authentication)** — Learn how to the SSO is integrate in the project.
+**[Authentication](./authentication)** — Learn how to the SSO is integrate in the project.  
+**[API Endpoints](./api-endpoints)** — Understand the API endpoints use.
 
 :::info[Need help?]
 Can't find what you're looking for? Make en [issue](https://github.com/isc-hei/tisc-editor/issues) on Github.

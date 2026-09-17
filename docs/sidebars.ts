@@ -37,6 +37,7 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'techdocs/structure', label: 'Project Structure' },
     { type: 'doc', id: 'techdocs/database', label: 'Database Schema' },
     { type: 'doc', id: 'techdocs/authentication', label: 'Authentication & SSO' },
+    { type: 'doc', id: 'techdocs/api-endpoints', label: 'API Endpoints' },
   ],
 };
 
