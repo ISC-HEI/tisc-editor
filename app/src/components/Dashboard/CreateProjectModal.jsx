@@ -1,61 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Plus,
-  X,
-  LayoutTemplate,
-  FileText,
-  GraduationCap,
-  BookOpen,
-  ClipboardList,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react';
+import { Plus, X, LayoutTemplate, Loader2, AlertCircle } from 'lucide-react';
 import { createProject, getTagsByUser } from '@/app/dashboard/actions';
-
-const TEMPLATES = [
-  {
-    id: 'blank',
-    packageBase: 'blank',
-    name: 'Blank Project',
-    description: 'Empty document',
-    icon: <FileText className="text-gray-400" size={32} />,
-  },
-  {
-    id: 'isc-hei-exec-summary',
-    packageBase: 'isc-hei-exec-summary',
-    packageSubPath: 'src',
-    name: 'ISC-HEI Exec Summary',
-    description: 'Executive summary for the bachelor thesis',
-    templateFile: 'exec_summary.typ',
-    icon: <GraduationCap className="text-blue-500" size={32} />,
-  },
-  {
-    id: 'isc-hei-bthesis',
-    packageBase: 'isc-hei-bthesis',
-    packageSubPath: 'src',
-    name: 'ISC-HEI BThesis',
-    description: 'Official bachelor thesis document',
-    templateFile: 'bachelor_thesis.typ',
-    icon: <BookOpen className="text-purple-500" size={32} />,
-  },
-  {
-    id: 'isc-hei-report',
-    packageBase: 'isc-hei-report',
-    packageSubPath: 'src',
-    name: 'ISC-HEI Report',
-    description: 'Official template for project report',
-    templateFile: 'report.typ',
-    icon: <ClipboardList className="text-emerald-500" size={32} />,
-  },
-];
+import { TEMPLATES } from '@/lib/templates';
 
 export default function CreateProjectModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState(null);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   // Tags
   const [tags, setTags] = useState([]);
@@ -122,6 +77,7 @@ export default function CreateProjectModal() {
     setTags([]);
     setTagInput('');
     setSelectedTemplate('blank');
+    setShowAllTemplates(false);
   };
 
   return (
@@ -190,6 +146,7 @@ export default function CreateProjectModal() {
                   setTags([]);
                   setTagInput('');
                   setSelectedTemplate('blank');
+                  setShowAllTemplates(false);
                 } catch (err) {
                   setError(err instanceof Error ? err.message : 'An error occurred.');
                 } finally {
@@ -217,7 +174,7 @@ export default function CreateProjectModal() {
               />
 
               <div className="grid grid-cols-2 gap-4 mb-8">
-                {TEMPLATES.map((t) => (
+                {(showAllTemplates ? TEMPLATES : TEMPLATES.slice(0, 4)).map((t) => (
                   <label
                     key={t.id}
                     className={`group relative cursor-pointer p-4 border-2 rounded-xl flex flex-col items-center text-center transition-all ${
@@ -245,6 +202,16 @@ export default function CreateProjectModal() {
                   </label>
                 ))}
               </div>
+
+              {TEMPLATES.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllTemplates(!showAllTemplates)}
+                  className="w-full -mt-4 mb-8 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  {showAllTemplates ? 'Show less' : 'Show all'}
+                </button>
+              )}
 
               {/* Project name */}
               <div className="space-y-2 mb-6">

@@ -17,12 +17,9 @@ When creating a project, you can start with a blank project or choose one of the
 | ISC-HEI Exec Summary | Template for writing an executive summary |
 | ISC-HEI BThesis | Template for writing a bachelor’s thesis |
 | ISC-HEI Report | Template for writing a report |
-
-:::note[More coming]
-
-More templates will be added to the editor soon.
-
-:::
+| ISC-HEI Document | Template for writing a small document |
+| ISC-HEI TB Assignment | Template for writing a TB assignment |
+| ISC-HEI Poster | Template for making posters |
 
 You just have to select the template you want and add a name.
 
