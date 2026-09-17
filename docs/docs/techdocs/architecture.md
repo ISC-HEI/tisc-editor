@@ -1,7 +1,3 @@
----
-sidebar_position: 4
----
-
 # Architecture Overview
 
 This page gives a high-level overview of how the TISC Editor is built and how its main components interact.

@@ -1,7 +1,3 @@
----
-sidebar_position: 5
----
-
 # Project Structure
 
 This page describes how the `app` directory is organized.
