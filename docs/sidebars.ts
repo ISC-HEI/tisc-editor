@@ -36,6 +36,7 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'techdocs/architecture', label: 'Architecture Overview' },
     { type: 'doc', id: 'techdocs/structure', label: 'Project Structure' },
     { type: 'doc', id: 'techdocs/database', label: 'Database Schema' },
+    { type: 'doc', id: 'techdocs/authentication', label: 'Authentication & SSO' },
   ],
 };
 

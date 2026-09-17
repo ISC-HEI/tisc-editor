@@ -33,14 +33,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session;
     },
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnDashboard = !nextUrl.pathname.startsWith('/login');
-
-      if (isOnDashboard) {
-        return isLoggedIn;
-      }
-      return true;
-    },
   },
 });
