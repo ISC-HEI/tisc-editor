@@ -35,7 +35,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/isc-hei/tisc-editor/edit/main/',
+          editUrl: 'https://github.com/isc-hei/tisc-editor/edit/main/docs/',
           showLastUpdateTime: false,
           showLastUpdateAuthor: false,
         },
