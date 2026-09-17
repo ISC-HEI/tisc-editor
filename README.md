@@ -16,11 +16,12 @@
     <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
     <img src="https://img.shields.io/badge/Prisma-3982CE?style=for-the-badge&logo=Prisma&logoColor=white" />
     <img src="https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white" />
+    <img src="https://img.shields.io/badge/Docusaurus-3ECC5F?style=for-the-badge&logo=docusaurus&logoColor=white" />
   </div>
 
   <br />
 
-  [Explore Docs](./app/README.md) • [Dev URL](https://tisc.isc-vs.dev) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
+  [Documentation](https://tisc.isc-vs.dev/docs/) • [Dev URL](https://tisc.isc-vs.dev) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
 </div>
 
 ## Overview
@@ -30,17 +31,39 @@ TISC Editor is a **Dockerized repo** providing a professional environment for cl
 - **Web Editor:** VSCode-like interface, live preview, template gallery, collaboration.
 - **Compilation API:** Stateless Typst to PDF/SVG rendering, Base64 asset handling.
 - **Database Layer:** PostgreSQL managed with Prisma ORM.
-- **CI/CD:** Automated build and formatting checks on every push and pull request via GitHub Actions.
+- **Documentation:** User and technical documentation, built with Docusaurus.
+- **CI/CD:** Automated build, formatting and linting checks on every push and pull request via GitHub Actions.
 
+## Documentation
+
+The project ships with a full **Docusaurus documentation site**, covering both the user-facing features and the technical internals of the project.
+
+- **[User Tutorial](https://tisc.isc-vs.dev/docs/)** — How to use the editor: login, project management, collaboration, file management, compilation, export.
+- **[Technical Documentation](https://tisc.isc-vs.dev/docs/techdocs)** — Architecture, project structure, database schema, authentication, API reference, real-time collaboration, CI, and troubleshooting.
+
+The documentation source lives under [`docs/`](./docs) and is deployed alongside the app (see [Production Deployment](#production-deployment)).
+
+### Running the docs locally
+
+```bash
+cd docs
+bun install
+bun run start
+```
+
+The documentation will be available at `http://localhost:3001`.
+
+> Running the full stack via `docker-compose-dev.yml` also starts the docs automatically, and is accessible via the `/docs/`
 
 ## Tech Stack
 
-| Layer       | Technology |
-|------------|------------|
-| Frontend   | Next.js 16, TailwindCSS, Lucide Icons, Socket.io-client |
-| Backend    | Node.js API with Typst binary integration, Socket.io-server |
-| Database   | PostgreSQL, Prisma ORM |
-| DevOps     | Docker Compose, GitHub Actions |
+| Layer         | Technology |
+|---------------|------------|
+| Frontend      | Next.js 16, TailwindCSS, Lucide Icons, Socket.io-client |
+| Backend       | Node.js API with Typst binary integration, Socket.io-server |
+| Database      | PostgreSQL, Prisma ORM |
+| Documentation | Docusaurus |
+| DevOps        | Docker Compose, GitHub Actions |
 
 
 ## Key Features
@@ -118,7 +141,7 @@ AUTH_KEYCLOAK_ISSUER=https://sso.isc-vs.ch/realms/isc
 - **Node.js / Bun** (Optional, for local development outside Docker)
 
 ### Development Deployment Docker
-To launch the entire stack (App, API, Database):
+To launch the entire stack (App, API, Database, Docs):
 > Make sure you completed the [Configuration](#configuration--environment) before.
 ```bash
 git clone https://github.com/ISC-HEI/tisc-editor.git
@@ -127,6 +150,7 @@ docker compose -f docker-compose-dev.yml up -d --build
 ```
 
 * Editor UI: http://localhost:3000
+* Documentation: http://localhost:3000/docs
 
 ### Development Workflow
 <details>
@@ -148,6 +172,8 @@ First you need to start a PostgreSQL instance, with docker or on your device.
 #### App With API
 To start the App and the API, see [here](app/README.md).
 
+#### Documentation
+To start the documentation site, see [Running the docs locally](#running-the-docs-locally).
 
 </details>
 
@@ -192,6 +218,8 @@ docker run -d \
 docker exec tisc-app-prod npx prisma db push --url="postgresql://tisc_user:YOUR_PASSWORD@tisc-db:5432/tisc_db"
 ```
 
+> The documentation site is served through the same Nginx reverse proxy, bound to the `/docs/` path — no separate deployment step is required beyond what `publish_new_version.sh` already handles.
+
 ### Script Automation
 The `publish_new_version.sh` script automates the deployment process. After pushing your changes to the repository, run the following on the server:
 ```bash
@@ -214,7 +242,8 @@ The project uses **GitHub Actions** to automatically validate every push and pul
 | :--- | :--- | :--- |
 | **Build** | `build.yml` | Installs dependencies and runs `bun run build` from `app/` to make sure the project compiles. |
 | **Format** | `format.yml` | Installs dependencies and runs `bun run format:check` (Prettier) from `app/` to make sure the codebase is consistently formatted. |
-| **Lint** | `lint.yml` | Installs dependencies and runs `bun run lint` (ESLint) from `app/` to verify that the codebase meets the project’s linting rules. |
+| **Lint** | `lint.yml` | Installs dependencies and runs `bun run lint` (ESLint) from `app/` to verify that the codebase meets the project's linting rules. |
+| **Build Docs** | `build-docs.yml` | Installs dependencies and runs `bun run build` from `docs/` to make sure the documentation site compiles. |
 
 A local **pre-commit hook** (via Husky) also runs `bun run format:check`, `bun run lint` and `bun run typecheck` before each commit, so issues are caught before code even reaches CI.
 
@@ -238,6 +267,10 @@ graph TD
         DB[(PostgreSQL)]
     end
 
+    subgraph External
+        SSO[Keycloak SSO]
+    end
+
     %% Interactions
     UI -->|HTTP / Server Actions| NextJS
     SIOC <-->|Real-time Sync| SIOS
@@ -245,6 +278,7 @@ graph TD
     NextJS <--> Prisma
     Prisma <--> DB
     NextJS -->|Exec| Typst
+    NextJS <-->|OIDC Auth| SSO
 ```
 
 ## License
