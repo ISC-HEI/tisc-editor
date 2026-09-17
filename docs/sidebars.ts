@@ -30,7 +30,21 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'tutorial/storage', label: 'Storage Management' },
   ],
   techdocsSidebar: [
-    'techdocs/intro',
+    { type: 'doc', id: 'techdocs/intro', label: 'Getting Started' },
+    { type: 'doc', id: 'techdocs/installation', label: 'Start the project' },
+    { type: 'doc', id: 'techdocs/configuration', label: 'Configure your setup' },
+    { type: 'category', label: 'Architecture & Data', items: [
+      { type: 'doc', id: 'techdocs/architecture/architecture', label: 'Architecture Overview' },
+      { type: 'doc', id: 'techdocs/architecture/structure', label: 'Project Structure' },
+      { type: 'doc', id: 'techdocs/architecture/database', label: 'Database Schema' },
+    ]},
+    { type: 'category', label: 'Core Systems', items: [
+      { type: 'doc', id: 'techdocs/core-systems/authentication', label: 'Authentication & SSO' },
+      { type: 'doc', id: 'techdocs/core-systems/api-endpoints', label: 'API Endpoints' },
+      { type: 'doc', id: 'techdocs/core-systems/collaboration', label: 'Real-time Collaboration' },
+    ]},
+    { type: 'doc', id: 'techdocs/devops/ci', label: 'Continuous Integration' },
+    { type: 'doc', id: 'techdocs/troubleshooting', label: 'Troubleshooting' },
   ],
 };
 

@@ -39,7 +39,6 @@ export async function fetchSvg(fileTree, { sync = false, projectId } = {}) {
         fileTree: fileTree,
         mainFile: mainPath,
         format: 'svg',
-        documentFontSize: refs?.editorFontSize || undefined,
         sync,
         projectId,
       }),
@@ -90,7 +89,6 @@ export async function exportPdf(fileTree) {
         fileTree: fileTree,
         mainFile: mainPath,
         format: 'pdf',
-        documentFontSize: refs?.editorFontSize || undefined,
       }),
     });
 

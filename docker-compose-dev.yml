@@ -67,7 +67,7 @@ services:
           memory: 512M
 
   docs:
-    image: node:20-slim
+    image: oven/bun:1-slim
     container_name: tisc-docs
     userns_mode: "host"
     working_dir: /docs
@@ -79,11 +79,16 @@ services:
       - /docs/node_modules
     networks:
       - tisc-network
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/docs/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
     command: >
       sh -c "
-      corepack enable &&
-      (npm install) &&
-      (npx docusaurus start --host 0.0.0.0 --port 3001 --no-open)
+      bun install &&
+      bunx docusaurus start --host 0.0.0.0 --port 3001 --no-open
       "
     deploy:
       resources:
@@ -95,8 +100,10 @@ services:
     image: nginx:1.27-alpine
     container_name: tisc-nginx
     depends_on:
-      - app
-      - docs
+      app:
+        condition: service_healthy
+      docs:
+        condition: service_healthy
     restart: always
     ports:
       - "3000:80"
