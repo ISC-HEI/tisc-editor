@@ -12,7 +12,6 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 set -a
-
 source "$ENV_FILE"
 set +a
 
@@ -28,11 +27,16 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)$([ "$BRANCH" != "main" ] && echo "-$BRANCH")
 echo "==> Version : $APP_VER"
 
-# ---- Build the image ----
+# ---- Build the images ----
 docker build \
   --build-arg NEXT_PUBLIC_APP_VERSION="$APP_VER" \
   -t isc-hei/tis-editor:latest \
   ./app
+
+docker build \
+  -f docs/Dockerfile \
+  -t isc-hei/tisc-docs:latest \
+  .
 
 # ---- Ensure the Docker network exists ----
 docker network inspect tisc-network >/dev/null 2>&1 || docker network create tisc-network
@@ -60,20 +64,19 @@ if [[ "${1:-}" == "--db" ]]; then
 fi
 
 # ---- Start the app (remove the old instance if it exists) ----
-echo "==> Waiting for the app to start..."
+echo "==> Starting the app..."
 docker rm -f tisc-app-prod >/dev/null 2>&1 || true
 
 docker run -d \
   --name tisc-app-prod \
   --network tisc-network \
-  -p 8082:3000 \
+  --network-alias app \
   --env-file "$ENV_FILE" \
   -e DATABASE_URL="$DATABASE_URL" \
   -e AUTH_URL="$AUTH_URL" \
   --restart unless-stopped \
   isc-hei/tis-editor:latest
 
-# ---- Wait for the app to be ready ----
 echo "==> Waiting for the app to be ready..."
 until docker exec tisc-app-prod curl -sf http://localhost:3000/api/ws >/dev/null 2>&1; do
   sleep 1
@@ -83,5 +86,40 @@ echo "==> App ready."
 # ---- Apply the Prisma schema ----
 echo "==> Push of the Prisma schema..."
 docker exec tisc-app-prod npx prisma db push --url="$DATABASE_URL"
+
+# ---- Start the docs site ----
+echo "==> Starting the docs..."
+docker rm -f tisc-docs >/dev/null 2>&1 || true
+
+docker run -d \
+  --name tisc-docs \
+  --network tisc-network \
+  --network-alias docs \
+  --restart unless-stopped \
+  isc-hei/tisc-docs:latest
+
+echo "==> Waiting for the docs to be ready..."
+until docker exec tisc-docs curl -sf http://localhost:3001/docs/ >/dev/null 2>&1; do
+  sleep 1
+done
+echo "==> Docs ready."
+
+# ---- Start nginx (reverse proxy for app + docs) ----
+echo "==> Starting nginx..."
+docker rm -f tisc-nginx >/dev/null 2>&1 || true
+
+docker run -d \
+  --name tisc-nginx \
+  --network tisc-network \
+  -p 8082:80 \
+  -v "$(pwd)/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro" \
+  --restart unless-stopped \
+  nginx:1.27-alpine
+
+echo "==> Waiting for nginx to be ready..."
+until curl -sf http://localhost:8082 >/dev/null 2>&1; do
+  sleep 1
+done
+echo "==> Nginx ready."
 
 echo "==> Deployment completed (version $APP_VER)."
