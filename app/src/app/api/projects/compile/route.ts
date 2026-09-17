@@ -143,7 +143,7 @@ function writeImages(
         let buffer: Buffer;
 
         if (fileName.endsWith('.typ')) {
-          let textContent = decodeContent(node.data);
+          const textContent = decodeContent(node.data);
 
           buffer = Buffer.from(textContent, 'utf-8');
         } else {
@@ -260,11 +260,11 @@ export async function POST(req: Request) {
       fs.mkdirSync(workingDir, { recursive: true });
     }
 
-    writeImages(
-      fileTree.children,
-      workingDir,
-      { files: createdFiles, dirs: createdDirs, totalSize: 0 },
-    );
+    writeImages(fileTree.children, workingDir, {
+      files: createdFiles,
+      dirs: createdDirs,
+      totalSize: 0,
+    });
 
     const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
 

@@ -1,5 +1,4 @@
 import { downloadBlob, formatDateNow } from './useUtils';
-import { refs } from './refs';
 
 /**
  * Sends the project file tree to the server to compile it into an SVG string.
