@@ -17,6 +17,7 @@ This section is dedicated to the **technical part**: everything you need to know
 **[Authentication](./authentication)** — Learn how to the SSO is integrate in the project.  
 **[API Endpoints](./api-endpoints)** — Understand the API endpoints use.  
 **[Real-time Collaboration](./collaboration)** — Learn how the websocket work.  
+**[Continuous Integration](./ci.md)** — Understand the CI.
 
 :::info[Need help?]
 Can't find what you're looking for? Make en [issue](https://github.com/isc-hei/tisc-editor/issues) on Github.

@@ -39,6 +39,7 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'techdocs/authentication', label: 'Authentication & SSO' },
     { type: 'doc', id: 'techdocs/api-endpoints', label: 'API Endpoints' },
     { type: 'doc', id: 'techdocs/collaboration', label: 'Real-time Collaboration' },
+    { type: 'doc', id: 'techdocs/ci', label: 'Continuous Integration' },
   ],
 };
 
