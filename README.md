@@ -218,6 +218,13 @@ graph TD
     NextJS <-->|OIDC Auth| SSO
 ```
 
+## Preview
+
+| | |
+|---|---|
+| ![Landing page](.github/assets/doc_landing_page.png) | ![SSO](.github/assets/doc_sso.png) |
+| ![Editor](.github/assets/editor.png) | ![Dashboard](.github/assets/dashboard.png) |
+
 ## License
 This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
 
