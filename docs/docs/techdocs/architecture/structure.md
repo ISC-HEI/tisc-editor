@@ -43,6 +43,7 @@ Server-side logic and integrations:
 - **`prisma.ts`** — Prisma client instance.
 - **`quota-service.ts`** — Storage quota calculation logic.
 - **`socketServer.ts`** — Socket.io server setup.
+- **`template.ts`** — List of the [templates](../core-systems/templates).
 
 ## `src/pages/api/ws.ts`
 
