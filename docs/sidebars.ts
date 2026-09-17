@@ -33,6 +33,7 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'techdocs/intro', label: 'Getting Started' },
     { type: 'doc', id: 'techdocs/installation', label: 'Start the project' },
     { type: 'doc', id: 'techdocs/configuration', label: 'Configure your setup' },
+    { type: 'doc', id: 'techdocs/architecture', label: 'Architecture Overview' },
 
   ],
 };
