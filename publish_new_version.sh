@@ -24,7 +24,12 @@ DATABASE_URL="postgresql://tisc_user:${DB_PASSWORD}@tisc-db:5432/tisc_db"
 
 # ---- Get the version ----
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-APP_VER=$(git describe --tags --always --first-parent --dirty=.dev)$([ "$BRANCH" != "main" ] && echo "-$BRANCH")
+GIT_DESC=$(git describe --tags --always --first-parent --dirty=.dev)
+if [ "$BRANCH" != "main" ]; then
+  APP_VER="${GIT_DESC}-${BRANCH}"
+else
+  APP_VER="$GIT_DESC"
+fi
 echo "==> Version : $APP_VER"
 
 # ---- Build the images ----
