@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Plus,
-  X,
-  LayoutTemplate,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react';
+import { Plus, X, LayoutTemplate, Loader2, AlertCircle } from 'lucide-react';
 import { createProject, getTagsByUser } from '@/app/dashboard/actions';
 import { TEMPLATES } from '@/lib/templates';
 
@@ -180,10 +174,7 @@ export default function CreateProjectModal() {
               />
 
               <div className="grid grid-cols-2 gap-4 mb-8">
-                {(showAllTemplates
-                  ? TEMPLATES
-                  : TEMPLATES.slice(0, 4)
-                ).map((t) => (
+                {(showAllTemplates ? TEMPLATES : TEMPLATES.slice(0, 4)).map((t) => (
                   <label
                     key={t.id}
                     className={`group relative cursor-pointer p-4 border-2 rounded-xl flex flex-col items-center text-center transition-all ${
@@ -215,9 +206,7 @@ export default function CreateProjectModal() {
               {TEMPLATES.length > 4 && (
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowAllTemplates(!showAllTemplates)
-                  }
+                  onClick={() => setShowAllTemplates(!showAllTemplates)}
                   className="w-full -mt-4 mb-8 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                 >
                   {showAllTemplates ? 'Show less' : 'Show all'}
@@ -277,24 +266,20 @@ export default function CreateProjectModal() {
                   </div>
 
                   {/* Suggestions */}
-                  {!isCreating &&
-                    tagInput.trim() &&
-                    filteredTags.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
-                        {filteredTags.slice(0, 8).map((tag) => (
-                          <button
-                            key={tag.id}
-                            type="button"
-                            onClick={() => addTag(tag.name)}
-                            className="w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-colors text-sm text-slate-700"
-                          >
-                            <span className="font-medium">
-                              #{tag.name}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  {!isCreating && tagInput.trim() && filteredTags.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                      {filteredTags.slice(0, 8).map((tag) => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => addTag(tag.name)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-colors text-sm text-slate-700"
+                        >
+                          <span className="font-medium">#{tag.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tags list */}
