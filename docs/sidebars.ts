@@ -41,6 +41,7 @@ const sidebars: SidebarsConfig = {
     { type: 'category', label: 'Core Systems', items: [
       { type: 'doc', id: 'techdocs/core-systems/authentication', label: 'Authentication & SSO' },
       { type: 'doc', id: 'techdocs/core-systems/api-endpoints', label: 'API Endpoints' },
+      { type: 'doc', id: 'techdocs/core-systems/server-actions', label: 'Server Actions' },
       { type: 'doc', id: 'techdocs/core-systems/collaboration', label: 'Real-time Collaboration' },
       { type: 'doc', id: 'techdocs/core-systems/templates', label: 'Template Management' },
     ]},
