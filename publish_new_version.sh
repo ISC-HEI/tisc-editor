@@ -40,8 +40,7 @@ docker build \
   -t isc-hei/tis-editor:latest \
   ./app
 
-
-cp CHANGELOG.md docs/techdocs/changelog.md # Add changelog to docs for the next build
+cp CHANGELOG.md docs/docs/techdocs/changelog.md # Add changelog to docs for the next build
 
 docker build \
   -f docs/Dockerfile \
