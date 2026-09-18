@@ -5,9 +5,6 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 git pull origin main
 
-echo "==> Installation des fonts..."
-bash fonts/install_fonts.sh
-
 ENV_FILE=".env"
 
 if [ ! -f "$ENV_FILE" ]; then

@@ -7,7 +7,7 @@ OK="${GREEN}✔${NC}"
 
 FONTS_URL="https://files.isc-vs.ch/typst/modern-isc-fonts-v2.tar.gz"
 FONTS_DIR_NAME="modern-isc-fonts-v2"
-DEST_DIR="${HOME}/.local/share/fonts"
+DEST_DIR="/usr/local/share/fonts"
 REQUIRED_FONTS=("Source Sans Pro" "Source Sans 3" "Inria Sans" "Fira Code")
 
 TMP_DIR="$(mktemp -d /tmp/isc-fonts-XXXXXX)"

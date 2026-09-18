@@ -10,7 +10,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRED_DISABLED=1
 
 ARG NEXT_PUBLIC_APP_VERSION
 ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
@@ -27,6 +27,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+RUN apk add --no-cache wget tar fontconfig ca-certificates
+COPY fonts/install_fonts.sh /tmp/install_fonts.sh
+RUN chmod +x /tmp/install_fonts.sh && /tmp/install_fonts.sh && rm -f /tmp/install_fonts.sh
 
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
