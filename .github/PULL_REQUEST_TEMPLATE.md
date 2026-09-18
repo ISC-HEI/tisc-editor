@@ -20,3 +20,4 @@ Please delete options that are not relevant.
 * [ ] I have performed a self-review of my code.
 * [ ] I have tested that everything runs correctly.
 * [ ] I have added the necessary documentation in `/docs`, if applicable.
+* [ ] I have updated the changelog.

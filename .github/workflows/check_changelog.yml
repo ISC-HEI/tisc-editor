@@ -1,0 +1,41 @@
+name: Check changelog updated
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip check if PR is labeled "no-changelog"
+        id: skip
+        run: |
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}" == "true" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify CHANGELOG.md was modified
+        if: steps.skip.outputs.skip == 'false'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -qx "CHANGELOG.md"; then
+            echo "CHANGELOG.md was updated."
+          else
+            echo "CHANGELOG.md was not updated in this PR."
+            echo "Please add an entry to CHANGELOG.md, or add the 'no-changelog' label if this PR doesn't need one."
+            exit 1
+          fi
