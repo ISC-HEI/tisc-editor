@@ -222,7 +222,8 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
       <EditorHeader title={title} tags={tags} />
       {!canEdit && (
         <div className="bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-medium text-center py-1.5">
-          Read-only mode: you have view access only. To edit, please request edit access from the project owner.
+          Read-only mode: you have view access only. To edit, please request edit access from the
+          project owner.
         </div>
       )}
 

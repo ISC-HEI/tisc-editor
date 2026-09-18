@@ -13,7 +13,13 @@ import { useEditorWatcher } from '@/hooks/useEditor';
 import { useEffect, useRef, useState } from 'react';
 import { functions, refs, initPreviewRefs, applyLanguageToTypst } from '@/hooks/refs';
 
-export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange, canEdit = true }) {
+export function Toolbar({
+  fontSize,
+  onFontSizeChange,
+  wordWrap,
+  onWordWrapChange,
+  canEdit = true,
+}) {
   const btnSaveRef = useRef(null);
   const btnOpenRef = useRef(null);
   const btnBRef = useRef(null);

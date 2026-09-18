@@ -141,7 +141,7 @@ function initFileManager() {
   });
 
   refs.btnCreateFolder.addEventListener('click', () => {
-      if (!canEdit) return;
+    if (!canEdit) return;
     functions.openCustomPrompt(`Create new folder in ${selectedFolderPath}`, async (folderName) => {
       if (!folderName) return;
 
@@ -181,7 +181,7 @@ function initFileManager() {
   });
 
   refs.imageFilesInput.addEventListener('change', (event) => {
-      if (!canEdit) return;
+    if (!canEdit) return;
     const files = Array.from(event.target.files);
     const targetFolder = getFolder(fileTree, selectedFolderPath);
 
@@ -355,7 +355,6 @@ function renderTreeRecursive(folder, container, path) {
     itemRow.classList.add('tree-item-row');
 
     const fullPath = path ? `${path}/${item.name}` : item.name;
-
 
     itemRow.addEventListener('contextmenu', (e) => {
       e.preventDefault();

@@ -12,7 +12,7 @@ export const MonacoEditor = ({
   onChange,
   onCursorChange,
   onInstanceReady,
-  readOnly
+  readOnly,
 }) => {
   const editorRef = useRef(null);
   const monacoInstance = useRef(null);

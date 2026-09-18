@@ -2,7 +2,19 @@
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { shareProject, removeSharedUser, transferProjectOwnership } from '@/app/dashboard/actions';
-import { Trash, Plus, Users, X, Mail, Loader2, ArrowRight, Eye, Pencil, ChevronDown, Check } from 'lucide-react';
+import {
+  Trash,
+  Plus,
+  Users,
+  X,
+  Mail,
+  Loader2,
+  ArrowRight,
+  Eye,
+  Pencil,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 
 export default function SharedUserWindow({ projectId, title, users, onClose, onRemoveSuccess }) {
   const router = useRouter();
@@ -145,7 +157,9 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                           setRoleOpen(false);
                         }}
                         className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors ${
-                          active ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                          active
+                            ? 'bg-blue-50 text-blue-700 font-semibold'
+                            : 'text-slate-700 hover:bg-slate-50'
                         }`}
                       >
                         <Icon size={15} className={active ? 'text-blue-600' : 'text-slate-400'} />
@@ -208,7 +222,7 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                           {u.email}
                         </span>
                         <span className="text-[11px] text-slate-400 uppercase tracking-widest">
-                          {u.role === 'owner' ? 'Owner' : (u.role === 'editor' ? 'Editor' : 'Viewer')}
+                          {u.role === 'owner' ? 'Owner' : u.role === 'editor' ? 'Editor' : 'Viewer'}
                         </span>
                       </div>
                     </div>
