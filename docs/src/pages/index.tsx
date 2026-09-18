@@ -65,15 +65,6 @@ export default function Home(): React.ReactNode {
             GitHub (or clone the repository).
           </p>
         </section>
-
-        <a
-          className={styles.editLink}
-          href="https://github.com/isc-hei/tisc-editor/edit/main/src/pages/index.tsx"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Edit this page
-        </a>
       </main>
     </Layout>
   );
