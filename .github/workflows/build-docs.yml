@@ -23,6 +23,9 @@ jobs:
         run: bun install --frozen-lockfile
         working-directory: docs
 
+      - name: Sync changelog
+        run: cp CHANGELOG.md docs/docs/techdocs/changelog.md
+
       - name: Build
         run: bun run build
         working-directory: docs

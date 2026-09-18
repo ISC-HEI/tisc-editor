@@ -42,6 +42,13 @@ If you don't have a Keycloak client ID and secret, contact **Pierre-André Mudry
 
 :::
 
+### Database
+
+| Variable | Description | Utility |
+| --- | --- | --- |
+| `DATABSE_URL` | Database connection URL already defin in docker-compose | `dev` |
+| `DB_PASSWORD` | Database secret password | `production` |
+
 ## Example
 
 ```dotenv

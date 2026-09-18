@@ -22,7 +22,9 @@ This section is dedicated to the **technical part**: everything you need to know
 
 **[Authentication](./core-systems/authentication)** — Learn how SSO is integrated into the project.  
 **[API Endpoints](./core-systems/api-endpoints)** — Understand the available API endpoints.  
-**[Real-time Collaboration](./core-systems/collaboration)** — Learn how the WebSocket integration works.
+**[Server Actions](./core-systems/server-actions)** — Understand the Server Actions powering the dashboard.  
+**[Real-time Collaboration](./core-systems/collaboration)** — Learn how the WebSocket integration works.  
+**[Role & Permissions](./core-systems/role-permissions)** — Understand the differents roles and permissions.
 
 ## DevOps
 
@@ -33,6 +35,7 @@ This section is dedicated to the **technical part**: everything you need to know
 
 ## Help
 
+**[Changelog](./changelog)** — Take a look at the modifications.  
 **[Troubleshooting](./troubleshooting)** — Find solutions to your problem or create new one.
 
 ---
