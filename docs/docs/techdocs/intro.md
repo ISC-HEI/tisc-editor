@@ -10,7 +10,8 @@ This section is dedicated to the **technical part**: everything you need to know
 ## Getting Started
 
 **[Installation](./installation)** — Learn how to clone and start the project.  
-**[Configuration](./configuration)** — Configure your environment variables.
+**[Configuration](./configuration)** — Configure your environment variables.  
+**[Fonts Management](./fonts-management.md)** — Install localy the fonts.  
 
 ## Architecture & Data
 

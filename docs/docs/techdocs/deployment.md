@@ -22,6 +22,14 @@ DB_PASSWORD=your_db_password
 See the [Configuration & Environment](./configuration) page for details on these variables.
 :::
 
+## Installing the fonts
+
+You need to start by installing the fonts on the server, it run automaticly in the script but you may need to install `fontconfig`:
+
+```bash
+apt-get update && apt-get install -y fontconfig
+```
+
 ## Deploying
 
 ```bash
