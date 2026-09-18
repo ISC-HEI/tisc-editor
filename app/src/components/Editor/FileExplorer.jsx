@@ -71,7 +71,7 @@ export function FileExplorer({ canEdit = true }) {
         <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500 italic flex items-center gap-1.5">
           Explorer
           {!canEdit && (
-            <span title="Lecture seule">
+            <span title="Readonly mode">
               <Lock size={12} className="text-amber-500" />
             </span>
           )}
@@ -80,7 +80,7 @@ export function FileExplorer({ canEdit = true }) {
           <button
             ref={btnCreateFileRef}
             disabled={!canEdit}
-            title={canEdit ? 'New Typst File' : 'Lecture seule'}
+            title={canEdit ? 'New Typst File' : 'Readonly mode'}
             className={`p-1.5 hover:bg-slate-200 rounded-md text-slate-600 transition-colors ${
               !canEdit ? disabledClass : ''
             }`}
@@ -90,7 +90,7 @@ export function FileExplorer({ canEdit = true }) {
           <button
             ref={btnCreateFolderRef}
             disabled={!canEdit}
-            title={canEdit ? 'New Folder' : 'Lecture seule'}
+            title={canEdit ? 'New Folder' : 'Readonly mode'}
             className={`p-1.5 hover:bg-slate-200 rounded-md text-slate-600 transition-colors ${
               !canEdit ? disabledClass : ''
             }`}
