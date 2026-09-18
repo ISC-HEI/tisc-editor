@@ -28,6 +28,8 @@ This section is dedicated to the **technical part**: everything you need to know
 
 **[Continuous Integration](./devops/ci)** — Understand the CI workflows.
 
+## Deployment
+**[Deployment](./deployment)** — Learn how the project is deployed.
 
 ## Help
 
