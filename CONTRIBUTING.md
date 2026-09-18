@@ -11,7 +11,8 @@ Thank you for contributing to the TISC Editor documentation! This guide describe
   - [3. Create a branch](#3-create-a-branch)
   - [4. Write the documentation](#4-write-the-documentation)
   - [5. Commit following Conventional Commits](#5-commit-following-conventional-commits)
-  - [6. Open a Pull Request](#6-open-a-pull-request)
+  - [6. Write differences](#6-write-differences)
+  - [7. Open a Pull Request](#7-open-a-pull-request)
 
 ## Prerequisites
 
@@ -101,7 +102,29 @@ docs(tutorial): fix installation guide steps
 Refs #42
 ```
 
-### 6. Open a Pull Request
+### 6. Write differences
+
+Every visible or significant change must be documented in the [`CHANGELOG.md`](CHANGELOG.md) file at the root of the project. 
+
+Add your contribution under the appropriate section (day) by starting your entry with one of the authorized keywords:
+
+| Type | Description |
+| :--- | :--- |
+| **`Added`** | For adding a new feature, page, or component. |
+| **`Fixed`** | For fixing a bug, typo, error, or broken link. |
+| **`Removed`** | For removing a deprecated feature, page, or element. |
+| **`Documentation`** | For major updates to technical documentation or tutorials. |
+
+> If it close an issue, specify it with (close #X)
+
+Example entry:
+
+```markdown
+- **Documentation**: correction of the installation guide steps (close #42)
+```
+
+
+### 7. Open a Pull Request
 
 Push your branch and open a Pull Request targeting `main`:
 
