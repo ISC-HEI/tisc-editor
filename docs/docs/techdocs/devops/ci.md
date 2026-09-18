@@ -76,5 +76,6 @@ Ensures the Docusaurus documentation site builds successfully. Same principle as
 | Format | `bun run format:check` | `app` | Confirms code is properly formatted |
 | Lint | `bun run lint` | `app` | Confirms code passes ESLint rules |
 | Build Docs | `bun run build` | `docs` | Confirms the documentation site builds without errors |
+| Check changelog updated | `-` | `./` | Check that on PR the changelog has been updated (bypass by adding `no-changelog`) |
 
 All workflows must pass before a pull request can be merged into `main` (assuming branch protection is enabled on the repository).

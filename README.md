@@ -231,6 +231,7 @@ The project uses **GitHub Actions** to automatically validate every push and pul
 | **Format** | `format.yml` | Installs dependencies and runs `bun run format:check` (Prettier) from `app/` to make sure the codebase is consistently formatted. |
 | **Lint** | `lint.yml` | Installs dependencies and runs `bun run lint` (ESLint) from `app/` to verify that the codebase meets the project's linting rules. |
 | **Build Docs** | `build-docs.yml` | Installs dependencies and runs `bun run build` from `docs/` to make sure the documentation site compiles. |
+| **Check changelog updated** | `check_changelog.yml` | Check that on PR the changelog has been updated (bypass by adding `no-changelog`) |
 
 A local **pre-commit hook** (via Husky) also runs `bun run format:check`, `bun run lint` and `bun run typecheck` before each commit, so issues are caught before code even reaches CI.
 
