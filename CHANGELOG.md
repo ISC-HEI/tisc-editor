@@ -3,6 +3,7 @@
 All notable changes to this project, organized by day.
 
 ## 2026-09-18
+- Added database variabes, server actions, role & permissions and changelog to the documentation (techdoc).
 - Added the owner’s name at the top of the thumbnails for the guest projects.
 - Added the changelog
 - Removed the "edit page" link on the landing page
