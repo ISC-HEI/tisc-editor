@@ -77,6 +77,7 @@ services:
     volumes:
       - ./docs:/docs
       - /docs/node_modules
+      - ./CHANGELOG.md:/CHANGELOG.md:ro
     networks:
       - tisc-network
     healthcheck:
@@ -87,6 +88,7 @@ services:
       start_period: 60s
     command: >
       sh -c "
+      cp /CHANGELOG.md docs/techdocs/changelog.md &&
       bun install &&
       bunx docusaurus start --host 0.0.0.0 --port 3001 --no-open
       "
