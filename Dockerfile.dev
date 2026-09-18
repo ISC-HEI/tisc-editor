@@ -2,7 +2,7 @@ FROM alpine:3.20 AS fonts-builder
 
 RUN apk add --no-cache wget bash tar ca-certificates fontconfig
 
-COPY fonts/install_fonts.sh /tmp/install_fonts.sh
+COPY app/fonts/install_fonts.sh /tmp/install_fonts.sh
 RUN chmod +x /tmp/install_fonts.sh && \
     HOME=/tmp bash /tmp/install_fonts.sh
 

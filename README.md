@@ -156,13 +156,6 @@ docker compose -f docker-compose-dev.yml up -d --build
 <details>
 <summary><strong>Option A - Docker Compose (recommended)</strong></summary>
 
-Start by installing the font on your system
-
-```bash
-# apt-get update && apt-get install -y fontconfig
-bash fonts/install_fonts.sh
-```
-
 For active development, we recommend using the following command to see live logs while you code:
 ```bash
 docker compose -f docker-compose-dev.yml up --build

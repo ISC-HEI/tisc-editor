@@ -2,7 +2,7 @@
 
 Typst compiles documents using **locally installed fonts**. TISC Editor relies on a custom font bundle (`modern-isc-fonts-v2`) that must be present in the compilation environment — otherwise document compilation may fail or fall back to incorrect fonts.
 
-Font installation is handled entirely **at Docker build time** by [`fonts/install_fonts.sh`](https://github.com/ISC-HEI/tisc-editor/blob/main/fonts/install_fonts.sh), which is invoked from the app's `Dockerfile`. Fonts are never installed on the host machine or at container runtime — they are baked directly into the image.
+Font installation is handled entirely **at Docker build time** by [`app/fonts/install_fonts.sh`](https://github.com/ISC-HEI/tisc-editor/blob/main/app/fonts/install_fonts.sh), which is invoked from the app's `Dockerfile`. Fonts are never installed on the host machine or at container runtime — they are baked directly into the image.
 
 :::info
 This means fonts do not need to be installed manually, in development or in production. Simply building the Docker image (`docker build ./app`) is enough — the resulting image already contains all required fonts.
