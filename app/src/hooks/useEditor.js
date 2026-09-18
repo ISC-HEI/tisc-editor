@@ -12,6 +12,8 @@ export let isLoadingFile = false;
 let hasCompilationError = false;
 let onPathChangeCallback = null;
 
+export let canEdit = true;
+
 let syncMarkers = [];
 
 const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
@@ -24,11 +26,17 @@ const debounceFetchCompile = debounce(async () => {
   if (isLoadingFile) return;
   syncFileTreeWithEditor();
   await fetchCompile();
-  await autoSave();
+  if (canEdit) {
+    await autoSave();
+  }
 });
 
 export function setIsLoadingFile(value) {
   isLoadingFile = value;
+}
+
+export function setCanEdit(value) {
+  canEdit = value;
 }
 
 function updateExportButtons() {
@@ -65,12 +73,29 @@ function initEditor() {
     debounceFetchCompile();
   });
 
-  refs.btnBold.addEventListener('click', () => applyFormatting('bold'));
-  refs.btnItalic.addEventListener('click', () => applyFormatting('italic'));
-  refs.btnUnderline.addEventListener('click', () => applyFormatting('underline'));
+  refs.btnBold.addEventListener('click', () => {
+    if (!canEdit) return;
+    applyFormatting('bold');
+  });
+  refs.btnItalic.addEventListener('click', () => {
+    if (!canEdit) return;
+    applyFormatting('italic');
+  });
+  refs.btnUnderline.addEventListener('click', () => {
+    if (!canEdit) return;
+    applyFormatting('underline');
+  });
+
   refs.btnSave.addEventListener('click', downloadDocument);
-  refs.btnOpen.addEventListener('click', () => refs.fileInputOpen.click());
-  refs.fileInputOpen.addEventListener('change', openAndShowFile);
+
+  refs.btnOpen.addEventListener('click', () => {
+    if (!canEdit) return;
+    refs.fileInputOpen.click();
+  });
+  refs.fileInputOpen.addEventListener('change', (e) => {
+    if (!canEdit) return;
+    openAndShowFile(e);
+  });
 
   if (!handleExportPdf) {
     handleExportPdf = () => {

@@ -1,8 +1,20 @@
 'use client';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { shareProject, removeSharedUser, transferProjectOwnership } from '@/app/dashboard/actions';
-import { Trash, Plus, Users, X, Mail, Loader2, ArrowRight } from 'lucide-react';
+import {
+  Trash,
+  Plus,
+  Users,
+  X,
+  Mail,
+  Loader2,
+  ArrowRight,
+  Eye,
+  Pencil,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 
 export default function SharedUserWindow({ projectId, title, users, onClose, onRemoveSuccess }) {
   const router = useRouter();
@@ -10,13 +22,32 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [role, setRole] = useState('view'); // 'view' | 'edit'
+  const [roleOpen, setRoleOpen] = useState(false);
+  const roleRef = useRef(null);
+
+  const roles = [
+    { value: 'view', label: 'See', icon: Eye },
+    { value: 'edit', label: 'Edit', icon: Pencil },
+  ];
+  const currentRole = roles.find((r) => r.value === role);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (roleRef.current && !roleRef.current.contains(e.target)) {
+        setRoleOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleShare = async () => {
     if (!email) return;
     setError('');
 
     startTransition(async () => {
-      const result = await shareProject(projectId, email);
+      const result = await shareProject(projectId, email, role === 'edit');
       if (result?.error) {
         setError(result.error);
       } else {
@@ -96,6 +127,51 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900 placeholder:text-slate-400"
               />
             </div>
+
+            <div className="relative" ref={roleRef}>
+              <button
+                type="button"
+                onClick={() => setRoleOpen((o) => !o)}
+                disabled={isPending}
+                className="flex items-center gap-2 pl-3 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium text-slate-700 hover:bg-slate-100 whitespace-nowrap"
+              >
+                <currentRole.icon size={15} className="text-slate-400" />
+                {currentRole.label}
+                <ChevronDown
+                  size={14}
+                  className={`text-slate-400 transition-transform ${roleOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {roleOpen && (
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150 origin-top-right">
+                  {roles.map((r) => {
+                    const Icon = r.icon;
+                    const active = r.value === role;
+                    return (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => {
+                          setRole(r.value);
+                          setRoleOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left transition-colors ${
+                          active
+                            ? 'bg-blue-50 text-blue-700 font-semibold'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Icon size={15} className={active ? 'text-blue-600' : 'text-slate-400'} />
+                        <span className="flex-grow">{r.label}</span>
+                        {active && <Check size={14} className="text-blue-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <button
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white p-2.5 rounded-xl transition-all shadow-sm shadow-blue-200"
               onClick={handleShare}
@@ -146,7 +222,7 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                           {u.email}
                         </span>
                         <span className="text-[11px] text-slate-400 uppercase tracking-widest">
-                          {u.role === 'owner' ? 'Owner' : 'Editor'}
+                          {u.role === 'owner' ? 'Owner' : u.role === 'editor' ? 'Editor' : 'Viewer'}
                         </span>
                       </div>
                     </div>

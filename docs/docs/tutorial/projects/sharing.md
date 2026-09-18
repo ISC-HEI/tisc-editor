@@ -17,7 +17,9 @@ You must use the `hevs` email.
 
 :::
 
-3. The person will see the project in their dashboard, and you will see a tag next to it indicating that the project is shared.
+3. Choose if you want the person to edit the project. By default the person can only view the project.
+
+4. The person will see the project in their dashboard, and you will see a tag next to it indicating that the project is shared.
 
 ### Removing a user from the project
 
@@ -41,9 +43,3 @@ When you are in the editor, you can see the people collaborating with you by hov
 When someone creates or deletes a file, other users see a notification at the top right of the screen.
 
 If a user sets another file as the main file to compile, this change applies to everyone and changes the rendered output for all collaborators.
-
-:::note[Read-only sharing not available yet]
-
-It is not currently possible to share a project in read-only mode.
-
-:::

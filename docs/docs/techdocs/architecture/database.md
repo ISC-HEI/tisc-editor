@@ -93,7 +93,7 @@ These tables are managed by NextAuth and are not meant to be queried directly ou
 
 ### ProjectAssignment
 
-Links a `User` to a `Project`, with a `role` of either `"owner"` or `"editor"`. This is the table used to determine who has access to a project and what they can do with it (see [Sharing a project](../../tutorial/projects/sharing)).
+Links a `User` to a `Project`, with a `role` of either `"owner"`, `"editor"` or `"viewer"`. This is the table used to determine who has access to a project and what they can do with it (see [Sharing a project](../../tutorial/projects/sharing)).
 
 The composite primary key `[userId, projectId]` ensures a user can only have a single role on a given project.
 

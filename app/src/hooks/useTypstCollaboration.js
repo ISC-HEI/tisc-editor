@@ -11,6 +11,7 @@ import {
 } from './useEditor';
 import { debounce, makeToast, stringToColor } from './useUtils';
 import { renderFileExplorer } from './useFileManager';
+import { canEdit } from './useEditor';
 
 /**
  * React hook that manages real-time collaboration using Socket.IO.
@@ -51,7 +52,7 @@ export const useTypstCollaboration = (docId, userId) => {
    */
   const updateContent = useCallback(
     (changeData) => {
-      if (isRemoteChange.current || isLoadingFile) return;
+      if (isRemoteChange.current || isLoadingFile || !canEdit) return;
 
       if (socketRef.current?.connected) {
         socketRef.current.emit('edit-file', {

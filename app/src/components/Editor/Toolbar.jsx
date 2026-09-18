@@ -7,12 +7,19 @@ import {
   Folders,
   Languages,
   Settings2,
+  Lock,
 } from 'lucide-react';
 import { useEditorWatcher } from '@/hooks/useEditor';
 import { useEffect, useRef, useState } from 'react';
 import { functions, refs, initPreviewRefs, applyLanguageToTypst } from '@/hooks/refs';
 
-export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange }) {
+export function Toolbar({
+  fontSize,
+  onFontSizeChange,
+  wordWrap,
+  onWordWrapChange,
+  canEdit = true,
+}) {
   const btnSaveRef = useRef(null);
   const btnOpenRef = useRef(null);
   const btnBRef = useRef(null);
@@ -100,27 +107,41 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
     };
   }, []);
 
+  const disabledClass = 'opacity-30 cursor-not-allowed pointer-events-none';
+
   return (
     <>
       <nav className="w-14 border-r border-slate-200 flex flex-col items-center py-4 gap-4 shrink-0 bg-slate-50/50">
+        {!canEdit && (
+          <div title="Readonly mode" className="p-2 rounded-lg bg-amber-50 text-amber-500">
+            <Lock size={16} />
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
           <button
             ref={btnSaveRef}
-            className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm hover:text-blue-600 transition-all text-slate-500"
-            title="Save"
+            disabled={!canEdit}
+            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm hover:text-blue-600 transition-all text-slate-500 ${
+              !canEdit ? disabledClass : ''
+            }`}
+            title={canEdit ? 'Save' : 'Readonly mode'}
           >
             <ArrowDownToLine size={20} />
           </button>
 
           <button
             ref={btnOpenRef}
-            className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm hover:text-blue-600 transition-all text-slate-500"
-            title="Open"
+            disabled={!canEdit}
+            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm hover:text-blue-600 transition-all text-slate-500 ${
+              !canEdit ? disabledClass : ''
+            }`}
+            title={canEdit ? 'Open' : 'Readonly mode'}
           >
             <FolderOpen size={20} />
           </button>
 
-          <input ref={fileInputOpenRef} type="file" className="hidden" />
+          <input ref={fileInputOpenRef} type="file" className="hidden" disabled={!canEdit} />
         </div>
 
         <div className="w-8 h-[1px] bg-slate-200" />
@@ -128,24 +149,33 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
         <div className="flex flex-col gap-2">
           <button
             ref={btnBRef}
-            className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500"
-            title="Bold"
+            disabled={!canEdit}
+            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500 ${
+              !canEdit ? disabledClass : ''
+            }`}
+            title={canEdit ? 'Bold' : 'Readonly mode'}
           >
             <Bold size={18} />
           </button>
 
           <button
             ref={btnIRef}
-            className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500"
-            title="Italic"
+            disabled={!canEdit}
+            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500 ${
+              !canEdit ? disabledClass : ''
+            }`}
+            title={canEdit ? 'Italic' : 'Readonly mode'}
           >
             <Italic size={18} />
           </button>
 
           <button
             ref={btnURef}
-            className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500"
-            title="Underline"
+            disabled={!canEdit}
+            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500 ${
+              !canEdit ? disabledClass : ''
+            }`}
+            title={canEdit ? 'Underline' : 'Readonly mode'}
           >
             <Underline size={18} />
           </button>
@@ -195,6 +225,7 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
 
         <button
           ref={btnLangRef}
+          disabled={!canEdit}
           onClick={() => {
             if (isLangOpen) {
               closeAllPanels();
@@ -206,14 +237,14 @@ export function Toolbar({ fontSize, onFontSizeChange, wordWrap, onWordWrapChange
             isLangOpen
               ? 'bg-blue-50 text-blue-600 shadow-inner'
               : 'hover:bg-white hover:shadow-sm text-slate-500'
-          }`}
-          title="Language"
+          } ${!canEdit ? disabledClass : ''}`}
+          title={canEdit ? 'Language' : 'Readonly mode'}
         >
           <Languages size={18} />
         </button>
       </nav>
 
-      {isLangOpen && (
+      {isLangOpen && canEdit && (
         <div className="fixed left-14 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-xl z-50 p-4 animate-in slide-in-from-left duration-200">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-slate-700">Traduire le document</h3>

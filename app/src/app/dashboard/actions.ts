@@ -900,7 +900,11 @@ async function getProjectById(projectId: string, userId: string) {
   };
 }
 
-export async function shareProject(projectId: string, sharedUserEmail: string) {
+export async function shareProject(
+  projectId: string,
+  sharedUserEmail: string,
+  canEdit: boolean = false,
+) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -960,7 +964,7 @@ export async function shareProject(projectId: string, sharedUserEmail: string) {
     data: {
       userId: sharedUser.id,
       projectId,
-      role: 'editor',
+      role: canEdit ? 'editor' : 'viewer',
     },
   });
 

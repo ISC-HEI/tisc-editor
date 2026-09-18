@@ -1,11 +1,11 @@
-import { X, FolderPlus, Plus, FilePlus } from 'lucide-react';
+import { X, FolderPlus, Plus, FilePlus, Lock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { deleteItem, renameItem, setMainFile, useFileManagerWatcher } from '@/hooks/useFileManager';
 import { initPreviewRefs } from '@/hooks/refs';
 import ContextMenu from './ContextMenu';
 import { fileTree } from '@/hooks/useEditor';
 
-export function FileExplorer() {
+export function FileExplorer({ canEdit = true }) {
   const imageListRef = useRef(null);
   const btnCloseImagesRef = useRef(null);
   const imageExplorerRef = useRef(null);
@@ -44,9 +44,12 @@ export function FileExplorer() {
     }
 
     window.showContextMenu = (e, path, type) => {
+      if (!canEdit) return;
       setMenuConfig({ x: e.clientX, y: e.clientY, path, type });
     };
-  }, []);
+  }, [canEdit]);
+
+  const disabledClass = 'opacity-30 cursor-not-allowed pointer-events-none';
 
   return (
     <div
@@ -54,30 +57,43 @@ export function FileExplorer() {
       className="absolute left-0 top-0 bottom-0 w-72 bg-white border-r border-slate-200 shadow-xl z-20 flex flex-col transition-transform duration-300 transform"
       style={{ display: 'none' }}
     >
-      <ContextMenu
-        {...menuConfig}
-        targetPath={menuConfig.path}
-        onClose={closeMenu}
-        onRename={(path) => renameItem(path)}
-        onDelete={(path) => deleteItem(path, fileTree)}
-        onSetMain={(path) => setMainFile(path, fileTree)}
-      />
+      {canEdit && (
+        <ContextMenu
+          {...menuConfig}
+          targetPath={menuConfig.path}
+          onClose={closeMenu}
+          onRename={(path) => renameItem(path)}
+          onDelete={(path) => deleteItem(path, fileTree)}
+          onSetMain={(path) => setMainFile(path, fileTree)}
+        />
+      )}
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500 italic">
+        <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500 italic flex items-center gap-1.5">
           Explorer
+          {!canEdit && (
+            <span title="Readonly mode">
+              <Lock size={12} className="text-amber-500" />
+            </span>
+          )}
         </h3>
         <div className="flex items-center gap-1">
           <button
             ref={btnCreateFileRef}
-            title="New Typst File"
-            className="p-1.5 hover:bg-slate-200 rounded-md text-slate-600 transition-colors"
+            disabled={!canEdit}
+            title={canEdit ? 'New Typst File' : 'Readonly mode'}
+            className={`p-1.5 hover:bg-slate-200 rounded-md text-slate-600 transition-colors ${
+              !canEdit ? disabledClass : ''
+            }`}
           >
             <FilePlus size={16} />
           </button>
           <button
             ref={btnCreateFolderRef}
-            title="New Folder"
-            className="p-1.5 hover:bg-slate-200 rounded-md text-slate-600 transition-colors"
+            disabled={!canEdit}
+            title={canEdit ? 'New Folder' : 'Readonly mode'}
+            className={`p-1.5 hover:bg-slate-200 rounded-md text-slate-600 transition-colors ${
+              !canEdit ? disabledClass : ''
+            }`}
           >
             <FolderPlus size={16} />
           </button>
@@ -92,12 +108,15 @@ export function FileExplorer() {
       <div className="p-3">
         <button
           ref={btnUploadImagesRef}
-          className="w-full flex items-center justify-center gap-2 text-xs font-semibold p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100"
+          disabled={!canEdit}
+          className={`w-full flex items-center justify-center gap-2 text-xs font-semibold p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100 ${
+            !canEdit ? 'opacity-40 cursor-not-allowed hover:bg-blue-600' : ''
+          }`}
         >
           <Plus size={14} /> Import Media
         </button>
       </div>
-      <input ref={imageFilesInputRef} type="file" className="hidden" multiple />
+      <input ref={imageFilesInputRef} type="file" className="hidden" multiple disabled={!canEdit} />
       <div
         ref={rootDropZoneRef}
         className="mx-3 p-2 text-[10px] font-bold uppercase bg-slate-100 rounded text-slate-400 mb-2 flex items-center gap-2 border border-dashed border-slate-200"

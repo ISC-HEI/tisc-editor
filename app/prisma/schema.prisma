@@ -107,7 +107,7 @@ model VerificationToken {
 model ProjectAssignment {
   userId    String  @map("user_id") @db.Uuid
   projectId String  @map("project_id") @db.Uuid
-  role      String  @default("owner") // "owner" ou "editor"
+  role      String  @default("owner") // "owner", "editor" or "viewer"
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
