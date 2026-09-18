@@ -18,7 +18,7 @@ const MonacoEditor = dynamic(() => import('./MonacoEditor').then((mod) => mod.Mo
   ssr: false,
 });
 
-export default function Editor({ projectId, title, fileTree, userId, tags, canEdit = true, role }) {
+export default function Editor({ projectId, title, fileTree, userId, tags, canEdit = true }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', callback: null });
   const [inputValue, setInputValue] = useState('');
