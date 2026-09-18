@@ -30,16 +30,31 @@ export function ProjectCard({ project }) {
                 loading="lazy"
               />
 
+              {!isAuthor && project.ownerName && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-lg bg-gradient-to-t from-black/50 via-black/30 to-transparent px-1 pt-3 pb-1">
+                  <span className="block text-[8px] font-semibold text-white leading-tight truncate text-center">
+                    {project.ownerName}
+                  </span>
+                </div>
+              )}
+
               <div className="pointer-events-none absolute -top-3 left-1/2 -translate-x-1/2 w-64 h-96 rounded-xl overflow-hidden border border-slate-200 shadow-2xl bg-white opacity-0 scale-90 origin-top -translate-y-2 group-hover/thumb:opacity-100 group-hover/thumb:scale-100 group-hover/thumb:translate-y-0 transition-all duration-200 ease-out">
                 <img
                   src={`/api/projects/${project.id}/thumbnail`}
                   alt=""
                   className="w-full h-full object-cover object-top"
                 />
+                {!isAuthor && project.ownerName && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 via-black/30 to-transparent px-2 pt-6 pb-2">
+                    <span className="block text-xs font-semibold text-white leading-tight truncate text-center">
+                      {project.ownerName}
+                    </span>
+                  </div>
+                )}
               </div>
             </>
           ) : (
-            <div className="w-full h-full flex items-center justify-center rounded-lg overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center rounded-lg overflow-hidden relative">
               {isSharedWithMe ? (
                 <Users size={24} className="text-emerald-500" />
               ) : (
@@ -47,6 +62,14 @@ export function ProjectCard({ project }) {
                   size={24}
                   className="text-slate-300 group-hover:text-blue-400 transition-colors"
                 />
+              )}
+
+              {!isAuthor && project.ownerName && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/30 via-black/20 to-transparent px-1 pt-3 pb-1">
+                  <span className="block text-[8px] font-semibold text-white leading-tight truncate text-center">
+                    {project.ownerName}
+                  </span>
+                </div>
               )}
             </div>
           )}

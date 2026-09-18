@@ -55,7 +55,17 @@ export async function getUserProjects() {
           id: true,
           title: true,
           isActive: true,
-          userLinks: true,
+          userLinks: {
+            select: {
+              userId: true,
+              role: true,
+              user: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
           tags: {
             include: {
               tag: true,
@@ -81,11 +91,14 @@ export async function getUserProjects() {
   return assignments.map((a: AssignmentWithProject) => {
     const { thumbnail, ...project } = a.project;
 
+    const ownerLink = a.project.userLinks.find((link: UserLinkEntry) => link.role === 'owner');
+
     return {
       ...project,
       isAuthor: a.role === 'owner',
       role: a.role,
       hasThumbnail: !!thumbnail,
+      ownerName: ownerLink?.user?.name ?? null,
 
       tags: a.project.tags.map((projectTag: ProjectTagWithTag) => projectTag.tag),
       usersSharing: a.project.userLinks
