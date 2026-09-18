@@ -39,14 +39,15 @@ Use `--db` on the very first deployment, or whenever the database container was 
 
 | Step | Action |
 | :--- | :--- |
-| **1. Versioning** | Determines the version from `git describe` (suffixed with the branch name if not `main`). |
-| **2. Build** | Builds the Docker images for the app (`isc-hei/tis-editor`) and the docs (`isc-hei/tisc-docs`). |
-| **3. Network** | Creates the `tisc-network` Docker network if it doesn't exist. |
-| **4. Database** *(if `--db`)* | Starts PostgreSQL and waits for it to be ready (`pg_isready`). |
-| **5. Application** | Starts the `tisc-app-prod` container and waits for the API to respond. |
-| **6. Prisma** | Applies the database schema via `prisma db push`. |
-| **7. Documentation** | Starts the `tisc-docs` container and waits for it to be ready. |
-| **8. Reverse proxy** | Starts nginx (`tisc-nginx`) on port `8082`, routing traffic to the app and the docs according to `nginx/default.conf`. |
+| **1. Update** | Pulls the latest changes from the `main` branch using `git pull origin main`. |
+| **2. Versioning** | Determines the version from `git describe` (suffixed with the branch name if not `main`). |
+| **3. Build** | Builds the Docker images for the app (`isc-hei/tis-editor`) and the docs (`isc-hei/tisc-docs`). |
+| **4. Network** | Creates the `tisc-network` Docker network if it doesn't exist. |
+| **5. Database** *(if `--db`)* | Starts PostgreSQL and waits for it to be ready (`pg_isready`). |
+| **6. Application** | Starts the `tisc-app-prod` container and waits for the API to respond. |
+| **7. Prisma** | Applies the database schema via `prisma db push`. |
+| **8. Documentation** | Starts the `tisc-docs` container and waits for it to be ready. |
+| **9. Reverse proxy** | Starts nginx (`tisc-nginx`) on port `8082`, routing traffic to the app and the docs according to `nginx/default.conf`. |
 
 At each step, the script actively polls until the previous service is up before moving on, avoiding cascading startup failures.
 
