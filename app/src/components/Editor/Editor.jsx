@@ -10,7 +10,7 @@ import { PromptModal } from './PromptModal';
 import Breadcrumbs from './Breadcrumbs';
 import PaneLog from '../../components/Editor/PaneLog';
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from '@/hooks/refs';
-import { isLoadingFile, useEditorWatcher } from '@/hooks/useEditor';
+import { isLoadingFile, setCanEdit, useEditorWatcher } from '@/hooks/useEditor';
 import { useTypstCollaboration } from '@/hooks/useTypstCollaboration';
 import { findMainFile } from '@/hooks/useApi';
 
@@ -18,7 +18,7 @@ const MonacoEditor = dynamic(() => import('./MonacoEditor').then((mod) => mod.Mo
   ssr: false,
 });
 
-export default function Editor({ projectId, title, fileTree, userId, tags }) {
+export default function Editor({ projectId, title, fileTree, userId, tags, canEdit = true, role }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', callback: null });
   const [inputValue, setInputValue] = useState('');
@@ -26,6 +26,10 @@ export default function Editor({ projectId, title, fileTree, userId, tags }) {
   const [editorFontSize, setEditorFontSize] = useState(14);
   const [wordWrap, setWordWrap] = useState(false);
   const separatorRef = useRef(null);
+
+  useEffect(() => {
+    setCanEdit(canEdit);
+  }, [canEdit]);
 
   const handleFontSizeChange = (size) => {
     setEditorFontSize(size);
@@ -167,6 +171,8 @@ export default function Editor({ projectId, title, fileTree, userId, tags }) {
         e.preventDefault();
         setIsDraggingGlobal(false);
 
+        if (!canEdit) return;
+
         const droppedFiles = e.dataTransfer.files;
 
         if (droppedFiles.length > 0 && refs.imageFilesInput) {
@@ -199,7 +205,7 @@ export default function Editor({ projectId, title, fileTree, userId, tags }) {
       window.removeEventListener('dragleave', onDragLeave);
       window.removeEventListener('drop', onDrop);
     };
-  }, []);
+  }, [canEdit]);
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden text-slate-900">
@@ -214,6 +220,11 @@ export default function Editor({ projectId, title, fileTree, userId, tags }) {
         </div>
       )}
       <EditorHeader title={title} tags={tags} />
+      {!canEdit && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-medium text-center py-1.5">
+          Read-only mode: you have view access only. To edit, please request edit access from the project owner.
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden relative">
         <div className="flex flex-1 min-w-0 bg-white">
@@ -222,17 +233,19 @@ export default function Editor({ projectId, title, fileTree, userId, tags }) {
             onFontSizeChange={handleFontSizeChange}
             wordWrap={wordWrap}
             onWordWrapChange={handleWordWrapChange}
+            canEdit={canEdit}
           />
 
           <div className="flex-1 relative min-w-0 overflow-hidden">
             <Breadcrumbs path={activePath} />
-            <FileExplorer />
+            <FileExplorer canEdit={canEdit} />
             <MonacoEditor
               content={getInitialContent()}
               fontSize={editorFontSize}
               wordWrap={wordWrap}
+              readOnly={!canEdit}
               onChange={(newContent) => {
-                if (!isLoadingFile) {
+                if (!isLoadingFile && canEdit) {
                   updateContent(newContent);
                 }
               }}

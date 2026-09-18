@@ -1,4 +1,4 @@
-import { loadProject } from '@/app/dashboard/actions';
+import { loadProject, getProjectAssignmentRole } from '@/app/dashboard/actions';
 import { redirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { auth } from '@/lib/auth';
@@ -71,6 +71,14 @@ export default async function Page({
     redirect('/dashboard');
   }
 
+  const role = await getProjectAssignmentRole(projectId);
+
+  if (!role) {
+    redirect('/dashboard');
+  }
+
+  const canEdit = role === 'owner' || role === 'editor';
+
   const projectData = {
     id: project.id,
     title: project.title,
@@ -85,6 +93,8 @@ export default async function Page({
       fileTree={projectData.fileTree}
       userId={session.user.id}
       tags={projectData.tags}
+      canEdit={canEdit}
+      role={role}
     />
   );
 }

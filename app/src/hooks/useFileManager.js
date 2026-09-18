@@ -21,6 +21,7 @@ import {
 } from './useEditor';
 import { makeToast } from './useUtils';
 import JSZip from 'jszip';
+import { canEdit } from './useEditor';
 
 /** @type {string} Path of the folder currently selected for operations like file creation or upload. */
 let selectedFolderPath = 'root';
@@ -140,6 +141,7 @@ function initFileManager() {
   });
 
   refs.btnCreateFolder.addEventListener('click', () => {
+      if (!canEdit) return;
     functions.openCustomPrompt(`Create new folder in ${selectedFolderPath}`, async (folderName) => {
       if (!folderName) return;
 
@@ -173,11 +175,13 @@ function initFileManager() {
   });
 
   refs.btnUploadImages.addEventListener('click', (e) => {
+    if (!canEdit) return;
     e.preventDefault();
     refs.imageFilesInput.click();
   });
 
   refs.imageFilesInput.addEventListener('change', (event) => {
+      if (!canEdit) return;
     const files = Array.from(event.target.files);
     const targetFolder = getFolder(fileTree, selectedFolderPath);
 
@@ -231,6 +235,7 @@ function initFileManager() {
   });
 
   refs.rootDropZone.addEventListener('drop', (e) => {
+    if (!canEdit) return;
     e.preventDefault();
     refs.rootDropZone.style.background = 'transparent';
 
@@ -238,7 +243,10 @@ function initFileManager() {
     moveItem(sourcePath, 'root', fileTree);
   });
 
-  refs.btnCreateFile.addEventListener('click', createFile);
+  refs.btnCreateFile.addEventListener('click', () => {
+    if (!canEdit) return;
+    createFile();
+  });
 
   refs.btnExportZip.addEventListener('click', () => {
     exportZip(fileTree, infos.title || 'unknow_project');
@@ -269,7 +277,7 @@ export function useFileManagerWatcher() {
     }
 
     const handleGlobalKeyDown = (e) => {
-      if (e.key === 'F2') {
+      if (e.key === 'F2' && canEdit) {
         const pathToRename =
           lastClickedPath || (typeof currentFilePath !== 'undefined' ? currentFilePath : null);
 
@@ -337,7 +345,7 @@ function renderTreeRecursive(folder, container, path) {
     const li = document.createElement('li');
     li.style.listStyle = 'none';
 
-    li.draggable = true;
+    li.draggable = canEdit;
 
     const itemRow = document.createElement('div');
     itemRow.style.display = 'flex';
@@ -348,8 +356,10 @@ function renderTreeRecursive(folder, container, path) {
 
     const fullPath = path ? `${path}/${item.name}` : item.name;
 
+
     itemRow.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      if (!canEdit) return;
 
       document
         .querySelectorAll('.tree-item-row')
@@ -385,6 +395,7 @@ function renderTreeRecursive(folder, container, path) {
       li.addEventListener('drop', (e) => {
         e.preventDefault();
         itemRow.style.background = 'transparent';
+        if (!canEdit) return;
         const sourcePath = e.dataTransfer.getData('path');
         moveItem(sourcePath, fullPath, fileTree);
       });
@@ -533,6 +544,7 @@ function updatePaths(item, newFolderPath) {
  * @param {Object} fileTree - Reference to the global file tree.
  */
 export async function deleteItem(path, fileTree) {
+  if (!canEdit) return;
   document.querySelectorAll('.folder-item').forEach((el) => el.classList.remove('selected-item'));
   const parts = path.split('/').filter((x) => x);
   const name = parts[parts.length - 1];
@@ -667,6 +679,7 @@ function showContextMenu(e, path, type) {
  * @param {string} oldPath - The current path of the item to be renamed.
  */
 export async function renameItem(oldPath) {
+  if (!canEdit) return;
   const parts = oldPath.split('/').filter((x) => x);
   const oldName = parts[parts.length - 1];
 
@@ -751,6 +764,7 @@ function zipContent(zip, folder) {
  * @param {*} root The file tree
  */
 export async function setMainFile(path, root) {
+  if (!canEdit) return;
   syncFileTreeWithEditor();
 
   const clearMain = (node) => {

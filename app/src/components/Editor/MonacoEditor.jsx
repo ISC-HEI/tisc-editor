@@ -12,6 +12,7 @@ export const MonacoEditor = ({
   onChange,
   onCursorChange,
   onInstanceReady,
+  readOnly
 }) => {
   const editorRef = useRef(null);
   const monacoInstance = useRef(null);
@@ -43,6 +44,7 @@ export const MonacoEditor = ({
       scrollBeyondLastLine: false,
       padding: { top: 16 },
       lineNumbersMinChars: 3,
+      readOnly,
     });
 
     monacoInstance.current = editor;
