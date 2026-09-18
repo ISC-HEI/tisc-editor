@@ -24,6 +24,9 @@
   [Documentation](https://tisc.isc-vs.ch/docs/) • [Website URL](https://tisc.isc-vs.ch) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
 </div>
 
+
+## 👉 [Use the application](https://tisc.isc-vs.ch)
+
 ## Overview
 
 TISC Editor is a **Dockerized repo** providing a professional environment for cloud-based Typst editing:
@@ -38,8 +41,8 @@ TISC Editor is a **Dockerized repo** providing a professional environment for cl
 
 The project ships with a full **Docusaurus documentation site**, covering both the user-facing features and the technical internals of the project.
 
-- **[User Tutorial](https://tisc.isc-vs.ch/docs/)** — How to use the editor: login, project management, collaboration, file management, compilation, export.
-- **[Technical Documentation](https://tisc.isc-vs.ch/docs/techdocs)** — Architecture, project structure, database schema, authentication, API reference, real-time collaboration, CI, and troubleshooting.
+- **[User Tutorial](https://tisc.isc-vs.ch/docs/docs/tutorial/intro)** — How to use the editor: login, project management, collaboration, file management, compilation, export.
+- **[Technical Documentation](https://tisc.isc-vs.ch/docs/docs/techdocs/intro)** — Architecture, project structure, database schema, authentication, API reference, real-time collaboration, CI, and troubleshooting.
 
 The documentation source lives under [`docs/`](./docs) and is deployed alongside the app (see [Production Deployment](#production-deployment)).
 
