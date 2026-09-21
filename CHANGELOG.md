@@ -2,6 +2,11 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-09-21
+- Added GitHub link in the footer of the editor.
+- Moved `Dockerfile.dev` in the `/app` folder.
+
+
 ## 2026-09-18
 - Added `use the application` link in README.
 - Added `install_fonts.sh` in the `Dockerfile` and add documentation in techdocs.
