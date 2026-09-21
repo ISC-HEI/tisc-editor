@@ -5,5 +5,4 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-User=deploy
 ExecStart=/root/tisc-editor/scripts/check_and_deploy.sh
