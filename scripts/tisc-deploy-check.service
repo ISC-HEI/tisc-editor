@@ -1,0 +1,9 @@
+[Unit]
+Description=Check tisc-editor main branch and deploy if changed
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+ExecStart=/root/tisc-editor/scripts/check_and_deploy.sh
