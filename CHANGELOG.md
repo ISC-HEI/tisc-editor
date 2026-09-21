@@ -3,6 +3,7 @@
 All notable changes to this project, organized by day.
 
 ## 2026-09-21
+- Added automatic deployment script with it service and timer.
 - Added GitHub link in the footer of the editor.
 - Moved `Dockerfile.dev` in the `/app` folder.
 
