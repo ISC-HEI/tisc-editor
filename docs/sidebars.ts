@@ -49,6 +49,7 @@ const sidebars: SidebarsConfig = {
     ]},
     { type: 'doc', id: 'techdocs/devops/ci', label: 'Continuous Integration' },
     { type: 'doc', id: 'techdocs/deployment', label: 'Deployment' },
+    { type: 'doc', id: 'techdocs/automatic-deployment', label: 'Automatic Deployment' },
     { type: 'doc', id: 'techdocs/changelog', label: 'Changelog' },
     { type: 'doc', id: 'techdocs/troubleshooting', label: 'Troubleshooting' },
   ],

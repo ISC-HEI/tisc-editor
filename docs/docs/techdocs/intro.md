@@ -32,7 +32,9 @@ This section is dedicated to the **technical part**: everything you need to know
 **[Continuous Integration](./devops/ci)** — Understand the CI workflows.
 
 ## Deployment
-**[Deployment](./deployment)** — Learn how the project is deployed.
+**[Deployment](./deployment)** — Learn how the project is deployed.  
+**[Automatic Deployment](./automatic-deployment)** — Learn how the project is automaticly deployed on push.
+
 
 ## Help
 
