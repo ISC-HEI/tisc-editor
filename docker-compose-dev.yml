@@ -20,7 +20,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: app/Dockerfile.dev
     container_name: tisc-app
     userns_mode: "host"
     depends_on:
