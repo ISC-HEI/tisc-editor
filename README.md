@@ -175,7 +175,7 @@ Please see the [official documentation](https://tisc.isc-vs.ch/docs/docs/techdoc
 
 ## Production Deployment
 
-In production, the stack is deployed using the `publish_new_version.sh` script, which builds the Docker images and starts all services (app, database, documentation, reverse proxy) without relying on `docker-compose`.
+In production, deployment is **fully automatic**: there is no need to run any script manually. Merging (or pushing) to `main` is enough.
 
 ### Prerequisites
 
@@ -183,16 +183,25 @@ In production, the stack is deployed using the `publish_new_version.sh` script, 
 
 > See the [Configuration & Environment](#configuration--environment) section for details on these variables. (or the .env.example)
 
-### Deploying
 
-```bash
-./publish_new_version.sh --db
-```
+### How it works
 
-- The `--db` flag (re)creates and starts the PostgreSQL container (`tisc-db`). Omit it if the database is already running.
-- Without this flag, the script only redeploys the app, the docs, and nginx, reusing the existing database.
+A `systemd` timer on the production LXC runs `scripts/check_and_deploy.sh` every minute:
 
-### What the script does
+1. It compares the remote SHA of `main` (`git ls-remote`) with the last deployed SHA (stored in `/var/lib/tisc-editor/last_deployed_sha`).
+2. If nothing changed, it exits immediately.
+3. If a new commit is detected, it runs `git fetch` + `git reset --hard origin/main`, then executes `publish_new_version.sh`.
+4. On success, the new SHA is recorded. On failure, it is **not** recorded, so the deployment is retried automatically on the next tick.
+
+A lock file (`flock`) prevents overlapping runs. The LXC polls GitHub, so no inbound connection from GitHub Actions is required.
+
+> A new version is live within about a minute after the push to `main`.
+
+📖 Full setup and troubleshooting: [Automatic Deployment documentation](https://tisc.isc-vs.ch/docs/docs/techdocs/automatic-deployment)
+
+### What `publish_new_version.sh` does
+
+This script is executed automatically by the mechanism above.
 
 | Step | Action |
 | :--- | :--- |
@@ -209,20 +218,33 @@ At each step, the script actively polls until the previous service is up before 
 
 ### Access
 
-Once deployment is complete:
-
 - Application: `http://localhost:8082`
 - Documentation: `http://localhost:8082/docs/`
 
-### Updating
-
-To publish a new version, simply rerun the script (without `--db` if the database already exists):
+### Monitoring
 
 ```bash
-./publish_new_version.sh
+# Next scheduled run
+systemctl list-timers tisc-deploy-check.timer
+
+# Follow deployment logs live
+journalctl -t tisc-deploy -f
 ```
 
-The previous containers (`tisc-app-prod`, `tisc-docs`, `tisc-nginx`) are automatically removed and recreated with the new image.
+### Manual deployment (initial setup / fallback only)
+
+The automatic deployment runs the script **without** `--db`, so the database container must already exist. On a fresh server, run the first deployment manually:
+
+```bash
+./publish_new_version.sh --db
+```
+
+To force a redeploy without any code change:
+
+```bash
+rm /var/lib/tisc-editor/last_deployed_sha
+systemctl start tisc-deploy-check.service
+```
 
 ## CI/CD
 
