@@ -3,6 +3,7 @@
 All notable changes to this project, organized by day.
 
 ## 2026-09-24
+- Fixed close correctly the file explorer when opening a file.
 - Added documentation in README on automatic deployment.
 
 ## 2026-09-21

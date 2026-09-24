@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { refs, infos } from './refs';
+import { refs, infos, functions } from './refs';
 import { addLogToPane, debounce, makeToast } from './useUtils';
 import { fetchSvg, exportPdf, exportSvg, findMainFile } from './useApi';
 
@@ -532,7 +532,7 @@ export function openFile(path) {
   }
 
   refs.editor.setValue(content);
-  refs.imageExplorer.style.display = 'none';
+  functions.closeFileExplorer()
 
   setTimeout(() => {
     isLoadingFile = false;
