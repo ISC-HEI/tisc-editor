@@ -532,7 +532,7 @@ export function openFile(path) {
   }
 
   refs.editor.setValue(content);
-  functions.closeFileExplorer()
+  functions.closeFileExplorer();
 
   setTimeout(() => {
     isLoadingFile = false;
