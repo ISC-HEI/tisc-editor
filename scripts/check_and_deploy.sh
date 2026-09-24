@@ -14,7 +14,7 @@ set -euo pipefail
 # --- Configuration -----------------------------------------------------
 REPO_DIR="/root/tisc-editor"
 BRANCH="main"
-PUBLISH_SCRIPT="./publish_new_version.sh"
+PUBLISH_SCRIPT="./scripts/publish_new_version.sh"
 STATE_FILE="/var/lib/tisc-editor/last_deployed_sha"
 LOCK_FILE="/var/lock/tisc-editor-deploy.lock"
 LOG_TAG="tisc-deploy"

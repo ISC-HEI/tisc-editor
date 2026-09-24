@@ -33,7 +33,7 @@ apt-get update && apt-get install -y fontconfig
 ## Deploying
 
 ```bash
-./publish_new_version.sh --db
+./scripts/publish_new_version.sh --db
 ```
 
 - The `--db` flag (re)creates and starts the PostgreSQL container (`tisc-db`). Omit it if the database is already running.
@@ -71,7 +71,7 @@ Once deployment is complete:
 To publish a new version, simply rerun the script (without `--db` if the database already exists):
 
 ```bash
-./publish_new_version.sh
+./scripts/publish_new_version.sh
 ```
 
 The previous containers (`tisc-app-prod`, `tisc-docs`, `tisc-nginx`) are automatically removed and recreated with the new image.
