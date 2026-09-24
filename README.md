@@ -197,7 +197,7 @@ A lock file (`flock`) prevents overlapping runs. The LXC polls GitHub, so no inb
 
 > A new version is live within about a minute after the push to `main`.
 
-📖 Full setup and troubleshooting: [Automatic Deployment documentation](https://tisc.isc-vs.ch/docs/docs/techdocs/automatic-deployment)
+Full setup and troubleshooting: [Automatic Deployment documentation](https://tisc.isc-vs.ch/docs/docs/techdocs/automatic-deployment)
 
 ### What `publish_new_version.sh` does
 
