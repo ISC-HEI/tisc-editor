@@ -236,7 +236,7 @@ journalctl -t tisc-deploy -f
 The automatic deployment runs the script **without** `--db`, so the database container must already exist. On a fresh server, run the first deployment manually:
 
 ```bash
-./publish_new_version.sh --db
+./scripts/publish_new_version.sh --db
 ```
 
 To force a redeploy without any code change:

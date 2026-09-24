@@ -3,6 +3,8 @@
 All notable changes to this project, organized by day.
 
 ## 2026-09-24
+- Moved `publish_new_version.sh` in the `/scripts` folder.
+- Fixed close correctly the file explorer when opening a file.
 - Added documentation in README on automatic deployment.
 
 ## 2026-09-21
