@@ -684,6 +684,7 @@ function renderTreeRecursive(folder, container, path, depth) {
 
     li.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       if (!canEdit) return;
       applySelection(fullPath);
       showContextMenu(e, fullPath, item.type);
