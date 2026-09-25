@@ -45,6 +45,12 @@ let expandedPaths = new Set();
 let initialExpansionDone = false;
 
 /**
+ * @type {string|null} Path of the item currently being renamed inline. While set, the tree
+ * renders a text input in place of that item's name instead of the static label.
+ */
+let renamingPath = null;
+
+/**
  * Adds a new node (file or folder) to the local file tree structure.
  * @param {Object} root - The root object of the file tree.
  * @param {string} path - The full destination path starting with "root/".
@@ -242,6 +248,7 @@ function migratePathState(oldPath, newPath) {
 
   lastClickedPath = rewrite(lastClickedPath);
   activeFilePath = rewrite(activeFilePath);
+  renamingPath = rewrite(renamingPath);
   if (selectedFolderPath !== 'root') selectedFolderPath = rewrite(selectedFolderPath);
 }
 
@@ -256,6 +263,9 @@ function clearPathState(deletedPath) {
   }
   if (activeFilePath === deletedPath || activeFilePath?.startsWith(`${deletedPath}/`)) {
     activeFilePath = null;
+  }
+  if (renamingPath === deletedPath || renamingPath?.startsWith(`${deletedPath}/`)) {
+    renamingPath = null;
   }
   if (selectedFolderPath === deletedPath || selectedFolderPath?.startsWith(`${deletedPath}/`)) {
     selectedFolderPath = 'root';
@@ -598,6 +608,7 @@ export function getFolder(fileTree, path) {
  * Clears and re-renders the file explorer UI based on the current file tree state.
  * Preserves keyboard focus across re-renders when the tree already had it (important
  * for remote/collaborative updates, which must NOT steal focus from elsewhere in the app).
+ * When an item is being renamed inline, focus is instead handed to its rename input.
  * @param {Object} folder - The folder node to render.
  * @param {HTMLElement} container - The DOM element to inject the list into.
  * @param {string} [path=""] - Current recursion path for nested items.
@@ -620,11 +631,72 @@ export function renderFileExplorer(folder, container = refs.imageList, path = ''
       items[0].tabIndex = 0;
     }
 
-    if (hadFocus) {
+    if (renamingPath) {
+      // An inline rename is in progress: hand focus to its input and select the text
+      // so the user can immediately start typing over the current name.
+      const match = items.find((el) => el.dataset.path === renamingPath);
+      const input = match?.querySelector('.rename-input');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    } else if (hadFocus) {
       const match = items.find((el) => el.dataset.path === lastClickedPath);
       (match || items[0])?.focus();
     }
   }
+}
+
+/**
+ * Builds the inline text input used to rename a file or folder in place, replacing its
+ * name label in the tree row. Enter commits, Escape cancels, and blur commits (so
+ * clicking elsewhere behaves like a normal "click away to confirm" rename).
+ * @param {string} fullPath - Path of the item being renamed.
+ * @param {string} currentName - The item's current name, used as the input's starting value.
+ * @returns {HTMLInputElement}
+ */
+function buildNameEditor(fullPath, currentName) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentName;
+  input.spellcheck = false;
+  input.autocomplete = 'off';
+  input.className =
+    'rename-input flex-1 min-w-0 text-[13px] leading-tight px-1 py-0.5 rounded ' +
+    'border border-indigo-400 bg-white text-slate-800 shadow-sm ' +
+    'focus:outline-none focus:ring-1 focus:ring-indigo-400';
+
+  // Guards against the input's own blur firing (and re-committing) after Enter/Escape
+  // has already settled the rename and triggered a re-render that removes it from the DOM.
+  let settled = false;
+  const finish = (commit) => {
+    if (settled) return;
+    settled = true;
+    if (commit) {
+      commitRename(fullPath, input.value);
+    } else {
+      cancelRename();
+    }
+  };
+
+  input.addEventListener('keydown', (e) => {
+    // Stop the tree's own keydown handling (arrow-key navigation, Delete-to-remove, F2, …)
+    // from firing while the user is typing a new name.
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      finish(true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      finish(false);
+    }
+  });
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('click', (e) => e.stopPropagation());
+  input.addEventListener('dblclick', (e) => e.stopPropagation());
+  input.addEventListener('mousedown', (e) => e.stopPropagation());
+
+  return input;
 }
 
 /**
@@ -654,6 +726,7 @@ function renderTreeRecursive(folder, container, path, depth) {
   entries.forEach((item) => {
     const fullPath = path ? `${path}/${item.name}` : item.name;
     const isSelected = fullPath === lastClickedPath;
+    const isRenaming = fullPath === renamingPath;
 
     const li = document.createElement('li');
     li.setAttribute('role', 'treeitem');
@@ -663,7 +736,7 @@ function renderTreeRecursive(folder, container, path, depth) {
     li.dataset.type = item.type;
     li.style.listStyle = 'none';
     li.tabIndex = isSelected ? 0 : -1;
-    li.draggable = canEdit;
+    li.draggable = canEdit && !isRenaming;
     li.className =
       'rounded-md transition-colors duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400' +
       (isSelected ? ' selected-item' : '');
@@ -718,12 +791,17 @@ function renderTreeRecursive(folder, container, path, depth) {
       folderIcon.setAttribute('height', '16');
       folderIcon.classList.add('shrink-0', 'text-slate-500');
 
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'text-[13px] font-medium text-slate-700 truncate';
-      nameSpan.textContent = item.name;
-      nameSpan.title = fullPath;
+      const nameOrEditor = isRenaming
+        ? buildNameEditor(fullPath, item.name)
+        : (() => {
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'text-[13px] font-medium text-slate-700 truncate';
+            nameSpan.textContent = item.name;
+            nameSpan.title = fullPath;
+            return nameSpan;
+          })();
 
-      itemRow.append(chevronWrap, folderIcon, nameSpan);
+      itemRow.append(chevronWrap, folderIcon, nameOrEditor);
 
       li.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -743,6 +821,7 @@ function renderTreeRecursive(folder, container, path, depth) {
 
       itemRow.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (isRenaming) return;
         selectedFolderPath = fullPath;
         toggleExpand(fullPath, !isExpanded);
       });
@@ -768,19 +847,24 @@ function renderTreeRecursive(folder, container, path, depth) {
       iconWrap.innerHTML = getIcon(item.name, item.isMain);
       itemRow.appendChild(iconWrap);
 
-      const nameSpan = document.createElement('span');
-      nameSpan.className =
-        'text-[13px] truncate ' + (item.isMain ? 'font-semibold text-slate-800' : 'text-slate-600');
-      nameSpan.textContent = item.name;
-      nameSpan.title = fullPath;
-      itemRow.appendChild(nameSpan);
+      if (isRenaming) {
+        const input = buildNameEditor(fullPath, item.name);
+        itemRow.appendChild(input);
+      } else {
+        const nameSpan = document.createElement('span');
+        nameSpan.className =
+          'text-[13px] truncate ' + (item.isMain ? 'font-semibold text-slate-800' : 'text-slate-600');
+        nameSpan.textContent = item.name;
+        nameSpan.title = fullPath;
+        itemRow.appendChild(nameSpan);
 
-      if (item.isMain) {
-        const badge = document.createElement('span');
-        badge.className =
-          'ml-auto shrink-0 text-[9px] font-semibold uppercase tracking-wide text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded';
-        badge.textContent = 'Main';
-        itemRow.appendChild(badge);
+        if (item.isMain) {
+          const badge = document.createElement('span');
+          badge.className =
+            'ml-auto shrink-0 text-[9px] font-semibold uppercase tracking-wide text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded';
+          badge.textContent = 'Main';
+          itemRow.appendChild(badge);
+        }
       }
 
       if (fullPath === activeFilePath) {
@@ -835,6 +919,7 @@ function renderTreeRecursive(folder, container, path, depth) {
 
       itemRow.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (isRenaming) return;
         applySelection(fullPath);
         openFileAndTrack(fullPath);
       });
@@ -1067,50 +1152,80 @@ function showContextMenu(e, path, type) {
 }
 
 /**
- * Opens a prompt to rename an existing file or folder.
- * Updates the tree, migrates tracked UI state, saves, and notifies other users via Socket.IO.
- * @param {string} oldPath - The current path of the item to be renamed.
+ * Enters inline-rename mode for an item: the tree re-renders with that item's name
+ * replaced by a text input (see `buildNameEditor`), focused and pre-selected.
+ * Replaces the previous prompt()-based flow — call this the same way as before
+ * (e.g. from the context menu or the F2 shortcut); `commitRename`/`cancelRename`
+ * take over from there once the user finishes editing.
+ * @param {string} path - The current path of the item to be renamed.
  */
-export async function renameItem(oldPath) {
+export function renameItem(path) {
   if (!canEdit) return;
+  renamingPath = path;
+  lastClickedPath = path;
+  renderFileExplorer(fileTree);
+}
+
+/**
+ * Applies a rename entered via the inline editor: validates the new name, updates the
+ * tree, migrates tracked UI state, saves, exits rename mode, and notifies other users.
+ * An empty or unchanged name is treated as a cancel rather than an error.
+ * @param {string} oldPath - Path of the item being renamed.
+ * @param {string} rawNewName - Raw value typed into the rename input.
+ */
+async function commitRename(oldPath, rawNewName) {
+  renamingPath = null;
+
+  const newName = rawNewName.trim();
   const parts = oldPath.split('/').filter((x) => x);
   const oldName = parts[parts.length - 1];
 
-  functions.openCustomPrompt(`Rename "${oldName}" to:`, async (newName) => {
-    if (!newName || newName === oldName) return;
-
-    const parentPath = parts.slice(0, -1).join('/') || 'root';
-    const parent = getFolder(fileTree, parentPath);
-
-    if (!parent || parent.children[newName]) {
-      makeToast('Error renaming', 'error');
-      return;
-    }
-
-    const item = parent.children[oldName];
-
-    delete parent.children[oldName];
-
-    item.name = newName;
-    updatePaths(item, parentPath);
-    parent.children[newName] = item;
-
-    const newPath = parentPath === 'root' ? newName : `${parentPath}/${newName}`;
-    migratePathState(oldPath, newPath);
-
-    await saveFileTree();
+  if (!newName || newName === oldName) {
     renderFileExplorer(fileTree);
+    return;
+  }
 
-    if (refs.socket?.connected) {
-      const oldSocketPath = `root/${oldPath}`;
-      const newSocketPath = `root/${parentPath === 'root' ? '' : parentPath + '/'}${newName}`;
-      refs.socket.emit('rename-node', {
-        docId: currentProjectId,
-        oldPath: oldSocketPath,
-        newPath: newSocketPath,
-      });
-    }
-  });
+  const parentPath = parts.slice(0, -1).join('/') || 'root';
+  const parent = getFolder(fileTree, parentPath);
+
+  if (!parent || parent.children[newName]) {
+    makeToast('Error renaming', 'error');
+    renderFileExplorer(fileTree);
+    return;
+  }
+
+  const item = parent.children[oldName];
+
+  delete parent.children[oldName];
+
+  item.name = newName;
+  updatePaths(item, parentPath);
+  parent.children[newName] = item;
+
+  const newPath = parentPath === 'root' ? newName : `${parentPath}/${newName}`;
+  migratePathState(oldPath, newPath);
+  lastClickedPath = newPath;
+
+  await saveFileTree();
+  renderFileExplorer(fileTree);
+
+  if (refs.socket?.connected) {
+    const oldSocketPath = `root/${oldPath}`;
+    const newSocketPath = `root/${parentPath === 'root' ? '' : parentPath + '/'}${newName}`;
+    refs.socket.emit('rename-node', {
+      docId: currentProjectId,
+      oldPath: oldSocketPath,
+      newPath: newSocketPath,
+    });
+  }
+}
+
+/**
+ * Exits inline-rename mode without applying any change (Escape key).
+ */
+function cancelRename() {
+  renamingPath = null;
+  renderFileExplorer(fileTree);
 }
 
 /**
