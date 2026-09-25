@@ -24,6 +24,22 @@
   [Documentation](https://tisc.isc-vs.ch/docs/) • [Website URL](https://tisc.isc-vs.ch) • [Report Bug](https://github.com/ISC-HEI/tisc-editor/issues)
 </div>
 
+<br />
+
+<div align="center">
+  <table>
+    <tr>
+      <td width="50%"><img src="./.github/assets/editor.png" alt="Editor" /></td>
+      <td width="50%"><img src="./.github/assets/dashboard.png" alt="Dashboard" /></td>
+    </tr>
+    <tr>
+      <td width="50%"><img src="./.github/assets/doc_landing_page.png" alt="Landing page" /></td>
+      <td width="50%"><img src="./.github/assets/doc_sso.png" alt="SSO" /></td>
+    </tr>
+  </table>
+</div>
+
+<br />
 
 ## 👉 [Use the application](https://tisc.isc-vs.ch)
 
@@ -293,13 +309,6 @@ graph TD
     NextJS -->|Exec| Typst
     NextJS <-->|OIDC Auth| SSO
 ```
-
-## Preview
-
-| | |
-|---|---|
-| ![Landing page](.github/assets/doc_landing_page.png) | ![SSO](.github/assets/doc_sso.png) |
-| ![Editor](.github/assets/editor.png) | ![Dashboard](.github/assets/dashboard.png) |
 
 ## License
 This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.

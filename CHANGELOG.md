@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-09-25
+- Moved preview images on the top of the `README`.
+
 ## 2026-09-24
 - Moved `publish_new_version.sh` in the `/scripts` folder.
 - Fixed close correctly the file explorer when opening a file.
