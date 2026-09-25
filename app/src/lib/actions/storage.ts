@@ -4,6 +4,10 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { calcFileTreeSize } from '../quota-service';
 
+/**
+ * Computes the current user's storage usage from their owned projects,
+ * along with their quota limit and usage percentage.
+ */
 export async function getUserStorage() {
   const session = await auth();
 

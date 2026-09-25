@@ -2,6 +2,9 @@
 
 import { FileNode, ProjectFileTree } from '@/types/filetree';
 
+/**
+ * Builds the fetch options for the GitHub API, with or without the auth token.
+ */
 function getFetchOptions(useAuth = true) {
   const headers: Record<string, string> = {
     'User-Agent': 'TISC-Editor-App',
@@ -17,6 +20,10 @@ function getFetchOptions(useAuth = true) {
   };
 }
 
+/**
+ * Makes a request to GitHub using the token when available, and retries without
+ * the token if the authenticated request fails (401, or 404 on raw.githubusercontent.com).
+ */
 async function fetchGitHub(url: string) {
   const authResponse = await fetch(url, getFetchOptions(true));
   if (
@@ -30,6 +37,10 @@ async function fetchGitHub(url: string) {
   return authResponse;
 }
 
+/**
+ * Recursively walks a GitHub directory to rebuild the file tree, excluding hidden
+ * files, .md files, LICENSE, and the template file.
+ */
 const buildTreeFromGitHub = async (
   url: string,
   currentPath: string = '',
@@ -83,6 +94,9 @@ const buildTreeFromGitHub = async (
   return children;
 };
 
+/**
+ * Downloads a GitHub file's content and returns it base64-encoded as a data URI.
+ */
 async function getFileContentAsBase64(url: string) {
   const response = await fetchGitHub(url);
 
@@ -101,6 +115,10 @@ async function getFileContentAsBase64(url: string) {
   return `data:application/octet-stream;base64,${base64}`;
 }
 
+/**
+ * Returns the latest (semver) version of a Typst package available in the
+ * typst/packages repository.
+ */
 export async function getLatestVersion(packageBaseName: string): Promise<string> {
   const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${encodeURIComponent(packageBaseName)}`;
 
@@ -139,6 +157,10 @@ export async function getLatestVersion(packageBaseName: string): Promise<string>
   return versions[0];
 }
 
+/**
+ * Imports a Typst package from GitHub and builds the full project file tree,
+ * adding the template file as main.typ.
+ */
 export const importPackageAsTree = async (
   packageName: string,
   templateFile: string,

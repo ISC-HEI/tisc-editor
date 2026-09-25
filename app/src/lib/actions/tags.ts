@@ -4,6 +4,10 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
+/**
+ * Adds a tag to a project (creating the tag if it doesn't exist yet).
+ * Requires the current user to have access to the project.
+ */
 export const addTagToProject = async (projectId: string, tag: string) => {
   const session = await auth();
 
@@ -64,6 +68,10 @@ export const addTagToProject = async (projectId: string, tag: string) => {
   };
 };
 
+/**
+ * Removes a tag from a project, and deletes the tag entirely if it is no
+ * longer used by any project. Requires access to the project.
+ */
 export const removeTagFromProject = async (projectId: string, tag: string) => {
   const session = await auth();
 
@@ -132,6 +140,9 @@ export const removeTagFromProject = async (projectId: string, tag: string) => {
   };
 };
 
+/**
+ * Returns all tags used across the current user's projects, sorted alphabetically.
+ */
 export const getTagsByUser = async () => {
   const session = await auth();
 
@@ -165,6 +176,10 @@ export const getTagsByUser = async () => {
   });
 };
 
+/**
+ * Returns a project's current tags along with the full list of all available
+ * tags, for use in a tag picker. Requires access to the project.
+ */
 export const getProjectTags = async (projectId: string) => {
   const session = await auth();
 

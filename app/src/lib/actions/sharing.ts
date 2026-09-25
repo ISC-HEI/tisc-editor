@@ -4,6 +4,10 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
+/**
+ * Shares a project with another user by email, granting either editor or
+ * viewer access. Only the project owner can share.
+ */
 export async function shareProject(
   projectId: string,
   sharedUserEmail: string,
@@ -79,6 +83,10 @@ export async function shareProject(
   };
 }
 
+/**
+ * Transfers project ownership to another user who already has access to the
+ * project, demoting the current owner to editor.
+ */
 export async function transferProjectOwnership(projectId: string, newOwnerEmail: string) {
   const session = await auth();
 
@@ -162,6 +170,10 @@ export async function transferProjectOwnership(projectId: string, newOwnerEmail:
   };
 }
 
+/**
+ * Removes a shared user's access to a project. Only the owner can remove users,
+ * and the owner cannot remove themselves.
+ */
 export async function removeSharedUser(projectId: string, sharedUserEmail: string) {
   const session = await auth();
 
@@ -214,6 +226,9 @@ export async function removeSharedUser(projectId: string, sharedUserEmail: strin
   };
 }
 
+/**
+ * Returns all users assigned to a project (including the caller), with their role.
+ */
 export async function getProjectUsers(projectId: string) {
   const session = await auth();
 
@@ -242,6 +257,9 @@ export async function getProjectUsers(projectId: string) {
   }));
 }
 
+/**
+ * Returns id/email pairs for a list of user ids.
+ */
 export async function getUsersEmailFromId(usersId: string[]) {
   return await prisma.user.findMany({
     where: {
@@ -256,6 +274,9 @@ export async function getUsersEmailFromId(usersId: string[]) {
   });
 }
 
+/**
+ * Returns all users assigned to a project, excluding the current user, with their role.
+ */
 export async function getProjectMembers(projectId: string) {
   const session = await auth();
 

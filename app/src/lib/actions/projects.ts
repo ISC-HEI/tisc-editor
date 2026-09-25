@@ -8,6 +8,10 @@ import { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
 import { getLatestVersion, importPackageAsTree } from './github-import';
 
+/**
+ * Returns all projects the current user is assigned to, along with the user's
+ * role, ownership info, tags and sharing status for each project.
+ */
 export async function getUserProjects() {
   const session = await auth();
 
@@ -80,6 +84,9 @@ export async function getUserProjects() {
   });
 }
 
+/**
+ * Returns the current user's role on a given project, or null if not assigned.
+ */
 export async function getProjectAssignmentRole(projectId: string) {
   const session = await auth();
 
@@ -99,6 +106,10 @@ export async function getProjectAssignmentRole(projectId: string) {
   return assignment?.role ?? null;
 }
 
+/**
+ * Creates a new project for the current user, either blank or imported from a
+ * Typst package template, after validating tags and checking storage quota.
+ */
 export async function createProject(formData: FormData) {
   const session = await auth();
 
@@ -224,6 +235,9 @@ export async function createProject(formData: FormData) {
   return project;
 }
 
+/**
+ * Loads a project by id for the current user, returning null if they have no access.
+ */
 export async function loadProject(id: string) {
   const session = await auth();
 
@@ -236,6 +250,9 @@ export async function loadProject(id: string) {
   return await getProjectById(id, userId);
 }
 
+/**
+ * Fetches a project with its tags, scoped to a user's assignment (private helper).
+ */
 async function getProjectById(projectId: string, userId: string) {
   const assignment = await prisma.projectAssignment.findUnique({
     where: {
@@ -267,6 +284,9 @@ async function getProjectById(projectId: string, userId: string) {
   };
 }
 
+/**
+ * Deletes a project. Only the owner is allowed to perform this action.
+ */
 export async function deleteProject(formData: FormData) {
   const session = await auth();
 
@@ -314,6 +334,11 @@ export async function deleteProject(formData: FormData) {
   });
 }
 
+/**
+ * Removes the current user from a project. If they are the sole owner, the
+ * project is deleted; if they are an owner with other members, ownership must
+ * be transferred first.
+ */
 export async function leaveProject(formData: FormData) {
   const session = await auth();
 
@@ -383,6 +408,9 @@ export async function leaveProject(formData: FormData) {
   };
 }
 
+/**
+ * Saves the file tree content of a project for any user with access to it.
+ */
 export async function saveProjectData(
   projectId: string,
   content: string,
@@ -421,6 +449,9 @@ export async function saveProjectData(
   revalidatePath('/dashboard');
 }
 
+/**
+ * Sets a project's active status. Only the owner can perform this action.
+ */
 export const setProjectActiveStatus = async (projectId: string, isActive: boolean) => {
   const session = await auth();
 
