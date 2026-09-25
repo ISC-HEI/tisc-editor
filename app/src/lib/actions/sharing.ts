@@ -84,6 +84,83 @@ export async function shareProject(
 }
 
 /**
+ * Returns all users assigned to a project (including the caller), with their role.
+ */
+export async function getProjectUsers(projectId: string) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const users = await prisma.projectAssignment.findMany({
+    where: {
+      projectId,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  return users.map((u: { user: { id: string; email: string }; role: string }) => ({
+    id: u.user.id,
+    email: u.user.email,
+    role: u.role,
+  }));
+}
+
+/**
+ * Returns all users assigned to a project, excluding the current user, with their role.
+ */
+export async function getProjectMembers(projectId: string) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  const members = await prisma.projectAssignment.findMany({
+    where: {
+      projectId,
+      userId: { not: userId },
+    },
+    include: {
+      user: { select: { id: true, email: true } },
+    },
+  });
+
+  return members.map((m: { user: { id: string; email: string }; role: string }) => ({
+    id: m.user.id,
+    email: m.user.email,
+    role: m.role,
+  }));
+}
+
+/**
+ * Returns id/email pairs for a list of user ids.
+ */
+export async function getUsersEmailFromId(usersId: string[]) {
+  return await prisma.user.findMany({
+    where: {
+      id: {
+        in: usersId,
+      },
+    },
+    select: {
+      id: true,
+      email: true,
+    },
+  });
+}
+
+/**
  * Transfers project ownership to another user who already has access to the
  * project, demoting the current owner to editor.
  */
@@ -224,81 +301,4 @@ export async function removeSharedUser(projectId: string, sharedUserEmail: strin
   return {
     success: true,
   };
-}
-
-/**
- * Returns all users assigned to a project (including the caller), with their role.
- */
-export async function getProjectUsers(projectId: string) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const users = await prisma.projectAssignment.findMany({
-    where: {
-      projectId,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-        },
-      },
-    },
-  });
-
-  return users.map((u: { user: { id: string; email: string }; role: string }) => ({
-    id: u.user.id,
-    email: u.user.email,
-    role: u.role,
-  }));
-}
-
-/**
- * Returns id/email pairs for a list of user ids.
- */
-export async function getUsersEmailFromId(usersId: string[]) {
-  return await prisma.user.findMany({
-    where: {
-      id: {
-        in: usersId,
-      },
-    },
-    select: {
-      id: true,
-      email: true,
-    },
-  });
-}
-
-/**
- * Returns all users assigned to a project, excluding the current user, with their role.
- */
-export async function getProjectMembers(projectId: string) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  const members = await prisma.projectAssignment.findMany({
-    where: {
-      projectId,
-      userId: { not: userId },
-    },
-    include: {
-      user: { select: { id: true, email: true } },
-    },
-  });
-
-  return members.map((m: { user: { id: string; email: string }; role: string }) => ({
-    id: m.user.id,
-    email: m.user.email,
-    role: m.role,
-  }));
 }

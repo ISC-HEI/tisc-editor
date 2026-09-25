@@ -38,6 +38,27 @@ async function fetchGitHub(url: string) {
 }
 
 /**
+ * Downloads a GitHub file's content and returns it base64-encoded as a data URI.
+ */
+async function getFileContentAsBase64(url: string) {
+  const response = await fetchGitHub(url);
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to download file from GitHub: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+
+  const buffer = Buffer.from(arrayBuffer);
+
+  const base64 = buffer.toString('base64');
+
+  return `data:application/octet-stream;base64,${base64}`;
+}
+
+/**
  * Recursively walks a GitHub directory to rebuild the file tree, excluding hidden
  * files, .md files, LICENSE, and the template file.
  */
@@ -93,27 +114,6 @@ const buildTreeFromGitHub = async (
 
   return children;
 };
-
-/**
- * Downloads a GitHub file's content and returns it base64-encoded as a data URI.
- */
-async function getFileContentAsBase64(url: string) {
-  const response = await fetchGitHub(url);
-
-  if (!response.ok) {
-    throw new Error(
-      `Unable to download file from GitHub: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-
-  const buffer = Buffer.from(arrayBuffer);
-
-  const base64 = buffer.toString('base64');
-
-  return `data:application/octet-stream;base64,${base64}`;
-}
 
 /**
  * Returns the latest (semver) version of a Typst package available in the

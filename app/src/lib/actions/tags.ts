@@ -69,6 +69,103 @@ export const addTagToProject = async (projectId: string, tag: string) => {
 };
 
 /**
+ * Returns a project's current tags along with the full list of all available
+ * tags, for use in a tag picker. Requires access to the project.
+ */
+export const getProjectTags = async (projectId: string) => {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  const assignment = await prisma.projectAssignment.findUnique({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+
+  if (!assignment) {
+    throw new Error('Access denied');
+  }
+
+  const projectTags = await prisma.projectTag.findMany({
+    where: {
+      projectId,
+    },
+    include: {
+      tag: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      tag: {
+        name: 'asc',
+      },
+    },
+  });
+
+  const availableTags = await prisma.tag.findMany({
+    orderBy: {
+      name: 'asc',
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+
+  return {
+    projectTags: projectTags.map((item) => item.tag),
+    availableTags,
+  };
+};
+
+/**
+ * Returns all tags used across the current user's projects, sorted alphabetically.
+ */
+export const getTagsByUser = async () => {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  return prisma.tag.findMany({
+    where: {
+      projects: {
+        some: {
+          project: {
+            userLinks: {
+              some: {
+                userId,
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      name: 'asc',
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+};
+
+/**
  * Removes a tag from a project, and deletes the tag entirely if it is no
  * longer used by any project. Requires access to the project.
  */
@@ -137,102 +234,5 @@ export const removeTagFromProject = async (projectId: string, tag: string) => {
 
   return {
     success: true,
-  };
-};
-
-/**
- * Returns all tags used across the current user's projects, sorted alphabetically.
- */
-export const getTagsByUser = async () => {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  return prisma.tag.findMany({
-    where: {
-      projects: {
-        some: {
-          project: {
-            userLinks: {
-              some: {
-                userId,
-              },
-            },
-          },
-        },
-      },
-    },
-    orderBy: {
-      name: 'asc',
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
-};
-
-/**
- * Returns a project's current tags along with the full list of all available
- * tags, for use in a tag picker. Requires access to the project.
- */
-export const getProjectTags = async (projectId: string) => {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new Error('Access denied');
-  }
-
-  const projectTags = await prisma.projectTag.findMany({
-    where: {
-      projectId,
-    },
-    include: {
-      tag: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      tag: {
-        name: 'asc',
-      },
-    },
-  });
-
-  const availableTags = await prisma.tag.findMany({
-    orderBy: {
-      name: 'asc',
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
-
-  return {
-    projectTags: projectTags.map((item) => item.tag),
-    availableTags,
   };
 };

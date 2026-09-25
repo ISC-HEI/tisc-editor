@@ -9,104 +9,6 @@ import { FileNode } from '@/types/filetree';
 import { getLatestVersion, importPackageAsTree } from './github-import';
 
 /**
- * Returns all projects the current user is assigned to, along with the user's
- * role, ownership info, tags and sharing status for each project.
- */
-export async function getUserProjects() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('No authorization');
-  }
-
-  const userId = session.user.id;
-
-  const assignments = await prisma.projectAssignment.findMany({
-    where: {
-      userId,
-    },
-    include: {
-      project: {
-        select: {
-          id: true,
-          title: true,
-          isActive: true,
-          userLinks: {
-            select: {
-              userId: true,
-              role: true,
-              user: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          tags: {
-            include: {
-              tag: true,
-            },
-          },
-          thumbnail: {
-            select: { projectId: true },
-          },
-        },
-      },
-    },
-    orderBy: {
-      project: {
-        id: 'desc',
-      },
-    },
-  });
-
-  type AssignmentWithProject = (typeof assignments)[number];
-  type ProjectTagWithTag = AssignmentWithProject['project']['tags'][number];
-  type UserLinkEntry = AssignmentWithProject['project']['userLinks'][number];
-
-  return assignments.map((a: AssignmentWithProject) => {
-    const { thumbnail, ...project } = a.project;
-
-    const ownerLink = a.project.userLinks.find((link: UserLinkEntry) => link.role === 'owner');
-
-    return {
-      ...project,
-      isAuthor: a.role === 'owner',
-      role: a.role,
-      hasThumbnail: !!thumbnail,
-      ownerName: ownerLink?.user?.name ?? null,
-
-      tags: a.project.tags.map((projectTag: ProjectTagWithTag) => projectTag.tag),
-      usersSharing: a.project.userLinks
-        .filter((link: UserLinkEntry) => link.userId !== userId)
-        .map((link: UserLinkEntry) => link.userId),
-    };
-  });
-}
-
-/**
- * Returns the current user's role on a given project, or null if not assigned.
- */
-export async function getProjectAssignmentRole(projectId: string) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId: session.user.id,
-        projectId,
-      },
-    },
-  });
-
-  return assignment?.role ?? null;
-}
-
-/**
  * Creates a new project for the current user, either blank or imported from a
  * Typst package template, after validating tags and checking storage quota.
  */
@@ -285,127 +187,101 @@ async function getProjectById(projectId: string, userId: string) {
 }
 
 /**
- * Deletes a project. Only the owner is allowed to perform this action.
+ * Returns all projects the current user is assigned to, along with the user's
+ * role, ownership info, tags and sharing status for each project.
  */
-export async function deleteProject(formData: FormData) {
+export async function getUserProjects() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    throw new Error('No authorization');
   }
 
   const userId = session.user.id;
 
-  const projectId = formData.get('id') as string;
-
-  if (!projectId) {
-    throw new Error('Missing project id');
-  }
-
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const assignment = await tx.projectAssignment.findUnique({
-      where: {
-        userId_projectId: {
-          userId,
-          projectId,
+  const assignments = await prisma.projectAssignment.findMany({
+    where: {
+      userId,
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          title: true,
+          isActive: true,
+          userLinks: {
+            select: {
+              userId: true,
+              role: true,
+              user: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+          tags: {
+            include: {
+              tag: true,
+            },
+          },
+          thumbnail: {
+            select: { projectId: true },
+          },
         },
       },
-    });
-
-    if (!assignment) {
-      throw new Error('Unauthorized');
-    }
-
-    if (assignment.role !== 'owner') {
-      throw new Error('Only project owners can delete the project');
-    }
-
-    await tx.project.delete({
-      where: {
-        id: projectId,
+    },
+    orderBy: {
+      project: {
+        id: 'desc',
       },
-    });
+    },
+  });
 
-    revalidatePath('/dashboard');
+  type AssignmentWithProject = (typeof assignments)[number];
+  type ProjectTagWithTag = AssignmentWithProject['project']['tags'][number];
+  type UserLinkEntry = AssignmentWithProject['project']['userLinks'][number];
+
+  return assignments.map((a: AssignmentWithProject) => {
+    const { thumbnail, ...project } = a.project;
+
+    const ownerLink = a.project.userLinks.find((link: UserLinkEntry) => link.role === 'owner');
 
     return {
-      action: 'deleted',
+      ...project,
+      isAuthor: a.role === 'owner',
+      role: a.role,
+      hasThumbnail: !!thumbnail,
+      ownerName: ownerLink?.user?.name ?? null,
+
+      tags: a.project.tags.map((projectTag: ProjectTagWithTag) => projectTag.tag),
+      usersSharing: a.project.userLinks
+        .filter((link: UserLinkEntry) => link.userId !== userId)
+        .map((link: UserLinkEntry) => link.userId),
     };
   });
 }
 
 /**
- * Removes the current user from a project. If they are the sole owner, the
- * project is deleted; if they are an owner with other members, ownership must
- * be transferred first.
+ * Returns the current user's role on a given project, or null if not assigned.
  */
-export async function leaveProject(formData: FormData) {
+export async function getProjectAssignmentRole(projectId: string) {
   const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  const userId = session.user.id;
-  const projectId = formData.get('id') as string;
-
-  if (!projectId) {
-    throw new Error('Missing project id');
-  }
-
   const assignment = await prisma.projectAssignment.findUnique({
     where: {
       userId_projectId: {
-        userId,
+        userId: session.user.id,
         projectId,
       },
     },
   });
 
-  if (!assignment) {
-    throw new Error('Unauthorized');
-  }
-
-  const membersCount = await prisma.projectAssignment.count({
-    where: {
-      projectId,
-    },
-  });
-
-  if (assignment.role === 'owner') {
-    if (membersCount === 1) {
-      await prisma.project.delete({
-        where: {
-          id: projectId,
-        },
-      });
-
-      revalidatePath('/dashboard');
-
-      return {
-        action: 'deleted',
-      };
-    }
-
-    throw new Error(
-      'Vous devez transférer la propriété à un autre membre avant de quitter le projet.',
-    );
-  }
-
-  await prisma.projectAssignment.delete({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  revalidatePath('/dashboard');
-
-  return {
-    action: 'left',
-  };
+  return assignment?.role ?? null;
 }
 
 /**
@@ -489,3 +365,127 @@ export const setProjectActiveStatus = async (projectId: string, isActive: boolea
 
   revalidatePath('/dashboard');
 };
+
+/**
+ * Removes the current user from a project. If they are the sole owner, the
+ * project is deleted; if they are an owner with other members, ownership must
+ * be transferred first.
+ */
+export async function leaveProject(formData: FormData) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+  const projectId = formData.get('id') as string;
+
+  if (!projectId) {
+    throw new Error('Missing project id');
+  }
+
+  const assignment = await prisma.projectAssignment.findUnique({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+
+  if (!assignment) {
+    throw new Error('Unauthorized');
+  }
+
+  const membersCount = await prisma.projectAssignment.count({
+    where: {
+      projectId,
+    },
+  });
+
+  if (assignment.role === 'owner') {
+    if (membersCount === 1) {
+      await prisma.project.delete({
+        where: {
+          id: projectId,
+        },
+      });
+
+      revalidatePath('/dashboard');
+
+      return {
+        action: 'deleted',
+      };
+    }
+
+    throw new Error(
+      'Vous devez transférer la propriété à un autre membre avant de quitter le projet.',
+    );
+  }
+
+  await prisma.projectAssignment.delete({
+    where: {
+      userId_projectId: {
+        userId,
+        projectId,
+      },
+    },
+  });
+
+  revalidatePath('/dashboard');
+
+  return {
+    action: 'left',
+  };
+}
+
+/**
+ * Deletes a project. Only the owner is allowed to perform this action.
+ */
+export async function deleteProject(formData: FormData) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const userId = session.user.id;
+
+  const projectId = formData.get('id') as string;
+
+  if (!projectId) {
+    throw new Error('Missing project id');
+  }
+
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const assignment = await tx.projectAssignment.findUnique({
+      where: {
+        userId_projectId: {
+          userId,
+          projectId,
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new Error('Unauthorized');
+    }
+
+    if (assignment.role !== 'owner') {
+      throw new Error('Only project owners can delete the project');
+    }
+
+    await tx.project.delete({
+      where: {
+        id: projectId,
+      },
+    });
+
+    revalidatePath('/dashboard');
+
+    return {
+      action: 'deleted',
+    };
+  });
+}
