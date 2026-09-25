@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Plus, Tag, Loader2 } from 'lucide-react';
-import { getProjectTags, addTagToProject, removeTagFromProject } from '@/app/dashboard/actions';
+import { addTagToProject, getProjectTags, removeTagFromProject } from '@/lib/actions/tags';
 
 export default function EditProjectTagsModal({ projectId, onClose }) {
   const [projectTags, setProjectTags] = useState([]);

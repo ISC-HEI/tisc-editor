@@ -1,5 +1,4 @@
 import { auth } from '@/lib/auth';
-import { getUserProjects, getUserStorage } from './actions';
 import { ProjectList } from '../../components/Dashboard/ProjectList';
 import Footer from '../../components/Footer';
 import CreateProjectModal from '../../components/Dashboard/CreateProjectModal';
@@ -7,6 +6,8 @@ import { SignOutButton } from '@/components/SignOutButton';
 import { LayoutGrid, Users, HandshakeIcon } from 'lucide-react';
 import StorageBar from '@/components/Dashboard/StorageBar';
 import { StatCardColor, StatCardProps } from '@/types/statsCard';
+import { getUserProjects } from '@/lib/actions/projects';
+import { getUserStorage } from '@/lib/actions/storage';
 
 type Project = Awaited<ReturnType<typeof getUserProjects>>[number];
 

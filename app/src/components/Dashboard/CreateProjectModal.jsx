@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Plus, X, LayoutTemplate, Loader2, AlertCircle } from 'lucide-react';
-import { createProject, getTagsByUser } from '@/app/dashboard/actions';
 import { TEMPLATES } from '@/lib/templates';
+import { createProject } from '@/lib/actions/projects';
+import { getTagsByUser } from '@/lib/actions/tags';
 
 export default function CreateProjectModal() {
   const [isOpen, setIsOpen] = useState(false);

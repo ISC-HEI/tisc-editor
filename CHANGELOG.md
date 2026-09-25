@@ -4,6 +4,7 @@ All notable changes to this project, organized by day.
 
 ## 2026-09-25
 - Moved preview images on the top of the `README`.
+- Refactored server actions (`dashboard/actions.ts`) in multiple files (`lib/actions/*`)
 
 ## 2026-09-24
 - Moved `publish_new_version.sh` in the `/scripts` folder.

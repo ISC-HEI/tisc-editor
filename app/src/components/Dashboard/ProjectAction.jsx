@@ -2,18 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  deleteProject,
-  leaveProject,
-  getUsersEmailFromId,
-  getProjectAssignmentRole,
-  transferProjectOwnership,
-  setProjectActiveStatus,
-  getProjectMembers,
-} from '@/app/dashboard/actions';
+
 import SharedUserWindows from './SharedUserWindow';
 import EditProjectTagsModal from './EditProjectTagsModal';
 import { Ellipsis, Share2, Trash, Crown, Loader2, X, LogOut, Tag, Archive } from 'lucide-react';
+import {
+  getProjectMembers,
+  getUsersEmailFromId,
+  transferProjectOwnership,
+} from '@/lib/actions/sharing';
+import { getProjectAssignmentRole, leaveProject } from '@/lib/actions/projects';
 
 function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
   const [selected, setSelected] = useState(null);

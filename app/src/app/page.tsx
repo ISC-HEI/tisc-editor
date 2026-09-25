@@ -1,9 +1,9 @@
-import { loadProject, getProjectAssignmentRole } from '@/app/dashboard/actions';
 import { redirect } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { auth } from '@/lib/auth';
 import type { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
+import { getProjectAssignmentRole, loadProject } from '@/lib/actions/projects';
 
 const Editor = dynamic(() => import('../components/Editor/Editor'), {
   loading: () => <h2>The editor is loading</h2>,

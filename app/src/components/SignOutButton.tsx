@@ -1,5 +1,5 @@
 'use client';
-import { handleSignOut } from '@/app/dashboard/actions';
+import { handleSignOut } from '@/lib/actions/auth';
 import { LogOut } from 'lucide-react';
 
 export function SignOutButton() {
