@@ -211,7 +211,7 @@ A `systemd` timer on the production LXC runs `scripts/check_and_deploy.sh` every
 
 A lock file (`flock`) prevents overlapping runs. The LXC polls GitHub, so no inbound connection from GitHub Actions is required.
 
-> A new version is live within about a minute after the push to `main`.
+> A new version is usually live within 5 to 6 minutes after the push to `main`, as the build and deployment process takes some time.
 
 Full setup and troubleshooting: [Automatic Deployment documentation](https://tisc.isc-vs.ch/docs/docs/techdocs/automatic-deployment)
 
