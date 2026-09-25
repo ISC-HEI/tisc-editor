@@ -478,7 +478,7 @@ function setupResizable() {
   });
 }
 
-export function openFile(path) {
+export async function openFile(path) {
   if (!path || !refs.editor) return;
 
   const parts = path.replace('root/', '').split('/');
@@ -497,9 +497,11 @@ export function openFile(path) {
   }
 
   if (!ALWAYS_ALLOWED.includes(ext)) {
-    const confirmForce = window.confirm(
+    const confirmForce = await functions.openCustomConfirm(
+      'Unknown file type',
       `Unknown extension .${ext}. \n\nOpening this as text might corrupt the file if it's not a plain text format. Do you want to proceed?`,
     );
+
     if (!confirmForce) return;
   }
 

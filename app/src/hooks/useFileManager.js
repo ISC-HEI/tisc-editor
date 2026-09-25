@@ -176,9 +176,9 @@ function applyActiveFile(path) {
  * Opens a file and keeps the "active file" highlight in sync, without a full tree re-render.
  * @param {string} path
  */
-function openFileAndTrack(path) {
+async function openFileAndTrack(path) {
   applyActiveFile(path);
-  openFile(path);
+  await openFile(path);
 }
 
 /**
@@ -387,6 +387,7 @@ function initFileManager() {
     !refs.imageExplorer ||
     !refs.btnCloseImages ||
     !functions.openCustomPrompt ||
+    !functions.openCustomConfirm ||
     !refs.btnUploadImages ||
     !refs.imageFilesInput ||
     !refs.rootDropZone ||
@@ -1027,11 +1028,13 @@ export async function deleteItem(path, fileTree) {
   }
 
   const itemType = parent.children[name].type;
-  const confirmed = window.confirm(
+  const confirmed = await functions.openCustomConfirm(
+    itemType === 'folder' ? 'Delete folder' : 'Delete file',
     itemType === 'folder'
       ? `Delete folder "${name}" and everything inside it? This can't be undone.`
       : `Delete "${name}"? This can't be undone.`,
   );
+
   if (!confirmed) return;
 
   delete parent.children[name];
@@ -1353,6 +1356,6 @@ export async function setMainFile(path, root) {
   activeFilePath = path;
 
   await saveFileTree();
-  openFile(path);
+  await openFile(path);
   renderFileExplorer(fileTree);
 }

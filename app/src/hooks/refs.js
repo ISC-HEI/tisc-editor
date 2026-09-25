@@ -59,6 +59,7 @@ export let infos = {
  */
 export let functions = {
   openCustomPrompt: null,
+  openCustomConfirm: null,
   syncCollaboration: null,
 };
 

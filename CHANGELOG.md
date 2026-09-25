@@ -8,6 +8,7 @@ All notable changes to this project, organized by day.
 - Updated file explorer general design and fixed mutliple bugs.
 - Added inline rename action.
 - Added color on icons.
+- Added custom confirm modal.
 
 ## 2026-09-24
 - Moved `publish_new_version.sh` in the `/scripts` folder.

@@ -22,6 +22,14 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', callback: null });
   const [inputValue, setInputValue] = useState('');
+
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmModalConfig, setConfirmModalConfig] = useState({
+    title: '',
+    message: '',
+    resolve: null,
+  });
+
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const [editorFontSize, setEditorFontSize] = useState(14);
   const [wordWrap, setWordWrap] = useState(false);
@@ -80,13 +88,16 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
         separator: separatorRef.current,
       });
     }
+
     initPreviewInfos({
       currentProjectId: projectId,
       defaultFileTree: fileTree,
       title: title,
     });
+
     initPreviewFunctions({
-      openCustomPrompt: openCustomPrompt,
+      openCustomPrompt,
+      openCustomConfirm,
     });
   };
 
@@ -96,11 +107,39 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
     setIsModalOpen(true);
   };
 
+  const openCustomConfirm = (title, message) => {
+    return new Promise((resolve) => {
+      setConfirmModalConfig({
+        title,
+        message,
+        resolve,
+      });
+
+      setIsConfirmModalOpen(true);
+    });
+  };
+
   const handleModalConfirm = () => {
     if (inputValue.trim() && modalConfig.callback) {
       modalConfig.callback(inputValue);
     }
     setIsModalOpen(false);
+  };
+
+  const handleConfirm = () => {
+    if (confirmModalConfig.resolve) {
+      confirmModalConfig.resolve(true);
+    }
+
+    setIsConfirmModalOpen(false);
+  };
+
+  const handleCancelConfirm = () => {
+    if (confirmModalConfig.resolve) {
+      confirmModalConfig.resolve(false);
+    }
+
+    setIsConfirmModalOpen(false);
   };
 
   const getInitialContent = () => {
@@ -113,6 +152,7 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
           if (found) return found;
         }
       }
+
       return null;
     };
 
@@ -125,11 +165,13 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
           if (found) return found;
         }
       }
+
       return null;
     };
 
     const mainNode =
       findMainNode(fileTree) || fileTree?.children?.['main.typ'] || findFirstFileNode(fileTree);
+
     let rawData = mainNode?.data || mainNode?.content || '';
 
     if (rawData.startsWith('data:')) {
@@ -137,7 +179,11 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
         const base64 = rawData.split(',')[1];
         const binary = atob(base64);
         const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+
         return new TextDecoder().decode(bytes);
       } catch (e) {
         console.error('Error:', e);
@@ -177,11 +223,13 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
 
         if (droppedFiles.length > 0 && refs.imageFilesInput) {
           const dataTransfer = new DataTransfer();
+
           Array.from(droppedFiles).forEach((file) => {
             dataTransfer.items.add(file);
           });
 
           refs.imageFilesInput.files = dataTransfer.files;
+
           const event = new Event('change', { bubbles: true });
           refs.imageFilesInput.dispatchEvent(event);
         }
@@ -212,14 +260,19 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
       {isDraggingGlobal && (
         <div className="absolute inset-0 z-[100] p-8 pointer-events-none animate-in fade-in duration-200">
           <div className="w-full h-full border-4 border-dashed border-blue-500/50 rounded-[2rem] bg-blue-50/80 backdrop-blur-[2px] flex flex-col items-center justify-center">
-            <h2 className="text-3xl font-bold text-blue-700 tracking-tight">Drop to upload</h2>
+            <h2 className="text-3xl font-bold text-blue-700 tracking-tight">
+              Drop to upload
+            </h2>
+
             <p className="text-blue-600/70 font-medium mt-2">
               Your files will be added to the project root
             </p>
           </div>
         </div>
       )}
+
       <EditorHeader title={title} tags={tags} />
+
       {!canEdit && (
         <div className="bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-medium text-center py-1.5">
           Read-only mode: you have view access only. To edit, please request edit access from the
@@ -239,7 +292,9 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
 
           <div className="flex-1 relative min-w-0 overflow-hidden">
             <Breadcrumbs path={activePath} />
+
             <FileExplorer canEdit={canEdit} />
+
             <MonacoEditor
               content={getInitialContent()}
               fontSize={editorFontSize}
@@ -263,7 +318,9 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
 
         <PreviewPane />
       </div>
+
       <PaneLog />
+
       <PromptModal
         isOpen={isModalOpen}
         title={modalConfig.title}
@@ -272,6 +329,40 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
         onConfirm={handleModalConfirm}
         onClose={() => setIsModalOpen(false)}
       />
+
+        {isConfirmModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="w-full max-w-md mx-4 rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+              <div className="px-6 py-5">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  {confirmModalConfig.title}
+                </h2>
+
+                <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">
+                  {confirmModalConfig.message}
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={handleCancelConfirm}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
