@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  createElement,
-  Folder,
-  FolderOpen,
-  ChevronRight,
-} from 'lucide';
+import { createElement, Folder, FolderOpen, ChevronRight } from 'lucide';
 import { refs, functions, infos } from '@/hooks/refs';
 import {
   currentProjectId,
