@@ -267,9 +267,6 @@ async function getProjectById(projectId: string, userId: string) {
   };
 }
 
-
-
-
 export async function deleteProject(formData: FormData) {
   const session = await auth();
 

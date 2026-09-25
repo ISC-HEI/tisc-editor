@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation';
 import SharedUserWindows from './SharedUserWindow';
 import EditProjectTagsModal from './EditProjectTagsModal';
 import { Ellipsis, Share2, Trash, Crown, Loader2, X, LogOut, Tag, Archive } from 'lucide-react';
-import { getProjectMembers, getUsersEmailFromId, transferProjectOwnership } from '@/lib/actions/sharing';
+import {
+  getProjectMembers,
+  getUsersEmailFromId,
+  transferProjectOwnership,
+} from '@/lib/actions/sharing';
 import { getProjectAssignmentRole, leaveProject } from '@/lib/actions/projects';
 
 function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
