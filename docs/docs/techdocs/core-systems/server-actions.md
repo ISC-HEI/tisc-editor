@@ -1,15 +1,25 @@
 # Server Actions
 
-Most of the dashboard's business logic does not go through the [API routes](./api-endpoints) but through **Next.js Server Actions**. They all live in `src/app/dashboard/actions.ts` and are marked with the `'use server'` directive.
+The dashboard's business logic does not go through the [API routes](./api-endpoints) but through **Next.js Server Actions**. They are marked with the `'use server'` directive and split across several files under `src/app/dashboard/actions/`, grouped by domain:
+
+| File | Contains |
+| --- | --- |
+| `projects.ts` | Project CRUD, loading, saving, archiving |
+| `tags.ts` | Tag management |
+| `sharing.ts` | Sharing, ownership transfer, member management |
+| `storage.ts` | Storage quota usage |
+| `github-import.ts` | Template fetching/importing from GitHub (see [Template Management](./templates)) |
+| `auth.ts` | Sign-out |
+| `utils.ts` | Shared internal helpers used by the files above (not exported to components) |
 
 Unlike the API routes, these functions are called directly from React components (as regular async functions, or bound to a `<form action={...}>`), without an explicit HTTP layer. Next.js handles the serialization for you.
 
 :::info[Common pattern]
 
-Almost every action follows the same shape:
+Almost every action follows the same shape, backed by shared helpers in `utils.ts`:
 
-1. Read the session with `auth()`. If there is no `session.user.id`, throw `Unauthorized` (or `No authorization`).
-2. Look up the caller's `ProjectAssignment` for the target project to check **that they have access at all**, and sometimes that their `role` is `owner` for owner-only actions.
+1. Read the session and resolve the caller's user ID via `requireUserId()`. If there is no session, it throws `Unauthorized` (or a custom message, e.g. `No authorization`, when the caller passes one).
+2. Look up the caller's `ProjectAssignment` for the target project via `getAssignment()` / `requireAssignment()` to check **that they have access at all**. Owner-only actions additionally check `role === 'owner'` (either inline, or via `requireOwnerAssignment()` for the handful of actions — `shareProject`, `transferProjectOwnership`, `removeSharedUser` — that use a single "not owner" error regardless of whether the caller has no assignment at all or just isn't the owner).
 3. Perform the Prisma read/write (occasionally wrapped in `prisma.$transaction`).
 4. Call `revalidatePath('/dashboard')` so the dashboard's server-rendered data is refreshed on the next navigation.
 
@@ -18,6 +28,8 @@ Individual sections below only call out what differs from this pattern.
 :::
 
 ## Projects
+
+*Defined in `projects.ts`.*
 
 ### `getUserProjects()`
 
@@ -46,7 +58,7 @@ Returns the caller's role (`'owner' | 'editor' | 'viewer'`) on a project, or `nu
 
 Creates a new project, optionally from a [template](./templates), and assigns the caller as `owner`.
 
-**Auth:** required.
+**Auth:** required (`No authorization` if missing).
 
 **Form fields**
 
@@ -66,11 +78,47 @@ Creates a new project, optionally from a [template](./templates), and assigns th
 
 **How it works**
 
-1. If `packageBase` is `'blank'`, the file tree is just an empty `main.typ`. Otherwise, the template is resolved and downloaded from GitHub — see [Template Management](./templates) for the full fetch/import flow.
+1. If `packageBase` is `'blank'`, the file tree is just an empty `main.typ`. Otherwise, the template is resolved and downloaded from GitHub via `getLatestVersion` and `importPackageAsTree`, imported from `github-import.ts` — see [Template Management](./templates) for the full fetch/import flow.
 2. The resulting file tree's size is checked against the caller's storage quota (`checkUserQuota`, see [Database Schema](../architecture/database)). If it would be exceeded, the action throws `Quota exceeded (X MB / Y MB). Cannot create project.` **before** any database write.
 3. The `Project`, its owner `ProjectAssignment`, and its tags (created via `upsert` so existing tags are reused) are all written inside a single `prisma.$transaction`.
 
 **Returns** the created `Project` record.
+
+### `loadProject(id)`
+
+Loads a single project (with its tags) for the caller, used when opening a project from the dashboard. Delegates to an internal (non-exported) `getProjectById` helper.
+
+**Auth:** required.
+
+**Returns** the `Project` record with `tags` resolved to `Tag[]`, or `null` if the caller has no `ProjectAssignment` for it (i.e. no access, rather than a thrown error).
+
+### `saveProjectData(projectId, content, fileTree)`
+
+Persists a project's file tree from the dashboard/editor context (distinct from [`POST /api/projects/save`](./api-endpoints#post-apiprojectssave), which is the route used by the editor's autosave and does enforce the quota check on every call).
+
+**Auth:** required. The caller must have a `ProjectAssignment` on the project, otherwise `Access denied`.
+
+**Note:** the `content` parameter is currently unused by the underlying `prisma.project.update` call, which only persists `fileTree`.
+
+### `setProjectActiveStatus(projectId, isActive)`
+
+Sets `Project.isActive`, the mechanism behind [archiving / unarchiving](../../tutorial/projects/archive) a project.
+
+**Auth:** required. The caller must be the `owner`, otherwise `Only project owners can change the active status`.
+
+### `leaveProject(formData)`
+
+Removes the caller's `ProjectAssignment` from a project.
+
+**Auth:** required.
+
+**Form fields:** `id` — the project ID.
+
+**Behavior depends on the caller's role:**
+
+- **Owner, sole member** (`membersCount === 1`): the project is deleted outright, same effect as `deleteProject`. Returns `{ action: 'deleted' }`.
+- **Owner, other members present**: the action throws — an owner must transfer ownership (see [`transferProjectOwnership`](#transferprojectownershipprojectid-newowneremail)) before they can leave.
+- **Editor / viewer**: their assignment is simply deleted. Returns `{ action: 'left' }`.
 
 ### `deleteProject(formData)`
 
@@ -88,41 +136,11 @@ There is no soft-delete or trash for this action — unlike [archiving](../../tu
 
 :::
 
-### `leaveProject(formData)`
+---
 
-Removes the caller's `ProjectAssignment` from a project.
+## Storage
 
-**Auth:** required.
-
-**Form fields:** `id` — the project ID.
-
-**Behavior depends on the caller's role:**
-
-- **Owner, sole member** (`membersCount === 1`): the project is deleted outright, same effect as `deleteProject`. Returns `{ action: 'deleted' }`.
-- **Owner, other members present**: the action throws — an owner must transfer ownership (see [`transferProjectOwnership`](#transferprojectownershipprojectid-newowneremail)) before they can leave.
-- **Editor / viewer**: their assignment is simply deleted. Returns `{ action: 'left' }`.
-
-### `saveProjectData(projectId, content, fileTree)`
-
-Persists a project's file tree from the dashboard/editor context (distinct from [`POST /api/projects/save`](./api-endpoints#post-apiprojectssave), which is the route used by the editor's autosave and does enforce the quota check on every call).
-
-**Auth:** required. The caller must have a `ProjectAssignment` on the project, otherwise `Access denied`.
-
-**Note:** the `content` parameter is currently unused by the underlying `prisma.project.update` call, which only persists `fileTree`.
-
-### `loadProject(id)`
-
-Loads a single project (with its tags) for the caller, used when opening a project from the dashboard.
-
-**Auth:** required.
-
-**Returns** the `Project` record with `tags` resolved to `Tag[]`, or `null` if the caller has no `ProjectAssignment` for it (i.e. no access, rather than a thrown error).
-
-### `setProjectActiveStatus(projectId, isActive)`
-
-Sets `Project.isActive`, the mechanism behind [archiving / unarchiving](../../tutorial/projects/archive) a project.
-
-**Auth:** required. The caller must be the `owner`, otherwise `Only project owners can change the active status`.
+*Defined in `storage.ts`.*
 
 ### `getUserStorage()`
 
@@ -136,23 +154,13 @@ Computes the caller's current storage usage against their quota, used by the das
 
 ## Tags
 
+*Defined in `tags.ts`.*
+
 ### `addTagToProject(projectId, tag)`
 
 Attaches a tag to a project, creating the `Tag` record first if it doesn't already exist (`upsert`).
 
 **Auth:** required. The caller must have a `ProjectAssignment` on the project (any role), otherwise `Access denied`.
-
-### `removeTagFromProject(projectId, tag)`
-
-Detaches a tag from a project. If the tag ends up attached to **zero** projects afterwards, the `Tag` record itself is deleted, keeping the global tag list clean.
-
-**Auth:** required. Same access check as `addTagToProject`.
-
-### `getTagsByUser()`
-
-Returns every distinct tag used across all projects the caller has access to, sorted alphabetically. Used to power tag-filter suggestions on the dashboard.
-
-**Auth:** required.
 
 ### `getProjectTags(projectId)`
 
@@ -162,11 +170,23 @@ Returns both the tags currently on a project and the full list of tags available
 
 **Returns** `{ projectTags: Tag[], availableTags: Tag[] }`.
 
+### `getTagsByUser()`
+
+Returns every distinct tag used across all projects the caller has access to, sorted alphabetically. Used to power tag-filter suggestions on the dashboard.
+
+**Auth:** required.
+
+### `removeTagFromProject(projectId, tag)`
+
+Detaches a tag from a project. If the tag ends up attached to **zero** projects afterwards, the `Tag` record itself is deleted, keeping the global tag list clean.
+
+**Auth:** required. Same access check as `addTagToProject`.
+
 ---
 
 ## Sharing & Ownership
 
-See [Sharing a project](../../tutorial/projects/sharing) for the user-facing flow these actions implement.
+*Defined in `sharing.ts`.* See [Sharing a project](../../tutorial/projects/sharing) for the user-facing flow these actions implement.
 
 ### `shareProject(projectId, sharedUserEmail, canEdit = false)`
 
@@ -183,6 +203,24 @@ Grants another user access to a project by creating a `ProjectAssignment` for th
 | The target already has a `ProjectAssignment` | `The user already has access to this project` |
 
 The new assignment's role is `editor` if `canEdit` is `true`, otherwise `viewer`.
+
+### `getProjectUsers(projectId)`
+
+Returns every member of a project (including the caller), with their `id`, `email` and `role`. Used to render the full member list in the sharing modal.
+
+**Auth:** required (any authenticated user — this action does not check that the caller belongs to the project).
+
+### `getProjectMembers(projectId)`
+
+Same as `getProjectUsers`, but **excludes the caller** from the result. Used to populate pickers such as the "transfer ownership to…" selector.
+
+**Auth:** required.
+
+### `getUsersEmailFromId(usersId)`
+
+Resolves a list of user IDs to their `{ id, email }`. Used on the client to display emails for users already known by ID (e.g. the collaboration presence list).
+
+**Auth:** none — this action does not call `auth()`.
 
 ### `transferProjectOwnership(projectId, newOwnerEmail)`
 
@@ -203,27 +241,11 @@ Revokes another user's access by deleting their `ProjectAssignment`.
 
 **Auth:** required. Only the `owner` may remove users, otherwise `Only owner can remove users`. An owner cannot remove themselves this way (`Owner cannot remove themselves`) — see `leaveProject` or `transferProjectOwnership` instead.
 
-### `getProjectUsers(projectId)`
-
-Returns every member of a project (including the caller), with their `id`, `email` and `role`. Used to render the full member list in the sharing modal.
-
-**Auth:** required (any authenticated user — this action does not check that the caller belongs to the project).
-
-### `getProjectMembers(projectId)`
-
-Same as `getProjectUsers`, but **excludes the caller** from the result. Used to populate pickers such as the "transfer ownership to…" selector.
-
-**Auth:** required.
-
-### `getUsersEmailFromId(usersId)`
-
-Resolves a list of user IDs to their `{ id, email }`. Used on the client to display emails for users already known by ID (e.g. the collaboration presence list).
-
-**Auth:** none — this action does not call `auth()`.
-
 ---
 
 ## Authentication
+
+*Defined in `auth.ts`.*
 
 ### `handleSignOut()`
 
