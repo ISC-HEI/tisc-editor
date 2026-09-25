@@ -1059,9 +1059,37 @@ async function saveFileTree() {
 // ----------------------------------------------------
 
 /**
- * Maps a file extension to a specific Lucide icon and returns its HTML string.
+ * Per-extension accent color, used both for the icon stroke and for the tinted
+ * "chip" background behind it. Six-digit hex only (so we can append an alpha
+ * suffix like `1A` for the chip background — see `getIcon`).
+ * @type {Record<string, string>}
+ */
+const EXTENSION_COLORS = {
+  json: '#f59e0b', // amber — data / config
+  typ: '#8b5cf6', // violet — the project's main Typst format
+  tmtheme: '#ec4899', // pink — theme/style files
+  py: '#14b8a6', // teal — scripts
+  js: '#eab308', // yellow — scripts
+  jpg: '#f43f5e', // rose — media
+  jpeg: '#f43f5e',
+  png: '#f43f5e',
+  gif: '#f43f5e',
+  webp: '#f43f5e',
+  svg: '#f43f5e',
+};
+
+/** Fallback accent color for extensions not listed in `EXTENSION_COLORS`. */
+const DEFAULT_ICON_COLOR = '#94a3b8'; // slate-400
+
+/**
+ * Maps a file extension to a specific Lucide icon, colored by file type, and returns
+ * its HTML string as a small rounded "chip": the icon on a softly tinted background
+ * (~10% opacity of its accent color) so file types are recognizable at a glance.
+ * The main file gets the app's indigo accent plus a subtle ring instead of its
+ * extension color, so it still stands out as "the" entry point.
  * @param {string} filename - The name of the file to determine the icon for.
- * @returns {string} The HTML string of the rendered SVG icon.
+ * @param {boolean} [isMain] - Whether this file is the project's main/entry file.
+ * @returns {string} The HTML string of the rendered icon chip.
  */
 export function getIcon(filename, isMain) {
   const ext = filename.split('.').pop().toLowerCase();
@@ -1072,24 +1100,35 @@ export function getIcon(filename, isMain) {
     py: Terminal,
     js: FileCode,
     jpg: Image,
+    jpeg: Image,
     png: Image,
+    gif: Image,
+    webp: Image,
     svg: Image,
   };
   const IconData = iconMap[ext] || FileQuestion;
+  const color = isMain ? '#3b82f6' : EXTENSION_COLORS[ext] || DEFAULT_ICON_COLOR;
 
   const svgElement = createElement(IconData);
-
-  svgElement.setAttribute('width', '18');
-  svgElement.setAttribute('height', '18');
-  if (isMain) {
-    svgElement.setAttribute('stroke', '#3b82f6');
-    svgElement.setAttribute('class', 'inline-block mr-2 font-bold');
-  } else {
-    svgElement.setAttribute('class', 'inline-block mr-2');
-  }
+  svgElement.setAttribute('width', '15');
+  svgElement.setAttribute('height', '15');
+  svgElement.setAttribute('stroke', color);
+  svgElement.setAttribute('stroke-width', isMain ? '2.5' : '2');
   svgElement.style.verticalAlign = 'middle';
 
-  return svgElement.outerHTML;
+  const chip = document.createElement('span');
+  chip.className = 'inline-flex items-center justify-center rounded-md mr-2 shrink-0';
+  Object.assign(chip.style, {
+    width: '22px',
+    height: '22px',
+    backgroundColor: `${color}1A`, // color + ~10% alpha, e.g. "#3b82f61A"
+  });
+  if (isMain) {
+    chip.style.boxShadow = `0 0 0 1px ${color}66 inset`;
+  }
+  chip.appendChild(svgElement);
+
+  return chip.outerHTML;
 }
 
 // ----------------------------------------------------

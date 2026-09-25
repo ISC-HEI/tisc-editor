@@ -7,6 +7,7 @@ All notable changes to this project, organized by day.
 - Refactored server actions (`dashboard/actions.ts`) in multiple files (`lib/actions/*`)
 - Updated file explorer general design and fixed mutliple bugs.
 - Added inline rename action.
+- Added color on icons.
 
 ## 2026-09-24
 - Moved `publish_new_version.sh` in the `/scripts` folder.
