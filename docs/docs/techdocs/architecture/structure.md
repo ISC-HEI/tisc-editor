@@ -16,7 +16,7 @@ Follows the Next.js App Router convention. Contains pages, layouts, and API rout
 
 - **`api/[auth]/[...nextauth]`** — NextAuth catch-all route, handles the OIDC flow with Keycloak.
 - **`api/projects`** — REST endpoints for project operations: compiling (`compile`), saving (`save`), and generating thumbnails (`[id]/thumbnail`).
-- **`dashboard`** — The project dashboard page and its server actions.
+- **`dashboard`** — The project dashboard page.
 - **`login`** — The login page.
 
 ## `src/components`
@@ -25,6 +25,11 @@ React components, split by feature area:
 
 - **`Dashboard`** — Components used on the dashboard: project cards, creation/edit modals, storage bar, sharing window.
 - **`Editor`** — Components used inside the editor: file explorer, Monaco editor wrapper, preview pane, toolbar, breadcrumbs, context menu, logs.
+
+## `src/config`
+
+- **`fileExtensions.js`** — Configuration for file icons and authorization.
+
 
 ## `src/hooks`
 
@@ -38,7 +43,7 @@ Custom React hooks encapsulating stateful logic, notably:
 ## `src/lib`
 
 Server-side logic and integrations:
-
+- **`actions/`** — Server actions functions.
 - **`auth.ts`** / **`auth.config.ts`** — NextAuth setup and configuration.
 - **`prisma.ts`** — Prisma client instance.
 - **`quota-service.ts`** — Storage quota calculation logic.

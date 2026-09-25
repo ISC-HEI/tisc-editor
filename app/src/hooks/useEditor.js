@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { refs, infos, functions } from './refs';
 import { addLogToPane, debounce, makeToast } from './useUtils';
 import { fetchSvg, exportPdf, exportSvg, findMainFile } from './useApi';
+import { getExtensionConfig } from '@/config/fileExtensions';
 
 export let currentProjectId;
 export let fileTree = { type: 'folder', name: 'root', children: {} };
@@ -15,9 +16,6 @@ let onPathChangeCallback = null;
 export let canEdit = true;
 
 let syncMarkers = [];
-
-const BANNED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'ttf', 'otf', 'zip', 'svg'];
-const ALWAYS_ALLOWED = ['typ', 'json', 'txt', 'md', 'js', 'css', 'py', 'sh', 'scala'];
 
 let handleExportPdf = null;
 let handleExportSvg = null;
@@ -466,13 +464,15 @@ export async function openFile(path) {
   if (!node || node.type === 'folder') return;
 
   const ext = node.name.split('.').pop().toLowerCase();
+  const config = getExtensionConfig(ext);
 
-  if (BANNED_EXTENSIONS.includes(ext)) {
+  if (config.allowed == false) {
+    // We use == false, because it can be null
     makeToast(`Interrupted: .${ext} is a binary file.`, 'error');
     return;
   }
 
-  if (!ALWAYS_ALLOWED.includes(ext)) {
+  if (config.allowed == null) {
     const confirmForce = await functions.openCustomConfirm(
       'Unknown file type',
       `Unknown extension .${ext}. \n\nOpening this as text might corrupt the file if it's not a plain text format. Do you want to proceed?`,
@@ -481,10 +481,9 @@ export async function openFile(path) {
     if (!confirmForce) return;
   }
 
-  const lang = getEditorLanguage(ext);
   const model = refs.editor.getModel();
   if (model) {
-    refs.monaco.editor.setModelLanguage(model, lang);
+    refs.monaco.editor.setModelLanguage(model, config.language);
   }
 
   isLoadingFile = true;
@@ -545,55 +544,6 @@ export function syncFileTreeWithEditor() {
       const binary = String.fromCharCode(...bytes);
       node.data = 'data:text/plain;base64,' + btoa(binary);
     }
-  }
-}
-
-function getEditorLanguage(extension) {
-  if (!extension) return 'plaintext';
-  const ext = extension.toLowerCase();
-  switch (ext) {
-    case 'typ':
-      return 'typst';
-    case 'json':
-      return 'json';
-    case 'yml':
-    case 'yaml':
-      return 'yaml';
-    case 'py':
-      return 'python';
-    case 'js':
-    case 'mjs':
-    case 'cjs':
-      return 'javascript';
-    case 'ts':
-      return 'typescript';
-    case 'html':
-    case 'htm':
-      return 'html';
-    case 'css':
-      return 'css';
-    case 'md':
-    case 'markdown':
-      return 'markdown';
-    case 'sh':
-    case 'bash':
-      return 'shell';
-    case 'sql':
-      return 'sql';
-    case 'cpp':
-    case 'cc':
-    case 'cxx':
-      return 'cpp';
-    case 'c':
-      return 'c';
-    case 'rs':
-      return 'rust';
-    case 'go':
-      return 'go';
-    case 'scala':
-      return 'scala';
-    default:
-      return 'plaintext';
   }
 }
 

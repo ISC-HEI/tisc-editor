@@ -1,17 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  createElement,
-  FileJson,
-  Book,
-  FileCode,
-  Image,
-  FileQuestion,
-  Folder,
-  FolderOpen,
-  Terminal,
-  Notebook,
-  ChevronRight,
-} from 'lucide';
+import { createElement, Folder, FolderOpen, ChevronRight } from 'lucide';
 import { refs, functions, infos } from '@/hooks/refs';
 import {
   currentProjectId,
@@ -24,6 +12,7 @@ import {
 import { makeToast } from './useUtils';
 import JSZip from 'jszip';
 import { canEdit } from './useEditor';
+import { getExtensionConfig } from '@/config/fileExtensions';
 
 /** @type {string} Path of the folder currently selected for operations like file creation or upload. */
 let selectedFolderPath = 'root';
@@ -1061,30 +1050,6 @@ async function saveFileTree() {
 }
 
 // ----------------------------------------------------
-
-/**
- * Per-extension accent color, used both for the icon stroke and for the tinted
- * "chip" background behind it. Six-digit hex only (so we can append an alpha
- * suffix like `1A` for the chip background — see `getIcon`).
- * @type {Record<string, string>}
- */
-const EXTENSION_COLORS = {
-  json: '#f59e0b', // amber — data / config
-  typ: '#8b5cf6', // violet — the project's main Typst format
-  tmtheme: '#ec4899', // pink — theme/style files
-  py: '#14b8a6', // teal — scripts
-  js: '#eab308', // yellow — scripts
-  jpg: '#f43f5e', // rose — media
-  jpeg: '#f43f5e',
-  png: '#f43f5e',
-  gif: '#f43f5e',
-  webp: '#f43f5e',
-  svg: '#f43f5e',
-};
-
-/** Fallback accent color for extensions not listed in `EXTENSION_COLORS`. */
-const DEFAULT_ICON_COLOR = '#94a3b8'; // slate-400
-
 /**
  * Maps a file extension to a specific Lucide icon, colored by file type, and returns
  * its HTML string as a small rounded "chip": the icon on a softly tinted background
@@ -1096,24 +1061,18 @@ const DEFAULT_ICON_COLOR = '#94a3b8'; // slate-400
  * @returns {string} The HTML string of the rendered icon chip.
  */
 export function getIcon(filename, isMain) {
-  const ext = filename.split('.').pop().toLowerCase();
-  const iconMap = {
-    json: FileJson,
-    typ: Book,
-    tmtheme: Notebook,
-    py: Terminal,
-    js: FileCode,
-    jpg: Image,
-    jpeg: Image,
-    png: Image,
-    gif: Image,
-    webp: Image,
-    svg: Image,
-  };
-  const IconData = iconMap[ext] || FileQuestion;
-  const color = isMain ? '#3b82f6' : EXTENSION_COLORS[ext] || DEFAULT_ICON_COLOR;
+  const ext = filename.includes('.')
+    ? filename.split('.').pop().toLowerCase()
+    : filename.toLowerCase();
+
+  const config = getExtensionConfig(ext);
+
+  const color = isMain ? '#3b82f6' : config.color;
+
+  const IconData = config.icon;
 
   const svgElement = createElement(IconData);
+
   svgElement.setAttribute('width', '15');
   svgElement.setAttribute('height', '15');
   svgElement.setAttribute('stroke', color);
@@ -1121,15 +1080,19 @@ export function getIcon(filename, isMain) {
   svgElement.style.verticalAlign = 'middle';
 
   const chip = document.createElement('span');
+
   chip.className = 'inline-flex items-center justify-center rounded-md mr-2 shrink-0';
+
   Object.assign(chip.style, {
     width: '22px',
     height: '22px',
-    backgroundColor: `${color}1A`, // color + ~10% alpha, e.g. "#3b82f61A"
+    backgroundColor: `${color}1A`,
   });
+
   if (isMain) {
     chip.style.boxShadow = `0 0 0 1px ${color}66 inset`;
   }
+
   chip.appendChild(svgElement);
 
   return chip.outerHTML;
