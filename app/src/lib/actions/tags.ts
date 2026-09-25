@@ -1,21 +1,15 @@
 'use server';
 
-import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireUserId, requireAssignment } from './utils';
 
 /**
  * Adds a tag to a project (creating the tag if it doesn't exist yet).
  * Requires the current user to have access to the project.
  */
 export const addTagToProject = async (projectId: string, tag: string) => {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   if (!projectId || !tag?.trim()) {
     throw new Error('Missing project id or tag');
@@ -23,18 +17,7 @@ export const addTagToProject = async (projectId: string, tag: string) => {
 
   const tagName = tag.trim();
 
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new Error('Access denied');
-  }
+  await requireAssignment(userId, projectId);
 
   const tagRecord = await prisma.tag.upsert({
     where: {
@@ -73,26 +56,9 @@ export const addTagToProject = async (projectId: string, tag: string) => {
  * tags, for use in a tag picker. Requires access to the project.
  */
 export const getProjectTags = async (projectId: string) => {
-  const session = await auth();
+  const userId = await requireUserId();
 
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new Error('Access denied');
-  }
+  await requireAssignment(userId, projectId);
 
   const projectTags = await prisma.projectTag.findMany({
     where: {
@@ -133,13 +99,7 @@ export const getProjectTags = async (projectId: string) => {
  * Returns all tags used across the current user's projects, sorted alphabetically.
  */
 export const getTagsByUser = async () => {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   return prisma.tag.findMany({
     where: {
@@ -170,13 +130,7 @@ export const getTagsByUser = async () => {
  * longer used by any project. Requires access to the project.
  */
 export const removeTagFromProject = async (projectId: string, tag: string) => {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   if (!projectId || !tag?.trim()) {
     throw new Error('Missing project id or tag');
@@ -184,18 +138,7 @@ export const removeTagFromProject = async (projectId: string, tag: string) => {
 
   const tagName = tag.trim();
 
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new Error('Access denied');
-  }
+  await requireAssignment(userId, projectId);
 
   const tagRecord = await prisma.tag.findUnique({
     where: {

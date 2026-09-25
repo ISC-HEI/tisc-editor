@@ -1,8 +1,8 @@
 'use server';
 
-import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireUserId, requireOwnerAssignment } from './utils';
 
 /**
  * Shares a project with another user by email, granting either editor or
@@ -13,26 +13,9 @@ export async function shareProject(
   sharedUserEmail: string,
   canEdit: boolean = false,
 ) {
-  const session = await auth();
+  const userId = await requireUserId();
 
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  const ownerCheck = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (ownerCheck?.role !== 'owner') {
-    throw new Error('Only owner can share');
-  }
+  await requireOwnerAssignment(userId, projectId, 'Only owner can share');
 
   const sharedUser = await prisma.user.findUnique({
     where: {
@@ -87,11 +70,7 @@ export async function shareProject(
  * Returns all users assigned to a project (including the caller), with their role.
  */
 export async function getProjectUsers(projectId: string) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
+  await requireUserId();
 
   const users = await prisma.projectAssignment.findMany({
     where: {
@@ -118,13 +97,7 @@ export async function getProjectUsers(projectId: string) {
  * Returns all users assigned to a project, excluding the current user, with their role.
  */
 export async function getProjectMembers(projectId: string) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   const members = await prisma.projectAssignment.findMany({
     where: {
@@ -165,30 +138,13 @@ export async function getUsersEmailFromId(usersId: string[]) {
  * project, demoting the current owner to editor.
  */
 export async function transferProjectOwnership(projectId: string, newOwnerEmail: string) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   if (!projectId || !newOwnerEmail) {
     throw new Error('Missing project id or new owner email');
   }
 
-  const currentOwner = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!currentOwner || currentOwner.role !== 'owner') {
-    throw new Error('Only the owner can transfer ownership');
-  }
+  await requireOwnerAssignment(userId, projectId, 'Only the owner can transfer ownership');
 
   const newOwner = await prisma.user.findUnique({
     where: {
@@ -252,26 +208,9 @@ export async function transferProjectOwnership(projectId: string, newOwnerEmail:
  * and the owner cannot remove themselves.
  */
 export async function removeSharedUser(projectId: string, sharedUserEmail: string) {
-  const session = await auth();
+  const userId = await requireUserId();
 
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  const ownerAssignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (ownerAssignment?.role !== 'owner') {
-    throw new Error('Only owner can remove users');
-  }
+  await requireOwnerAssignment(userId, projectId, 'Only owner can remove users');
 
   const userToRemove = await prisma.user.findUnique({
     where: {

@@ -1,25 +1,19 @@
 'use server';
 
-import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { checkUserQuota } from '@/lib/quota-service';
 import { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
 import { getLatestVersion, importPackageAsTree } from './github-import';
+import { requireUserId, getAssignment, requireAssignment } from './utils';
 
 /**
  * Creates a new project for the current user, either blank or imported from a
  * Typst package template, after validating tags and checking storage quota.
  */
 export async function createProject(formData: FormData) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('No authorization');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId('No authorization');
 
   const title = formData.get('title') as string;
   const packageBase = formData.get('packageBase') as string;
@@ -141,13 +135,7 @@ export async function createProject(formData: FormData) {
  * Loads a project by id for the current user, returning null if they have no access.
  */
 export async function loadProject(id: string) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   return await getProjectById(id, userId);
 }
@@ -191,13 +179,7 @@ async function getProjectById(projectId: string, userId: string) {
  * role, ownership info, tags and sharing status for each project.
  */
 export async function getUserProjects() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('No authorization');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId('No authorization');
 
   const assignments = await prisma.projectAssignment.findMany({
     where: {
@@ -266,20 +248,9 @@ export async function getUserProjects() {
  * Returns the current user's role on a given project, or null if not assigned.
  */
 export async function getProjectAssignmentRole(projectId: string) {
-  const session = await auth();
+  const userId = await requireUserId();
 
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId: session.user.id,
-        projectId,
-      },
-    },
-  });
+  const assignment = await getAssignment(userId, projectId);
 
   return assignment?.role ?? null;
 }
@@ -292,26 +263,9 @@ export async function saveProjectData(
   content: string,
   fileTree: Prisma.InputJsonValue,
 ) {
-  const session = await auth();
+  const userId = await requireUserId();
 
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new Error('Access denied');
-  }
+  await requireAssignment(userId, projectId);
 
   await prisma.project.update({
     where: {
@@ -329,26 +283,9 @@ export async function saveProjectData(
  * Sets a project's active status. Only the owner can perform this action.
  */
 export const setProjectActiveStatus = async (projectId: string, isActive: boolean) => {
-  const session = await auth();
+  const userId = await requireUserId();
 
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
-
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new Error('Access denied');
-  }
+  const assignment = await requireAssignment(userId, projectId);
 
   if (assignment.role !== 'owner') {
     throw new Error('Only project owners can change the active status');
@@ -372,31 +309,14 @@ export const setProjectActiveStatus = async (projectId: string, isActive: boolea
  * be transferred first.
  */
 export async function leaveProject(formData: FormData) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
   const projectId = formData.get('id') as string;
 
   if (!projectId) {
     throw new Error('Missing project id');
   }
 
-  const assignment = await prisma.projectAssignment.findUnique({
-    where: {
-      userId_projectId: {
-        userId,
-        projectId,
-      },
-    },
-  });
-
-  if (!assignment) {
-    throw new Error('Unauthorized');
-  }
+  const assignment = await requireAssignment(userId, projectId, 'Unauthorized');
 
   const membersCount = await prisma.projectAssignment.count({
     where: {
@@ -444,13 +364,7 @@ export async function leaveProject(formData: FormData) {
  * Deletes a project. Only the owner is allowed to perform this action.
  */
 export async function deleteProject(formData: FormData) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   const projectId = formData.get('id') as string;
 

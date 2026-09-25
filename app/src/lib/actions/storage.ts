@@ -1,21 +1,15 @@
 'use server';
 
-import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { calcFileTreeSize } from '../quota-service';
+import { requireUserId } from './utils';
 
 /**
  * Computes the current user's storage usage from their owned projects,
  * along with their quota limit and usage percentage.
  */
 export async function getUserStorage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const userId = session.user.id;
+  const userId = await requireUserId();
 
   const user = await prisma.user.findUnique({
     where: {
