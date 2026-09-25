@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X, ChevronDown, Tag as TagIcon, Archive } from 'lucide-react';
 import { ProjectCard } from './ProjectCard';
-import { getTagsByUser } from '@/app/dashboard/actions';
+import { getTagsByUser } from '@/lib/actions/tags';
 
 export function ProjectList({ initialProjects }) {
   const [search, setSearch] = useState('');

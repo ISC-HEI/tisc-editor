@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, Github } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 export default function Footer({ position = 'sticky' }) {
   const version = process.env.NEXT_PUBLIC_APP_VERSION || 'v0.0.0';

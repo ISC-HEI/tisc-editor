@@ -1,7 +1,6 @@
 'use client';
 import { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { shareProject, removeSharedUser, transferProjectOwnership } from '@/app/dashboard/actions';
 import {
   Trash,
   Plus,
@@ -15,6 +14,7 @@ import {
   ChevronDown,
   Check,
 } from 'lucide-react';
+import { removeSharedUser, shareProject, transferProjectOwnership } from '@/lib/actions/sharing';
 
 export default function SharedUserWindow({ projectId, title, users, onClose, onRemoveSuccess }) {
   const router = useRouter();
