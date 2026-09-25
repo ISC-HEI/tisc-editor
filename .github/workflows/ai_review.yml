@@ -1,0 +1,123 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Gemini Code Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} \
+            > pr.diff
+
+      - name: Send diff to Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          with open("pr.diff", "r", encoding="utf-8") as f:
+              diff = f.read()
+
+          prompt = """
+          You are an experienced software engineer performing a pull request review.
+
+          Review the following GitHub Pull Request diff.
+
+          Look specifically for:
+          - real bugs
+          - security vulnerabilities
+          - incorrect logic
+          - error handling problems
+          - performance problems
+          - missing important tests
+          - dangerous or breaking changes
+
+          Do NOT comment on:
+          - formatting
+          - naming preferences
+          - subjective style
+          - issues that are merely theoretical
+
+          Only report actionable findings.
+
+          For every finding provide:
+          1. Severity: CRITICAL, HIGH, MEDIUM or LOW
+          2. File / relevant code
+          3. Explanation
+          4. Suggested fix
+
+          If you find no significant issue, say so clearly.
+
+          PR DIFF:
+          """ + diff
+
+          url = (
+              "https://generativelanguage.googleapis.com/v1beta/"
+              "models/gemini-3.7-flash:generateContent"
+              "?key=" + os.environ["GEMINI_API_KEY"]
+          )
+
+          payload = {
+              "contents": [
+                  {
+                      "parts": [
+                          {
+                              "text": prompt
+                          }
+                      ]
+                  }
+              ]
+          }
+
+          request = urllib.request.Request(
+              url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Content-Type": "application/json"
+              },
+              method="POST"
+          )
+
+          with urllib.request.urlopen(request) as response:
+              result = json.load(response)
+
+          review = (
+              result["candidates"][0]
+              ["content"]["parts"][0]["text"]
+          )
+
+          with open("review.md", "w", encoding="utf-8") as f:
+              f.write(review)
+
+          PY
+
+      - name: Comment review on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment \
+            ${{ github.event.pull_request.number }} \
+            --body-file review.md
