@@ -73,6 +73,10 @@ jobs:
 
           PR DIFF:
           """ + diff
+          import time
+          import urllib.error
+
+          MAX_RETRIES = 5
 
           url = (
               "https://generativelanguage.googleapis.com/v1beta/"
@@ -101,8 +105,29 @@ jobs:
               method="POST"
           )
 
-          with urllib.request.urlopen(request) as response:
-              result = json.load(response)
+          for attempt in range(MAX_RETRIES):
+              try:
+                  with urllib.request.urlopen(request, timeout=120) as response:
+                      result = json.load(response)
+                  break
+
+              except urllib.error.HTTPError as e:
+                  if e.code in (429, 500, 502, 503, 504):
+                      if attempt == MAX_RETRIES - 1:
+                          print(f"Gemini failed after {MAX_RETRIES} attempts: HTTP {e.code}")
+                          print(e.read().decode("utf-8", errors="replace"))
+                          raise
+
+                      wait = 2 ** attempt
+                      print(
+                          f"Gemini returned HTTP {e.code}. "
+                          f"Retrying in {wait}s..."
+                      )
+                      time.sleep(wait)
+                  else:
+                      print(f"Gemini API error: HTTP {e.code}")
+                      print(e.read().decode("utf-8", errors="replace"))
+                      raise
 
           review = (
               result["candidates"][0]
