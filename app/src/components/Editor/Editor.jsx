@@ -260,9 +260,7 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
       {isDraggingGlobal && (
         <div className="absolute inset-0 z-[100] p-8 pointer-events-none animate-in fade-in duration-200">
           <div className="w-full h-full border-4 border-dashed border-blue-500/50 rounded-[2rem] bg-blue-50/80 backdrop-blur-[2px] flex flex-col items-center justify-center">
-            <h2 className="text-3xl font-bold text-blue-700 tracking-tight">
-              Drop to upload
-            </h2>
+            <h2 className="text-3xl font-bold text-blue-700 tracking-tight">Drop to upload</h2>
 
             <p className="text-blue-600/70 font-medium mt-2">
               Your files will be added to the project root
@@ -330,39 +328,37 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
         onClose={() => setIsModalOpen(false)}
       />
 
-        {isConfirmModalOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="w-full max-w-md mx-4 rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-              <div className="px-6 py-5">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  {confirmModalConfig.title}
-                </h2>
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md mx-4 rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-5">
+              <h2 className="text-lg font-semibold text-slate-900">{confirmModalConfig.title}</h2>
 
-                <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">
-                  {confirmModalConfig.message}
-                </p>
-              </div>
+              <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">
+                {confirmModalConfig.message}
+              </p>
+            </div>
 
-              <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={handleCancelConfirm}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
+            <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={handleCancelConfirm}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
 
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Confirm
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Confirm
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 }

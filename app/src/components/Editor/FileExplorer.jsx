@@ -117,7 +117,7 @@ export function FileExplorer({ canEdit = true }) {
         <div className="mx-3 mt-3 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-100 flex items-center gap-1.5">
           <Lock size={12} className="text-amber-500 shrink-0" />
           <span className="text-[11px] font-medium text-amber-700">
-            Read-only — you don't have edit access
+            Read-only — you don&apos;t have edit access
           </span>
         </div>
       )}

@@ -854,7 +854,8 @@ function renderTreeRecursive(folder, container, path, depth) {
       } else {
         const nameSpan = document.createElement('span');
         nameSpan.className =
-          'text-[13px] truncate ' + (item.isMain ? 'font-semibold text-slate-800' : 'text-slate-600');
+          'text-[13px] truncate ' +
+          (item.isMain ? 'font-semibold text-slate-800' : 'text-slate-600');
         nameSpan.textContent = item.name;
         nameSpan.title = fullPath;
         itemRow.appendChild(nameSpan);
