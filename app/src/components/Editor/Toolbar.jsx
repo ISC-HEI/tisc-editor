@@ -1,6 +1,5 @@
 import {
   ArrowDownToLine,
-  FolderOpen,
   Bold,
   Italic,
   Underline,
@@ -21,12 +20,10 @@ export function Toolbar({
   canEdit = true,
 }) {
   const btnSaveRef = useRef(null);
-  const btnOpenRef = useRef(null);
   const btnBRef = useRef(null);
   const btnIRef = useRef(null);
   const btnURef = useRef(null);
   const btnLangRef = useRef(null);
-  const fileInputOpenRef = useRef(null);
   const btnShowImagesRef = useRef(null);
   const btnSettingsRef = useRef(null);
 
@@ -87,12 +84,10 @@ export function Toolbar({
   useEffect(() => {
     initPreviewRefs({
       btnSave: btnSaveRef.current,
-      btnOpen: btnOpenRef.current,
       btnBold: btnBRef.current,
       btnItalic: btnIRef.current,
       btnUnderline: btnURef.current,
       btnLang: btnLangRef.current,
-      fileInputOpen: fileInputOpenRef.current,
       btnShowImages: btnShowImagesRef.current,
     });
 
@@ -129,19 +124,6 @@ export function Toolbar({
           >
             <ArrowDownToLine size={20} />
           </button>
-
-          <button
-            ref={btnOpenRef}
-            disabled={!canEdit}
-            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm hover:text-blue-600 transition-all text-slate-500 ${
-              !canEdit ? disabledClass : ''
-            }`}
-            title={canEdit ? 'Open' : 'Readonly mode'}
-          >
-            <FolderOpen size={20} />
-          </button>
-
-          <input ref={fileInputOpenRef} type="file" className="hidden" disabled={!canEdit} />
         </div>
 
         <div className="w-8 h-[1px] bg-slate-200" />

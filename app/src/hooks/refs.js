@@ -13,7 +13,6 @@ export let refs = {
   zoomLevelDisplay: null,
 
   btnSave: null,
-  btnOpen: null,
   btnBold: null,
   btnItalic: null,
   btnUnderline: null,
@@ -22,8 +21,6 @@ export let refs = {
   btnExportSvg: null,
   btnCreateFile: null,
   btnLang: null,
-
-  fileInputOpen: null,
 
   imageList: null,
   imageExplorer: null,
@@ -59,6 +56,7 @@ export let infos = {
  */
 export let functions = {
   openCustomPrompt: null,
+  openCustomConfirm: null,
   syncCollaboration: null,
 };
 

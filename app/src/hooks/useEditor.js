@@ -60,8 +60,6 @@ function initEditor() {
     !refs.btnUnderline ||
     !refs.page ||
     !refs.btnSave ||
-    !refs.btnOpen ||
-    !refs.fileInputOpen ||
     !refs.btnExportPdf ||
     !refs.btnExportSvg ||
     !refs.separator
@@ -87,15 +85,6 @@ function initEditor() {
   });
 
   refs.btnSave.addEventListener('click', downloadDocument);
-
-  refs.btnOpen.addEventListener('click', () => {
-    if (!canEdit) return;
-    refs.fileInputOpen.click();
-  });
-  refs.fileInputOpen.addEventListener('change', (e) => {
-    if (!canEdit) return;
-    openAndShowFile(e);
-  });
 
   if (!handleExportPdf) {
     handleExportPdf = () => {
@@ -427,19 +416,6 @@ export function downloadDocument() {
   URL.revokeObjectURL(link.href);
 }
 
-async function openAndShowFile() {
-  const file = refs.fileInputOpen.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    refs.editor.setValue(e.target.result);
-    fetchCompile();
-  };
-  reader.readAsText(file);
-  await autoSave();
-}
-
 async function autoSave() {
   if (!currentProjectId) return;
   syncFileTreeWithEditor();
@@ -478,7 +454,7 @@ function setupResizable() {
   });
 }
 
-export function openFile(path) {
+export async function openFile(path) {
   if (!path || !refs.editor) return;
 
   const parts = path.replace('root/', '').split('/');
@@ -497,9 +473,11 @@ export function openFile(path) {
   }
 
   if (!ALWAYS_ALLOWED.includes(ext)) {
-    const confirmForce = window.confirm(
+    const confirmForce = await functions.openCustomConfirm(
+      'Unknown file type',
       `Unknown extension .${ext}. \n\nOpening this as text might corrupt the file if it's not a plain text format. Do you want to proceed?`,
     );
+
     if (!confirmForce) return;
   }
 
