@@ -60,8 +60,6 @@ function initEditor() {
     !refs.btnUnderline ||
     !refs.page ||
     !refs.btnSave ||
-    !refs.btnOpen ||
-    !refs.fileInputOpen ||
     !refs.btnExportPdf ||
     !refs.btnExportSvg ||
     !refs.separator
@@ -87,15 +85,6 @@ function initEditor() {
   });
 
   refs.btnSave.addEventListener('click', downloadDocument);
-
-  refs.btnOpen.addEventListener('click', () => {
-    if (!canEdit) return;
-    refs.fileInputOpen.click();
-  });
-  refs.fileInputOpen.addEventListener('change', (e) => {
-    if (!canEdit) return;
-    openAndShowFile(e);
-  });
 
   if (!handleExportPdf) {
     handleExportPdf = () => {
@@ -425,19 +414,6 @@ export function downloadDocument() {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(link.href);
-}
-
-async function openAndShowFile() {
-  const file = refs.fileInputOpen.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    refs.editor.setValue(e.target.result);
-    fetchCompile();
-  };
-  reader.readAsText(file);
-  await autoSave();
 }
 
 async function autoSave() {
