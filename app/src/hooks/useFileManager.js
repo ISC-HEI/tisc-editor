@@ -7,8 +7,10 @@ import {
   Image,
   FileQuestion,
   Folder,
+  FolderOpen,
   Terminal,
   Notebook,
+  ChevronRight,
 } from 'lucide';
 import { refs, functions, infos } from '@/hooks/refs';
 import {
@@ -26,8 +28,21 @@ import { canEdit } from './useEditor';
 /** @type {string} Path of the folder currently selected for operations like file creation or upload. */
 let selectedFolderPath = 'root';
 
-/** @type {string|null} Stores the path of the last item clicked or right-clicked for context actions (rename, delete). */
+/**
+ * @type {string|null} Path of the item that is both the keyboard-navigation cursor and the
+ * context-menu/rename target ("selection", in the VS Code sense). Distinct from the file
+ * currently open in the editor — see `activeFilePath`.
+ */
 let lastClickedPath = null;
+
+/** @type {string|null} Path of the file currently open in the editor, used for the "active" row highlight. */
+let activeFilePath = null;
+
+/** @type {Set<string>} Folder paths that are currently expanded in the tree. */
+let expandedPaths = new Set();
+
+/** @type {boolean} Guards the one-time auto-expansion towards the main file on first load. */
+let initialExpansionDone = false;
 
 /**
  * Adds a new node (file or folder) to the local file tree structure.
@@ -108,6 +123,248 @@ export const renameNodeInLocalTree = (root, oldPath, newPath) => {
   }
 };
 
+// ----------------------------------------------------
+// Selection / active-file / expansion state helpers
+// ----------------------------------------------------
+
+/**
+ * Selects a tree row (keyboard cursor + context-menu/rename target) and syncs the
+ * corresponding classes/aria/tabIndex directly on the live DOM, without a full re-render.
+ * Passing `null` clears the selection (used when clicking the root drop zone).
+ * @param {string|null} path
+ */
+function applySelection(path) {
+  lastClickedPath = path;
+  const items = Array.from(refs.imageList?.querySelectorAll('[role="treeitem"]') ?? []);
+
+  items.forEach((el) => {
+    const match = el.dataset.path === path;
+    el.classList.toggle('selected-item', match);
+    el.setAttribute('aria-selected', String(match));
+    el.tabIndex = match ? 0 : -1;
+  });
+
+  // A roving-tabindex tree always needs exactly one focusable item.
+  if (items.length > 0 && !items.some((el) => el.tabIndex === 0)) {
+    items[0].tabIndex = 0;
+  }
+}
+
+/**
+ * Marks a file as the one currently open in the editor and updates the "active" highlight
+ * directly on the live DOM (cheap — doesn't require rebuilding the tree).
+ * @param {string} path
+ */
+function applyActiveFile(path) {
+  activeFilePath = path;
+  const items = refs.imageList?.querySelectorAll('[role="treeitem"][data-type="file"]') ?? [];
+
+  items.forEach((el) => {
+    const match = el.dataset.path === path;
+    el.classList.toggle('active-item', match);
+    el.querySelector('.tree-item-row')?.classList.toggle('bg-indigo-50', match);
+  });
+}
+
+/**
+ * Opens a file and keeps the "active file" highlight in sync, without a full tree re-render.
+ * @param {string} path
+ */
+function openFileAndTrack(path) {
+  applyActiveFile(path);
+  openFile(path);
+}
+
+/**
+ * Expands every ancestor folder of a given path, so the item becomes visible in the tree.
+ * @param {string} itemPath - Path of the file or folder to reveal.
+ */
+function expandAncestors(itemPath) {
+  const parts = itemPath.split('/').filter(Boolean);
+  parts.pop();
+  let acc = '';
+  for (const part of parts) {
+    acc = acc ? `${acc}/${part}` : part;
+    expandedPaths.add(acc);
+  }
+}
+
+/**
+ * Toggles a folder's expanded state and re-renders the tree.
+ * @param {string} path
+ * @param {boolean} expand
+ */
+function toggleExpand(path, expand) {
+  if (expand) expandedPaths.add(path);
+  else expandedPaths.delete(path);
+  lastClickedPath = path;
+  renderFileExplorer(fileTree);
+}
+
+/**
+ * Walks the tree once to find the main file and expands its ancestor folders,
+ * so the entry point is visible the first time the explorer is opened.
+ * @param {Object} folder
+ * @param {string} [path='']
+ * @returns {boolean} Whether the main file was found (stops the search once true).
+ */
+function computeInitialExpansion(folder, path = '') {
+  for (const item of Object.values(folder.children)) {
+    const fullPath = path ? `${path}/${item.name}` : item.name;
+    if (item.type === 'file' && item.isMain) {
+      expandAncestors(fullPath);
+      return true;
+    }
+    if (item.type === 'folder' && computeInitialExpansion(item, fullPath)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Rewrites any tracked path (selection, active file, expanded folders) that pointed at
+ * `oldPath` or one of its descendants, so state stays valid after a rename or move.
+ * @param {string} oldPath
+ * @param {string} newPath
+ */
+function migratePathState(oldPath, newPath) {
+  const rewrite = (p) => {
+    if (!p) return p;
+    if (p === oldPath) return newPath;
+    if (p.startsWith(`${oldPath}/`)) return newPath + p.slice(oldPath.length);
+    return p;
+  };
+
+  const kept = new Set();
+  expandedPaths.forEach((p) => kept.add(rewrite(p)));
+  expandedPaths = kept;
+
+  lastClickedPath = rewrite(lastClickedPath);
+  activeFilePath = rewrite(activeFilePath);
+  if (selectedFolderPath !== 'root') selectedFolderPath = rewrite(selectedFolderPath);
+}
+
+/**
+ * Clears any tracked path (selection, active file, expanded folders) that pointed at
+ * `deletedPath` or one of its descendants, so state doesn't reference a node that no longer exists.
+ * @param {string} deletedPath
+ */
+function clearPathState(deletedPath) {
+  if (lastClickedPath === deletedPath || lastClickedPath?.startsWith(`${deletedPath}/`)) {
+    lastClickedPath = null;
+  }
+  if (activeFilePath === deletedPath || activeFilePath?.startsWith(`${deletedPath}/`)) {
+    activeFilePath = null;
+  }
+  if (selectedFolderPath === deletedPath || selectedFolderPath?.startsWith(`${deletedPath}/`)) {
+    selectedFolderPath = 'root';
+  }
+
+  const kept = new Set();
+  expandedPaths.forEach((p) => {
+    if (p !== deletedPath && !p.startsWith(`${deletedPath}/`)) kept.add(p);
+  });
+  expandedPaths = kept;
+}
+
+/**
+ * Returns the ancestor treeitem `<li>` of a given row, if any.
+ * @param {HTMLElement} el
+ */
+function getParentTreeitem(el) {
+  return el.parentElement?.closest('[role="treeitem"]') ?? null;
+}
+
+// ----------------------------------------------------
+// Keyboard navigation (ARIA treeview pattern)
+// ----------------------------------------------------
+
+/**
+ * Delegated keydown handler for the tree, implementing the standard ARIA treeview
+ * keyboard interactions: arrow keys to navigate, Enter/Space to open or toggle,
+ * Delete/Backspace to remove (with confirmation), Home/End to jump to the ends.
+ * @param {KeyboardEvent} e
+ */
+function handleTreeKeyDown(e) {
+  const items = Array.from(refs.imageList?.querySelectorAll('[role="treeitem"]') ?? []);
+  if (items.length === 0) return;
+
+  const currentEl = e.target.closest?.('[role="treeitem"]');
+  const currentIndex = currentEl ? items.indexOf(currentEl) : -1;
+
+  switch (e.key) {
+    case 'ArrowDown': {
+      e.preventDefault();
+      (items[currentIndex + 1] || items[items.length - 1] || items[0])?.focus();
+      break;
+    }
+    case 'ArrowUp': {
+      e.preventDefault();
+      (items[currentIndex - 1] || items[0])?.focus();
+      break;
+    }
+    case 'Home': {
+      e.preventDefault();
+      items[0]?.focus();
+      break;
+    }
+    case 'End': {
+      e.preventDefault();
+      items[items.length - 1]?.focus();
+      break;
+    }
+    case 'ArrowRight': {
+      if (!currentEl) break;
+      e.preventDefault();
+      const path = currentEl.dataset.path;
+      if (currentEl.dataset.type === 'folder') {
+        if (!expandedPaths.has(path)) {
+          toggleExpand(path, true);
+        } else {
+          const group = currentEl.querySelector(':scope > [role="group"]');
+          group?.querySelector(':scope > [role="treeitem"]')?.focus();
+        }
+      }
+      break;
+    }
+    case 'ArrowLeft': {
+      if (!currentEl) break;
+      e.preventDefault();
+      const path = currentEl.dataset.path;
+      if (currentEl.dataset.type === 'folder' && expandedPaths.has(path)) {
+        toggleExpand(path, false);
+      } else {
+        getParentTreeitem(currentEl)?.focus();
+      }
+      break;
+    }
+    case 'Enter':
+    case ' ': {
+      if (!currentEl) break;
+      e.preventDefault();
+      const path = currentEl.dataset.path;
+      if (currentEl.dataset.type === 'folder') {
+        selectedFolderPath = path;
+        toggleExpand(path, !expandedPaths.has(path));
+      } else {
+        applySelection(path);
+        openFileAndTrack(path);
+      }
+      break;
+    }
+    case 'Delete':
+    case 'Backspace': {
+      if (!currentEl || !canEdit) break;
+      e.preventDefault();
+      deleteItem(currentEl.dataset.path, fileTree);
+      break;
+    }
+    default:
+      break;
+  }
+}
+
 /**
  * Initializes listeners for file management UI components (Upload, Create, Drag & Drop).
  * Checks if all required DOM references are available before binding events.
@@ -128,6 +385,12 @@ function initFileManager() {
   ) {
     return false;
   }
+
+  // Accessibility: turn the list into a proper ARIA treeview and wire up keyboard navigation once.
+  refs.imageList.setAttribute('role', 'tree');
+  refs.imageList.setAttribute('aria-label', 'Project files');
+  refs.imageList.addEventListener('keydown', handleTreeKeyDown);
+
   refs.btnShowImages.addEventListener('click', () => {
     refs.imageExplorer.style.display = 'block';
   });
@@ -153,6 +416,11 @@ function initFileManager() {
             name: folderName,
             children: {},
           };
+
+          const newFolderPath =
+            selectedFolderPath === 'root' ? folderName : `${selectedFolderPath}/${folderName}`;
+          lastClickedPath = newFolderPath;
+
           renderFileExplorer(fileTree);
           await saveFileTree();
 
@@ -221,26 +489,26 @@ function initFileManager() {
   });
 
   refs.rootDropZone.addEventListener('click', () => {
-    document.querySelectorAll('.folder-item').forEach((el) => el.classList.remove('selected-item'));
+    applySelection(null);
     selectedFolderPath = 'root';
   });
 
   refs.rootDropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    refs.rootDropZone.style.background = '#eef';
+    refs.rootDropZone.classList.add('bg-indigo-50', 'border-indigo-300');
   });
 
   refs.rootDropZone.addEventListener('dragleave', () => {
-    refs.rootDropZone.style.background = 'transparent';
+    refs.rootDropZone.classList.remove('bg-indigo-50', 'border-indigo-300');
   });
 
   refs.rootDropZone.addEventListener('drop', (e) => {
     if (!canEdit) return;
     e.preventDefault();
-    refs.rootDropZone.style.background = 'transparent';
+    refs.rootDropZone.classList.remove('bg-indigo-50', 'border-indigo-300');
 
     const sourcePath = e.dataTransfer.getData('path');
-    moveItem(sourcePath, 'root', fileTree);
+    if (sourcePath) moveItem(sourcePath, 'root', fileTree);
   });
 
   refs.btnCreateFile.addEventListener('click', () => {
@@ -251,6 +519,11 @@ function initFileManager() {
   refs.btnExportZip.addEventListener('click', () => {
     exportZip(fileTree, infos.title || 'unknow_project');
   });
+
+  if (!initialExpansionDone) {
+    computeInitialExpansion(fileTree);
+    initialExpansionDone = true;
+  }
 
   renderFileExplorer(fileTree);
 
@@ -323,107 +596,206 @@ export function getFolder(fileTree, path) {
 
 /**
  * Clears and re-renders the file explorer UI based on the current file tree state.
+ * Preserves keyboard focus across re-renders when the tree already had it (important
+ * for remote/collaborative updates, which must NOT steal focus from elsewhere in the app).
  * @param {Object} folder - The folder node to render.
  * @param {HTMLElement} container - The DOM element to inject the list into.
  * @param {string} [path=""] - Current recursion path for nested items.
  */
 export function renderFileExplorer(folder, container = refs.imageList, path = '') {
   if (!container) return;
+
+  const isRootCall = container === refs.imageList;
+  const hadFocus = isRootCall && refs.imageList.contains(document.activeElement);
+
   container.innerHTML = '';
-  renderTreeRecursive(folder, container, path);
+  renderTreeRecursive(folder, container, path, 0);
+
+  if (isRootCall) {
+    const items = Array.from(refs.imageList.querySelectorAll('[role="treeitem"]'));
+
+    // A roving-tabindex tree always needs exactly one focusable item, even if the
+    // previously selected path no longer exists in the freshly rendered tree.
+    if (items.length > 0 && !items.some((el) => el.tabIndex === 0)) {
+      items[0].tabIndex = 0;
+    }
+
+    if (hadFocus) {
+      const match = items.find((el) => el.dataset.path === lastClickedPath);
+      (match || items[0])?.focus();
+    }
+  }
 }
 
 /**
  * Core recursive engine that builds the DOM elements for the file tree.
- * Handles drag events, click listeners, and image hover previews.
+ * Handles ARIA treeitem semantics, sorting, collapsible folders, drag events,
+ * click listeners, and image hover previews.
  * @param {Object} folder - Current folder node being rendered.
  * @param {HTMLElement} container - The UL/DIV where items are appended.
  * @param {string} path - The accumulated path string for recursion.
+ * @param {number} depth - Nesting depth, used for `aria-level`.
  */
-function renderTreeRecursive(folder, container, path) {
-  Object.values(folder.children).forEach((item) => {
-    const li = document.createElement('li');
-    li.style.listStyle = 'none';
+function renderTreeRecursive(folder, container, path, depth) {
+  const entries = Object.values(folder.children).sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+  });
 
+  if (depth > 0 && entries.length === 0) {
+    const emptyLi = document.createElement('li');
+    emptyLi.setAttribute('role', 'none');
+    emptyLi.className = 'pl-7 py-1 text-[11px] text-slate-400 italic select-none';
+    emptyLi.textContent = 'Empty folder';
+    container.appendChild(emptyLi);
+    return;
+  }
+
+  entries.forEach((item) => {
+    const fullPath = path ? `${path}/${item.name}` : item.name;
+    const isSelected = fullPath === lastClickedPath;
+
+    const li = document.createElement('li');
+    li.setAttribute('role', 'treeitem');
+    li.setAttribute('aria-level', String(depth + 1));
+    li.setAttribute('aria-selected', String(isSelected));
+    li.dataset.path = fullPath;
+    li.dataset.type = item.type;
+    li.style.listStyle = 'none';
+    li.tabIndex = isSelected ? 0 : -1;
     li.draggable = canEdit;
+    li.className =
+      'rounded-md transition-colors duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400' +
+      (isSelected ? ' selected-item' : '');
 
     const itemRow = document.createElement('div');
-    itemRow.style.display = 'flex';
-    itemRow.style.alignItems = 'center';
-    itemRow.style.gap = '8px';
-    itemRow.style.cursor = 'grab';
-    itemRow.classList.add('tree-item-row');
+    itemRow.classList.add(
+      'tree-item-row',
+      'flex',
+      'items-center',
+      'gap-1.5',
+      'px-1.5',
+      'py-1',
+      'rounded-md',
+      'cursor-grab',
+      'select-none',
+      'hover:bg-slate-100',
+    );
 
-    const fullPath = path ? `${path}/${item.name}` : item.name;
-
-    itemRow.addEventListener('contextmenu', (e) => {
+    li.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       if (!canEdit) return;
-
-      document
-        .querySelectorAll('.tree-item-row')
-        .forEach((el) => el.classList.remove('selected-item'));
-      itemRow.classList.add('selected-item');
-      lastClickedPath = fullPath;
-
+      applySelection(fullPath);
       showContextMenu(e, fullPath, item.type);
     });
 
     li.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('path', fullPath);
       e.stopPropagation();
-      li.style.opacity = '0.5';
+      li.classList.add('opacity-50');
     });
 
     li.addEventListener('dragend', () => {
-      li.style.opacity = '1';
+      li.classList.remove('opacity-50');
     });
 
     if (item.type === 'folder') {
-      const folderIcon = createElement(Folder);
-      folderIcon.setAttribute('width', '18');
-      folderIcon.setAttribute('height', '18');
+      const isExpanded = expandedPaths.has(fullPath);
+      li.setAttribute('aria-expanded', String(isExpanded));
 
-      itemRow.innerHTML = `${folderIcon.outerHTML} <strong>${item.name}</strong>`;
+      const chevronWrap = document.createElement('span');
+      chevronWrap.className =
+        'flex items-center justify-center w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-150' +
+        (isExpanded ? ' rotate-90' : '');
+      const chevron = createElement(ChevronRight);
+      chevron.setAttribute('width', '12');
+      chevron.setAttribute('height', '12');
+      chevronWrap.appendChild(chevron);
+
+      const folderIcon = createElement(isExpanded ? FolderOpen : Folder);
+      folderIcon.setAttribute('width', '16');
+      folderIcon.setAttribute('height', '16');
+      folderIcon.classList.add('shrink-0', 'text-slate-500');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'text-[13px] font-medium text-slate-700 truncate';
+      nameSpan.textContent = item.name;
+      nameSpan.title = fullPath;
+
+      itemRow.append(chevronWrap, folderIcon, nameSpan);
 
       li.addEventListener('dragover', (e) => {
         e.preventDefault();
-        itemRow.style.background = '#eef';
+        if (!canEdit) return;
+        itemRow.classList.add('bg-indigo-50', 'ring-1', 'ring-indigo-200');
       });
-      li.addEventListener('dragleave', () => (itemRow.style.background = 'transparent'));
+      li.addEventListener('dragleave', () => {
+        itemRow.classList.remove('bg-indigo-50', 'ring-1', 'ring-indigo-200');
+      });
       li.addEventListener('drop', (e) => {
         e.preventDefault();
-        itemRow.style.background = 'transparent';
+        itemRow.classList.remove('bg-indigo-50', 'ring-1', 'ring-indigo-200');
         if (!canEdit) return;
         const sourcePath = e.dataTransfer.getData('path');
-        moveItem(sourcePath, fullPath, fileTree);
+        if (sourcePath) moveItem(sourcePath, fullPath, fileTree);
       });
 
       itemRow.addEventListener('click', (e) => {
         e.stopPropagation();
-        lastClickedPath = fullPath;
-        document
-          .querySelectorAll('.tree-item-row')
-          .forEach((el) => el.classList.remove('selected-item'));
-        itemRow.classList.add('selected-item');
         selectedFolderPath = fullPath;
+        toggleExpand(fullPath, !isExpanded);
       });
 
       li.appendChild(itemRow);
 
-      const ul = document.createElement('ul');
-      ul.style.marginLeft = '20px';
-      li.appendChild(ul);
-      renderTreeRecursive(item, ul, fullPath);
+      const group = document.createElement('ul');
+      group.setAttribute('role', 'group');
+      group.style.marginLeft = '18px';
+      li.appendChild(group);
+
+      if (isExpanded) {
+        renderTreeRecursive(item, group, fullPath, depth + 1);
+      }
     } else {
-      const iconHTML = getIcon(item.name, item.isMain);
-      itemRow.innerHTML = `${iconHTML} <span>${item.name}</span>`;
+      // Fixed-width spacer so file names align with folder names (which have a chevron before them).
+      const spacer = document.createElement('span');
+      spacer.className = 'w-3.5 h-3.5 shrink-0';
+      itemRow.appendChild(spacer);
+
+      const iconWrap = document.createElement('span');
+      iconWrap.className = 'shrink-0 flex items-center';
+      iconWrap.innerHTML = getIcon(item.name, item.isMain);
+      itemRow.appendChild(iconWrap);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className =
+        'text-[13px] truncate ' + (item.isMain ? 'font-semibold text-slate-800' : 'text-slate-600');
+      nameSpan.textContent = item.name;
+      nameSpan.title = fullPath;
+      itemRow.appendChild(nameSpan);
+
+      if (item.isMain) {
+        const badge = document.createElement('span');
+        badge.className =
+          'ml-auto shrink-0 text-[9px] font-semibold uppercase tracking-wide text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded';
+        badge.textContent = 'Main';
+        itemRow.appendChild(badge);
+      }
+
+      if (fullPath === activeFilePath) {
+        li.classList.add('active-item');
+        itemRow.classList.add('bg-indigo-50');
+      }
 
       const ext = item.name.split('.').pop().toLowerCase();
       const isStandardImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
 
       if (isStandardImage && item.data) {
         itemRow.addEventListener('mouseenter', (e) => {
+          // Defensive: a re-render while hovering (e.g. a remote change) could otherwise
+          // leave an orphaned preview behind, since its mouseleave would never fire.
+          document.getElementById('image-hover-preview')?.remove();
+
           const preview = document.createElement('div');
           preview.id = 'image-hover-preview';
 
@@ -456,19 +828,14 @@ function renderTreeRecursive(folder, container, path) {
         });
 
         itemRow.addEventListener('mouseleave', () => {
-          const preview = document.getElementById('image-hover-preview');
-          if (preview) preview.remove();
+          document.getElementById('image-hover-preview')?.remove();
         });
       }
 
       itemRow.addEventListener('click', (e) => {
         e.stopPropagation();
-        lastClickedPath = fullPath;
-        document
-          .querySelectorAll('.tree-item-row')
-          .forEach((el) => el.classList.remove('selected-item'));
-        itemRow.classList.add('selected-item');
-        openFile(fullPath);
+        applySelection(fullPath);
+        openFileAndTrack(fullPath);
       });
       li.appendChild(itemRow);
     }
@@ -481,14 +848,25 @@ function renderTreeRecursive(folder, container, path) {
 
 /**
  * Logic for moving an item between folders. Updates internal paths,
- * triggers a re-render, saves to DB, and broadcasts via Socket.IO.
+ * migrates tracked UI state (selection/active file/expansion), triggers a
+ * re-render, saves to DB, and broadcasts via Socket.IO.
  */
 async function moveItem(sourcePath, destFolderPath, fileTree) {
-  if (destFolderPath.startsWith(sourcePath)) return;
-
   const srcParts = sourcePath.split('/').filter((x) => x);
   const name = srcParts[srcParts.length - 1];
   const sourceParentPath = srcParts.slice(0, -1).join('/') || 'root';
+
+  // Dropped back onto its current parent: no-op (also avoids a false "already exists" toast,
+  // since the item would still be found in its own future destination at this point).
+  if (destFolderPath === sourceParentPath) return;
+
+  // Proper segment-boundary check: a plain `startsWith` would also (wrongly) block moving
+  // "foo" into "foobar", since the string "foobar" starts with "foo".
+  if (destFolderPath === sourcePath || destFolderPath.startsWith(`${sourcePath}/`)) {
+    makeToast("Can't move a folder into itself", 'error');
+    return;
+  }
+
   const sourceParent = getFolder(fileTree, sourceParentPath);
   const destFolder = getFolder(fileTree, destFolderPath);
 
@@ -505,6 +883,10 @@ async function moveItem(sourcePath, destFolderPath, fileTree) {
   delete sourceParent.children[name];
   updatePaths(item, destFolderPath);
   destFolder.children[name] = item;
+
+  const newPath = destFolderPath === 'root' ? name : `${destFolderPath}/${name}`;
+  migratePathState(sourcePath, newPath);
+  if (destFolderPath !== 'root') expandedPaths.add(destFolderPath);
 
   await saveFileTree();
   renderFileExplorer(fileTree);
@@ -538,13 +920,14 @@ function updatePaths(item, newFolderPath) {
 }
 
 /**
- * Permanently deletes an item, updates the UI, and notifies collaborative peers.
+ * Permanently deletes an item (after user confirmation), updates the UI,
+ * clears any stale tracked UI state, and notifies collaborative peers.
  * @param {string} path - Path of the item to delete.
  * @param {Object} fileTree - Reference to the global file tree.
  */
 export async function deleteItem(path, fileTree) {
   if (!canEdit) return;
-  document.querySelectorAll('.folder-item').forEach((el) => el.classList.remove('selected-item'));
+
   const parts = path.split('/').filter((x) => x);
   const name = parts[parts.length - 1];
   const parentPath = parts.slice(0, -1).join('/') || 'root';
@@ -557,11 +940,20 @@ export async function deleteItem(path, fileTree) {
     return;
   }
 
+  const itemType = parent.children[name].type;
+  const confirmed = window.confirm(
+    itemType === 'folder'
+      ? `Delete folder "${name}" and everything inside it? This can't be undone.`
+      : `Delete "${name}"? This can't be undone.`,
+  );
+  if (!confirmed) return;
+
   delete parent.children[name];
+  clearPathState(path);
+
   await saveFileTree();
   renderFileExplorer(fileTree);
   fetchCompile();
-  selectedFolderPath = 'root';
 
   if (refs.socket?.connected) {
     refs.socket.emit('delete-node', { docId: currentProjectId, path: `root/${path}` });
@@ -644,11 +1036,12 @@ async function createFile() {
       data: '',
     };
 
+    lastClickedPath = newFilePath;
     renderFileExplorer(fileTree);
 
     await saveFileTree();
 
-    openFile(newFilePath);
+    openFileAndTrack(newFilePath);
 
     if (refs.socket?.connected) {
       const socketPath =
@@ -674,7 +1067,7 @@ function showContextMenu(e, path, type) {
 
 /**
  * Opens a prompt to rename an existing file or folder.
- * Updates the tree, saves the state, and notifies other users via Socket.IO.
+ * Updates the tree, migrates tracked UI state, saves, and notifies other users via Socket.IO.
  * @param {string} oldPath - The current path of the item to be renamed.
  */
 export async function renameItem(oldPath) {
@@ -700,6 +1093,9 @@ export async function renameItem(oldPath) {
     item.name = newName;
     updatePaths(item, parentPath);
     parent.children[newName] = item;
+
+    const newPath = parentPath === 'root' ? newName : `${parentPath}/${newName}`;
+    migratePathState(oldPath, newPath);
 
     await saveFileTree();
     renderFileExplorer(fileTree);
@@ -758,7 +1154,8 @@ function zipContent(zip, folder) {
 }
 
 /**
- * Set a file as the main entry point for compilation and export
+ * Set a file as the main entry point for compilation and export.
+ * Also reveals it in the tree by expanding its ancestor folders.
  * @param {string} path The path of the new entry point
  * @param {*} root The file tree
  */
@@ -795,6 +1192,10 @@ export async function setMainFile(path, root) {
       path: path,
     });
   }
+
+  expandAncestors(path);
+  lastClickedPath = path;
+  activeFilePath = path;
 
   await saveFileTree();
   openFile(path);
