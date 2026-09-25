@@ -1,6 +1,5 @@
 import {
   ArrowDownToLine,
-  FolderOpen,
   Bold,
   Italic,
   Underline,
