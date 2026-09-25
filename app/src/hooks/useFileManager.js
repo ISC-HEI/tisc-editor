@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   createElement,
-  FileJson,
-  Book,
-  FileCode,
-  Image,
-  FileQuestion,
   Folder,
   FolderOpen,
-  Terminal,
-  Notebook,
   ChevronRight,
 } from 'lucide';
 import { refs, functions, infos } from '@/hooks/refs';
@@ -1093,8 +1086,7 @@ export function getIcon(filename, isMain) {
 
   const chip = document.createElement('span');
 
-  chip.className =
-    'inline-flex items-center justify-center rounded-md mr-2 shrink-0';
+  chip.className = 'inline-flex items-center justify-center rounded-md mr-2 shrink-0';
 
   Object.assign(chip.style, {
     width: '22px',

@@ -1,11 +1,4 @@
-import {
-  FileCode,
-  FileJson,
-  Image,
-  Book,
-  Notebook,
-  Terminal,
-} from 'lucide';
+import { FileCode, FileJson, Image, Book, Notebook, Terminal } from 'lucide';
 
 export const FILE_EXTENSIONS = {
   // Documents

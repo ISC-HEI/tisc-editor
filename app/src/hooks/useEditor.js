@@ -464,9 +464,10 @@ export async function openFile(path) {
   if (!node || node.type === 'folder') return;
 
   const ext = node.name.split('.').pop().toLowerCase();
-  const config = getExtensionConfig(ext)
+  const config = getExtensionConfig(ext);
 
-  if (config.allowed == false){ // We use == false, because it can be null
+  if (config.allowed == false) {
+    // We use == false, because it can be null
     makeToast(`Interrupted: .${ext} is a binary file.`, 'error');
     return;
   }
