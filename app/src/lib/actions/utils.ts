@@ -35,7 +35,11 @@ export async function getAssignment(userId: string, projectId: string) {
  * Returns the user's assignment on a project, or throws if they have no access.
  * Pass a custom message to match a caller's original error wording.
  */
-export async function requireAssignment(userId: string, projectId: string, message = 'Access denied') {
+export async function requireAssignment(
+  userId: string,
+  projectId: string,
+  message = 'Access denied',
+) {
   const assignment = await getAssignment(userId, projectId);
 
   if (!assignment) {
