@@ -26,6 +26,7 @@ This section is dedicated to the **technical part**: everything you need to know
 **[Server Actions](./core-systems/server-actions)** — Understand the Server Actions powering the dashboard.  
 **[Real-time Collaboration](./core-systems/collaboration)** — Learn how the WebSocket integration works.  
 **[Role & Permissions](./core-systems/role-permissions)** — Understand the differents roles and permissions.
+**[spellcheck](./core-systems/spellcheck)** — Understand how the spellcheck work.
 
 ## DevOps
 
