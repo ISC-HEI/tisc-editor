@@ -11,7 +11,7 @@ import {
   getUsersEmailFromId,
   transferProjectOwnership,
 } from '@/lib/actions/sharing';
-import { getProjectAssignmentRole, leaveProject } from '@/lib/actions/projects';
+import { deleteProject, getProjectAssignmentRole, leaveProject } from '@/lib/actions/projects';
 
 function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
   const [selected, setSelected] = useState(null);
