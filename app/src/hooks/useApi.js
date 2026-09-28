@@ -1,3 +1,4 @@
+import { getExtensionConfig } from '@/config/fileExtensions';
 import { downloadBlob, formatDateNow } from './useUtils';
 
 /**
@@ -35,7 +36,7 @@ export async function fetchSvg(fileTree, { sync = false, projectId } = {}) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fileTree: fileTree,
+        fileTree: toCompileTree(fileTree),
         mainFile: mainPath,
         format: 'svg',
         sync,
@@ -85,7 +86,7 @@ export async function exportPdf(fileTree) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        fileTree: fileTree,
+        fileTree: toCompileTree(fileTree),
         mainFile: mainPath,
         format: 'pdf',
       }),
@@ -151,3 +152,36 @@ export const findFirstFile = (node) => {
 
   return null;
 };
+
+function decodeDataUrl(str) {
+  if (typeof str !== 'string' || !str.startsWith('data:')) return str;
+  try {
+    const binary = atob(str.split(',')[1]);
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return str;
+  }
+}
+
+export function toCompileTree(node) {
+  if (!node) return node;
+
+  if (node.type === 'file') {
+    const isPlainTextFile = node.name.endsWith('.typ') || node.name.endsWith('.txt');
+    if (!isPlainTextFile) return node;
+
+    const text = node.content ?? decodeDataUrl(node.data) ?? '';
+    return { ...node, data: text };
+  }
+
+  if (node.children) {
+    return {
+      ...node,
+      children: Object.fromEntries(
+        Object.entries(node.children).map(([k, child]) => [k, toCompileTree(child)]),
+      ),
+    };
+  }
+  return node;
+}
