@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { refs } from './refs';
 
 /** @type {number} The current scale factor (1 = 100%). */
@@ -6,57 +6,70 @@ export let zoom = 1;
 
 /** @constant {number} The amount to increase or decrease the zoom per click. */
 const zoomStep = 0.1;
+const ZOOM_STEP = 0.1;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 3;
 
 /**
- * Binds click events to zoom-in and zoom-out buttons.
- * Sets up the initial visual state of the preview page.
- * @returns {boolean} True if all necessary DOM elements were found and initialized.
+ * Clamps and applies a new zoom value.
+ * @param {number} value
  */
-function initZoom() {
-  if (!refs.btnZoomIn || !refs.btnZoomOut || !refs.page || !refs.zoomLevelDisplay) {
-    return false;
-  }
-
+function setZoom(value) {
+  zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value * 100) / 100));
   updateZoom(refs.page, refs.zoomLevelDisplay);
-
-  refs.btnZoomIn.onclick = () => {
-    zoom += zoomStep;
-    updateZoom(refs.page, refs.zoomLevelDisplay);
-  };
-
-  refs.btnZoomOut.onclick = () => {
-    zoom = Math.max(0.1, zoom - zoomStep);
-    updateZoom(refs.page, refs.zoomLevelDisplay);
-  };
-
-  return true;
 }
 
 /**
- * React hook that monitors the availability of zoom control references.
- * Retries initialization if elements are not yet present in the DOM.
+ * Binds the zoom buttons and Ctrl/Cmd + wheel to the preview.
+ * @returns {(() => void) | null} A cleanup function, or null if the DOM elements aren't ready yet.
+ */
+function initZoom() {
+  const { btnZoomIn, btnZoomOut, page, zoomLevelDisplay, previewContainer } = refs;
+  if (!btnZoomIn || !btnZoomOut || !page || !zoomLevelDisplay || !previewContainer) {
+    return null;
+  }
+
+  updateZoom(page, zoomLevelDisplay);
+
+  btnZoomIn.onclick = () => setZoom(zoom + ZOOM_STEP);
+  btnZoomOut.onclick = () => setZoom(zoom - ZOOM_STEP);
+
+  const handleWheel = (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setZoom(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+  };
+
+  previewContainer.addEventListener('wheel', handleWheel, { passive: false });
+
+  return () => {
+    btnZoomIn.onclick = null;
+    btnZoomOut.onclick = null;
+    previewContainer.removeEventListener('wheel', handleWheel);
+  };
+}
+
+/**
+ * React hook that waits for the zoom control references, then binds them.
+ * Retries every 100ms until the elements are present in the DOM.
  */
 export function useZoomWatcher() {
-  const [initialized, setInitialized] = useState(false);
-
   useEffect(() => {
-    const success = initZoom();
+    let cleanup = initZoom();
+    let interval;
 
-    if (!success && !initialized) {
-      const interval = setInterval(() => {
-        if (initZoom()) {
-          setInitialized(true);
-          clearInterval(interval);
-        }
+    if (!cleanup) {
+      interval = setInterval(() => {
+        cleanup = initZoom();
+        if (cleanup) clearInterval(interval);
       }, 100);
-      return () => clearInterval(interval);
     }
 
     return () => {
-      if (refs.btnZoomIn) refs.btnZoomIn.onclick = null;
-      if (refs.btnZoomOut) refs.btnZoomOut.onclick = null;
+      clearInterval(interval);
+      cleanup?.();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 }
 
 // ----------------------------------------
