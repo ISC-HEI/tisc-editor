@@ -1,4 +1,3 @@
-import { getExtensionConfig } from '@/config/fileExtensions';
 import { downloadBlob, formatDateNow } from './useUtils';
 
 /**

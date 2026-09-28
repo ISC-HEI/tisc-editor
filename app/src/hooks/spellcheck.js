@@ -6,14 +6,33 @@ const SUPPORTED = new Set(['fr', 'en', 'de']);
 
 // Named arguments in Typst code whose string value is real prose
 const TEXT_KEYS = new Set([
-  'title', 'subtitle', 'caption', 'body', 'description', 'alt',
-  'supplement', 'semester', 'course-name', 'cover-image-caption',
+  'title',
+  'subtitle',
+  'caption',
+  'body',
+  'description',
+  'alt',
+  'supplement',
+  'semester',
+  'course-name',
+  'cover-image-caption',
 ]);
 
 // Typst keywords whose expression runs until the end of the line
 const LINE_KW = new Set([
-  'let', 'set', 'show', 'import', 'include', 'if', 'else', 'for',
-  'while', 'context', 'return', 'break', 'continue',
+  'let',
+  'set',
+  'show',
+  'import',
+  'include',
+  'if',
+  'else',
+  'for',
+  'while',
+  'context',
+  'return',
+  'break',
+  'continue',
 ]);
 
 // Sticky regexes (/y): they only match at `lastIndex`
@@ -38,10 +57,7 @@ async function fetchText(url) {
 function loadDict(lang) {
   if (!dictCache[lang]) {
     const base = `/dictionaries/${lang}/index`;
-    dictCache[lang] = Promise.all([
-      fetchText(`${base}.aff`),
-      fetchText(`${base}.dic`),
-    ])
+    dictCache[lang] = Promise.all([fetchText(`${base}.aff`), fetchText(`${base}.dic`)])
       .then(([aff, dic]) => new Typo(lang, aff, dic))
       .catch((err) => {
         delete dictCache[lang]; // don't cache a failure
@@ -82,9 +98,14 @@ function findProse(src) {
   const skipBlockComment = (i) => {
     let depth = 0;
     while (i < n) {
-      if (src.startsWith('/*', i)) { depth++; i += 2; }
-      else if (src.startsWith('*/', i)) { depth--; i += 2; if (!depth) return i; }
-      else i++;
+      if (src.startsWith('/*', i)) {
+        depth++;
+        i += 2;
+      } else if (src.startsWith('*/', i)) {
+        depth--;
+        i += 2;
+        if (!depth) return i;
+      } else i++;
     }
     return n;
   };
@@ -136,7 +157,8 @@ function findProse(src) {
       else if (c === '/' && src[i + 1] === '*') i = skipBlockComment(i);
       else if (c === '`') i = skipRaw(i);
       else if (c === '$') i = skipMath(i);
-      else if (c === '[') i = markup(i + 1, true); // content block -> back to prose
+      else if (c === '[')
+        i = markup(i + 1, true); // content block -> back to prose
       else if (c === '(') i = code(i + 1, ')');
       else if (c === '{') i = code(i + 1, '}');
       else i++;
@@ -174,38 +196,82 @@ function findProse(src) {
   function markup(i, inBlock) {
     let depth = 0; // nested [ ] inside the block
     let runStart = i;
-    const flush = (end) => { if (end > runStart) ranges.push([runStart, end]); };
+    const flush = (end) => {
+      if (end > runStart) ranges.push([runStart, end]);
+    };
     // Close the current run at `from` and restart after the skipped part at `to`
-    const jump = (from, to) => { flush(from); runStart = to; return to; };
+    const jump = (from, to) => {
+      flush(from);
+      runStart = to;
+      return to;
+    };
 
     while (i < n) {
       const c = src[i];
 
-      if (c === '\\') { i = jump(i, i + 2); continue; } // escape sequence
+      if (c === '\\') {
+        i = jump(i, i + 2);
+        continue;
+      } // escape sequence
 
       if (inBlock && c === ']') {
-        if (depth === 0) { flush(i); return i + 1; }
-        depth--; i++; continue;
+        if (depth === 0) {
+          flush(i);
+          return i + 1;
+        }
+        depth--;
+        i++;
+        continue;
       }
-      if (inBlock && c === '[') { depth++; i++; continue; }
+      if (inBlock && c === '[') {
+        depth++;
+        i++;
+        continue;
+      }
 
       // URLs must be tested before '//' so they aren't read as comments
       if (c === 'h') {
         const u = at(URL_RE, i);
-        if (u) { i = jump(i, i + u.length); continue; }
+        if (u) {
+          i = jump(i, i + u.length);
+          continue;
+        }
       }
-      if (c === '/' && src[i + 1] === '/') { i = jump(i, skipLineComment(i)); continue; }
-      if (c === '/' && src[i + 1] === '*') { i = jump(i, skipBlockComment(i)); continue; }
-      if (c === '`') { i = jump(i, skipRaw(i)); continue; }
-      if (c === '$') { i = jump(i, skipMath(i)); continue; }
-      if (c === '#') { flush(i); i = codeExpr(i + 1); runStart = i; continue; }
+      if (c === '/' && src[i + 1] === '/') {
+        i = jump(i, skipLineComment(i));
+        continue;
+      }
+      if (c === '/' && src[i + 1] === '*') {
+        i = jump(i, skipBlockComment(i));
+        continue;
+      }
+      if (c === '`') {
+        i = jump(i, skipRaw(i));
+        continue;
+      }
+      if (c === '$') {
+        i = jump(i, skipMath(i));
+        continue;
+      }
+      if (c === '#') {
+        flush(i);
+        i = codeExpr(i + 1);
+        runStart = i;
+        continue;
+      }
       if (c === '@') {
         const r = at(REF_RE, i);
-        if (r) { i = jump(i, i + r.length); continue; }
+        if (r) {
+          i = jump(i, i + r.length);
+          continue;
+        }
       }
       if (c === '<') {
         const l = at(LABEL_RE, i);
-        if (l) { i = jump(i, i + l.length); continue; }
+        if (l) {
+          i = jump(i, i + l.length);
+          continue;
+        }
       }
       i++;
     }
@@ -293,8 +359,10 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
       // Only handle our own markers
       for (const marker of context.markers.filter((m) => m.source === OWNER)) {
         const range = new monaco.Range(
-          marker.startLineNumber, marker.startColumn,
-          marker.endLineNumber, marker.endColumn
+          marker.startLineNumber,
+          marker.startColumn,
+          marker.endLineNumber,
+          marker.endColumn,
         );
         const word = model.getValueInRange(range);
 
@@ -305,11 +373,13 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
             diagnostics: [marker],
             isPreferred: i === 0,
             edit: {
-              edits: [{
-                resource: model.uri,
-                versionId: model.getVersionId(),
-                textEdit: { range, text: sugg },
-              }],
+              edits: [
+                {
+                  resource: model.uri,
+                  versionId: model.getVersionId(),
+                  textEdit: { range, text: sugg },
+                },
+              ],
             },
           });
         });

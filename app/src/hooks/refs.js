@@ -97,9 +97,7 @@ export const applyLanguageToTypst = (langCode) => {
     ? content.replace(langRegex, newRule)
     : newRule + content;
 
-  editor.executeEdits('set-language', [
-    { range: model.getFullModelRange(), text: newContent },
-  ]);
+  editor.executeEdits('set-language', [{ range: model.getFullModelRange(), text: newContent }]);
 
   refs.spellcheck?.setLanguage(langCode);
 };

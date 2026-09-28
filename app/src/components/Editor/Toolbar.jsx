@@ -116,8 +116,7 @@ export function Toolbar({
       setActiveLang(code);
       try {
         localStorage.setItem(LANG_STORAGE_KEY, code);
-      } catch {
-      }
+      } catch {}
       setIsLangOpen(false);
     } catch (err) {
       console.error('Impossible de changer la langue :', err);
@@ -265,9 +264,7 @@ export function Toolbar({
               ? 'bg-blue-50 text-blue-600 shadow-inner'
               : 'hover:bg-white hover:shadow-sm text-slate-500'
           } ${!canEdit ? disabledClass : ''}`}
-          title={
-            canEdit ? `Language : ${currentLang.label}` : 'Readonly mode'
-          }
+          title={canEdit ? `Language : ${currentLang.label}` : 'Readonly mode'}
         >
           <Languages size={18} />
 
