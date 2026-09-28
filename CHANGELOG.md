@@ -6,6 +6,7 @@ All notable changes to this project, organized by day.
 - Removed `Leave` option if only owner in project.
 - Added confirmation before deleting a project.
 - Added `CTRL + scroll` shortcut for zooming.
+- Added responsive in editor (preview not editing)
 
 ## 2026-09-25
 - Moved preview images on the top of the `README`.

@@ -35,6 +35,19 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
   const [wordWrap, setWordWrap] = useState(false);
   const separatorRef = useRef(null);
 
+  const layoutRef = useRef(null);
+  const [codeHeight, setCodeHeight] = useState(50);
+
+  const handleMobileResizeStart = (e) => e.currentTarget.setPointerCapture(e.pointerId);
+
+  const handleMobileResizeMove = (e) => {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    const rect = layoutRef.current.getBoundingClientRect();
+    const pct = ((e.clientY - rect.top) / rect.height) * 100;
+    setCodeHeight(Math.min(85, Math.max(15, pct)));
+    refs.editor?.layout();
+  };
+
   useEffect(() => {
     setCanEdit(canEdit);
   }, [canEdit]);
@@ -278,8 +291,12 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden relative">
-        <div className="flex flex-1 min-w-0 bg-white">
+      <div
+        ref={layoutRef}
+        style={{ '--code-h': `${codeHeight}%` }}
+        className="flex flex-col md:flex-row flex-1 overflow-hidden relative"
+      >
+        <div className="flex flex-none h-[var(--code-h)] md:h-auto md:flex-1 min-w-0 min-h-0 bg-white">
           <Toolbar
             fontSize={editorFontSize}
             onFontSizeChange={handleFontSizeChange}
@@ -311,8 +328,16 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
 
         <div
           ref={separatorRef}
-          className="w-1.5 bg-slate-100 hover:bg-blue-200 cursor-col-resize shrink-0 border-x border-slate-200"
+          className="hidden md:block w-1.5 bg-slate-100 hover:bg-blue-200 cursor-col-resize shrink-0 border-x border-slate-200"
         />
+
+        <div
+          onPointerDown={handleMobileResizeStart}
+          onPointerMove={handleMobileResizeMove}
+          className="md:hidden h-3 shrink-0 bg-slate-100 border-y border-slate-200 cursor-row-resize touch-none flex items-center justify-center"
+        >
+          <div className="w-10 h-1 rounded-full bg-slate-300" />
+        </div>
 
         <PreviewPane />
       </div>
