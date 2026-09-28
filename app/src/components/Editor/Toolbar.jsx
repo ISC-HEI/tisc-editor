@@ -7,10 +7,29 @@ import {
   Languages,
   Settings2,
   Lock,
+  Check,
 } from 'lucide-react';
 import { useEditorWatcher } from '@/hooks/useEditor';
 import { useEffect, useRef, useState } from 'react';
 import { functions, refs, initPreviewRefs, applyLanguageToTypst } from '@/hooks/refs';
+
+const LANGUAGES = [
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+];
+
+const DEFAULT_LANG = 'en';
+const LANG_STORAGE_KEY = 'typst-language';
+
+function loadInitialLang() {
+  try {
+    const saved = localStorage.getItem(LANG_STORAGE_KEY);
+    return LANGUAGES.some((l) => l.code === saved) ? saved : DEFAULT_LANG;
+  } catch {
+    return DEFAULT_LANG;
+  }
+}
 
 export function Toolbar({
   fontSize,
@@ -30,8 +49,12 @@ export function Toolbar({
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFileExplorerOpen, setIsFileExplorerOpen] = useState(false);
+  const [activeLang, setActiveLang] = useState(loadInitialLang);
+  const [isApplyingLang, setIsApplyingLang] = useState(false);
 
   useEditorWatcher();
+
+  const currentLang = LANGUAGES.find((l) => l.code === activeLang) ?? LANGUAGES[0];
 
   const closeFileExplorer = () => {
     setIsFileExplorerOpen(false);
@@ -78,6 +101,28 @@ export function Toolbar({
 
     if (refs.imageExplorer) {
       refs.imageExplorer.style.display = 'none';
+    }
+  };
+
+  const handleSelectLanguage = (code) => {
+    if (code === activeLang) {
+      setIsLangOpen(false);
+      return;
+    }
+
+    setIsApplyingLang(true);
+    try {
+      applyLanguageToTypst(code);
+      setActiveLang(code);
+      try {
+        localStorage.setItem(LANG_STORAGE_KEY, code);
+      } catch {
+      }
+      setIsLangOpen(false);
+    } catch (err) {
+      console.error('Impossible de changer la langue :', err);
+    } finally {
+      setIsApplyingLang(false);
     }
   };
 
@@ -215,21 +260,27 @@ export function Toolbar({
               openLanguage();
             }
           }}
-          className={`p-2.5 rounded-xl transition-all ${
+          className={`relative p-2.5 rounded-xl transition-all ${
             isLangOpen
               ? 'bg-blue-50 text-blue-600 shadow-inner'
               : 'hover:bg-white hover:shadow-sm text-slate-500'
           } ${!canEdit ? disabledClass : ''}`}
-          title={canEdit ? 'Language' : 'Readonly mode'}
+          title={
+            canEdit ? `Language : ${currentLang.label}` : 'Readonly mode'
+          }
         >
           <Languages size={18} />
+
+          <span className="absolute -bottom-1 -right-1 min-w-[18px] px-1 h-4 flex items-center justify-center rounded-full bg-blue-600 text-white text-[9px] font-bold uppercase leading-none shadow-sm">
+            {currentLang.code}
+          </span>
         </button>
       </nav>
 
       {isLangOpen && canEdit && (
         <div className="fixed left-14 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-xl z-50 p-4 animate-in slide-in-from-left duration-200">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-700">Traduire le document</h3>
+            <h3 className="font-bold text-slate-700">Language</h3>
 
             <button
               onClick={() => setIsLangOpen(false)}
@@ -239,50 +290,37 @@ export function Toolbar({
             </button>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <button
-              className="flex justify-between items-center text-left p-3 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-colors group"
-              onClick={() => {
-                applyLanguageToTypst('fr');
-                setIsLangOpen(false);
-              }}
-            >
-              <span className="font-medium">French</span>
-              <span>🇫🇷</span>
-            </button>
+          <div className="flex flex-col gap-2" role="listbox" aria-label="Langue du document">
+            {LANGUAGES.map(({ code, label, flag }) => {
+              const isActive = code === activeLang;
 
-            <button
-              className="flex justify-between items-center text-left p-3 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-colors group"
-              onClick={() => {
-                applyLanguageToTypst('en');
-                setIsLangOpen(false);
-              }}
-            >
-              <span className="font-medium">English</span>
-              <span>🇬🇧</span>
-            </button>
+              return (
+                <button
+                  key={code}
+                  role="option"
+                  aria-selected={isActive}
+                  disabled={isApplyingLang}
+                  onClick={() => handleSelectLanguage(code)}
+                  className={`flex justify-between items-center text-left p-3 rounded-xl transition-colors border ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-inner'
+                      : 'border-transparent hover:bg-blue-50 hover:text-blue-600'
+                  } ${isApplyingLang ? 'opacity-60 cursor-wait' : ''}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-lg leading-none">{flag}</span>
+                    <span className={isActive ? 'font-semibold' : 'font-medium'}>{label}</span>
+                  </span>
 
-            <button
-              className="flex justify-between items-center text-left p-3 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-colors group"
-              onClick={() => {
-                applyLanguageToTypst('de');
-                setIsLangOpen(false);
-              }}
-            >
-              <span className="font-medium">Deutsch</span>
-              <span>🇩🇪</span>
-            </button>
-          </div>
-
-          <div className="mt-8 p-3 bg-slate-50 rounded-lg border border-slate-100">
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
-              Info
-            </p>
-
-            <p className="text-xs text-slate-500 leading-relaxed">
-              This option changes the structural language (headings, dates, bibliography) of your
-              Typst document.
-            </p>
+                  {isActive && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                      <Check size={14} />
+                      Active
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
