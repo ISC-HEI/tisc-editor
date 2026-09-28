@@ -8,6 +8,7 @@ All notable changes to this project, organized by day.
 - Added `CTRL + scroll` shortcut for zooming.
 - Added responsive in editor (preview not editing)
 - Fixed NoneType error (missing XXXX method) in template.
+- Fixed font installation in dev environment.
 
 ## 2026-09-25
 - Moved preview images on the top of the `README`.
