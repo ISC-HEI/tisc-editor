@@ -4,9 +4,10 @@ RUN apk add --no-cache wget bash tar ca-certificates fontconfig
 
 COPY app/fonts/install_fonts.sh /tmp/install_fonts.sh
 
-RUN mkdir -p /tmp/.local/share/fonts && \
-    chmod +x /tmp/install_fonts.sh && \
-    HOME=/tmp bash /tmp/install_fonts.sh
+RUN chmod +x /tmp/install_fonts.sh && \
+    bash /tmp/install_fonts.sh && \
+    ls -la /usr/local/share/fonts && \
+    test -n "$(ls -A /usr/local/share/fonts)"
 
 FROM node:20-alpine
 
@@ -23,7 +24,7 @@ RUN bun install
 COPY app/ .
 COPY .git ./.git
 
-COPY --from=fonts-builder /tmp/.local/share/fonts /usr/local/share/fonts
+COPY --from=fonts-builder /usr/local/share/fonts /usr/local/share/fonts
 RUN fc-cache -f
 
 EXPOSE 3000

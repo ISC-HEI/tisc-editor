@@ -7,6 +7,7 @@ All notable changes to this project, organized by day.
 - Added confirmation before deleting a project.
 - Added `CTRL + scroll` shortcut for zooming.
 - Added responsive in editor (preview not editing)
+- Fixed NoneType error (missing XXXX method) in template.
 
 ## 2026-09-25
 - Moved preview images on the top of the `README`.
