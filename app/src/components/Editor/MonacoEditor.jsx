@@ -4,6 +4,7 @@ import * as monaco from 'monaco-editor';
 import { typstSyntax, typstConfig } from '../../assets/typst-definition';
 import { refs } from '@/hooks/refs';
 import { currentFilePath } from '@/hooks/useEditor';
+import { initSpellcheck } from '@/hooks/spellcheck';
 
 export const MonacoEditor = ({
   content,
@@ -50,6 +51,7 @@ export const MonacoEditor = ({
     monacoInstance.current = editor;
     refs.monaco = monaco;
     refs.editor = editor;
+    refs.spellcheck = initSpellcheck(monaco, editor, 'en');
 
     // Gestion des changements de contenu
     editor.onDidChangeModelContent((event) => {
