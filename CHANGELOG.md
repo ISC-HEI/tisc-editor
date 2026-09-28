@@ -2,6 +2,10 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-09-28
+- Removed `Leave` option if only owner in project.
+- Added confirmation before deleting a project.
+
 ## 2026-09-25
 - Moved preview images on the top of the `README`.
 - Refactored server actions (`dashboard/actions.ts`) in multiple files (`lib/actions/*`)

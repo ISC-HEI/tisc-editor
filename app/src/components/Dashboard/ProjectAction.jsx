@@ -11,7 +11,64 @@ import {
   getUsersEmailFromId,
   transferProjectOwnership,
 } from '@/lib/actions/sharing';
-import { deleteProject, getProjectAssignmentRole, leaveProject } from '@/lib/actions/projects';
+import {
+  deleteProject,
+  getProjectAssignmentRole,
+  leaveProject,
+  setProjectActiveStatus,
+} from '@/lib/actions/projects';
+
+const projectFormData = (projectId) => {
+  const formData = new FormData();
+  formData.append('id', projectId);
+  return formData;
+};
+
+function ConfirmModal({
+  title,
+  message,
+  confirmLabel = 'Confirm',
+  isPending = false,
+  onConfirm,
+  onCancel,
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[400] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={isPending ? undefined : onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-5">
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">{message}</p>
+        </div>
+
+        <div className="flex justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPending}
+            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            {isPending && <Loader2 size={14} className="animate-spin" />}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
   const [selected, setSelected] = useState(null);
@@ -24,9 +81,7 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
     setError('');
     try {
       await transferProjectOwnership(projectId, selected);
-      const formData = new FormData();
-      formData.append('id', projectId);
-      await leaveProject(formData);
+      await leaveProject(projectFormData(projectId));
       onSuccess();
     } catch (err) {
       setError(err.message);
@@ -126,16 +181,22 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
 
 export function ProjectActions({ projectId, title, usersSharing, isAuthor, isActive = true }) {
   const router = useRouter();
+  const menuRef = useRef(null);
+
   const [isOpen, setIsOpen] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [isEditingTags, setIsEditingTags] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [emails, setEmails] = useState([]);
   const [members, setMembers] = useState([]);
   const [currentRole, setCurrentRole] = useState(isAuthor ? 'owner' : 'editor');
-  const isOwner = currentRole === 'owner';
-  const menuRef = useRef(null);
   const [prevIsAuthor, setPrevIsAuthor] = useState(isAuthor);
+
+  const isOwner = currentRole === 'owner';
+  const hasOtherMembers = (usersSharing?.length ?? 0) > 1;
 
   if (isAuthor !== prevIsAuthor) {
     setPrevIsAuthor(isAuthor);
@@ -158,8 +219,7 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
     if (!usersSharing || usersSharing.length === 0) return;
     const fetchEmails = async () => {
       try {
-        const data = await getUsersEmailFromId(usersSharing);
-        setEmails(data);
+        setEmails(await getUsersEmailFromId(usersSharing));
       } catch (err) {
         console.error('Erreur emails:', err);
       }
@@ -175,39 +235,24 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleShare = (e) => {
-    e.preventDefault();
-    setIsSharing(true);
-    setIsOpen(false);
-  };
-
   const handleRemoveUserSuccess = (emailToRemove) => {
     setEmails((prev) => prev.filter((u) => u.email !== emailToRemove));
+    router.refresh();
   };
 
-  const handleLeaveClick = async (e) => {
-    e.preventDefault();
+  const handleLeaveClick = async () => {
     setIsOpen(false);
-
-    if (!isOwner) {
-      const formData = new FormData();
-      formData.append('id', projectId);
-      await leaveProject(formData);
-      router.refresh();
-      return;
-    }
-
     try {
-      const otherMembers = await getProjectMembers(projectId);
-      if (otherMembers.length === 0) {
-        const formData = new FormData();
-        formData.append('id', projectId);
-        await leaveProject(formData);
+      if (!isOwner) {
+        await leaveProject(projectFormData(projectId));
         router.refresh();
-      } else {
-        setMembers(otherMembers);
-        setIsTransferring(true);
+        return;
       }
+
+      const otherMembers = await getProjectMembers(projectId);
+      if (otherMembers.length === 0) return; // jamais de projet sans owner
+      setMembers(otherMembers);
+      setIsTransferring(true);
     } catch (err) {
       console.error('Erreur leave:', err);
     }
@@ -218,27 +263,35 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
     router.refresh();
   };
 
-  const handleArchiveClick = async (e) => {
-    e.preventDefault();
+  const handleArchiveClick = async () => {
     setIsOpen(false);
-
-    if (!isOwner) {
-      alert('Only the owner can archive the project.');
-      return;
+    try {
+      await setProjectActiveStatus(projectId, !isActive);
+      router.refresh();
+    } catch (err) {
+      console.error('Archiving Error:', err);
     }
-
-    setProjectActiveStatus(projectId, !isActive)
-      .then(() => {
-        router.refresh();
-      })
-      .catch((err) => {
-        console.error('Archiving Error:', err);
-      });
   };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteProject(projectFormData(projectId));
+      setIsConfirmingDelete(false);
+      router.refresh();
+    } catch (err) {
+      console.error('Delete Error:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const menuItem =
+    'w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2';
 
   return (
     <>
-      {isOwner && isSharing && (
+      {isSharing && (
         <SharedUserWindows
           projectId={projectId}
           title={title}
@@ -261,14 +314,22 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
         <EditProjectTagsModal projectId={projectId} onClose={() => setIsEditingTags(false)} />
       )}
 
+      {isConfirmingDelete && (
+        <ConfirmModal
+          title="Delete project"
+          message="Are you sure you want to delete this project? This action cannot be undone."
+          confirmLabel="Delete"
+          isPending={isDeleting}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setIsConfirmingDelete(false)}
+        />
+      )}
+
       {isOwner ? (
         <div className="relative" ref={menuRef}>
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              setIsOpen(!isOpen);
-            }}
+            onClick={() => setIsOpen((prev) => !prev)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors font-bold text-gray-500"
           >
             <Ellipsis />
@@ -278,8 +339,11 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
             <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-xl z-50 py-1 border-gray-100">
               <button
                 type="button"
-                onClick={handleShare}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                onClick={() => {
+                  setIsSharing(true);
+                  setIsOpen(false);
+                }}
+                className={menuItem}
               >
                 <Share2 size={16} /> Share
               </button>
@@ -290,36 +354,31 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
                   setIsEditingTags(true);
                   setIsOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                className={menuItem}
               >
                 <Tag size={16} /> Edit Tags
               </button>
 
-              <button
-                type="button"
-                onClick={handleArchiveClick}
-                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2"
-              >
+              <button type="button" onClick={handleArchiveClick} className={menuItem}>
                 <Archive size={16} /> {isActive ? 'Archive' : 'Unarchive'}
               </button>
 
+              {hasOtherMembers && (
+                <button type="button" onClick={handleLeaveClick} className={menuItem}>
+                  <LogOut size={16} /> Leave
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={handleLeaveClick}
-                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                onClick={() => {
+                  setIsConfirmingDelete(true);
+                  setIsOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
               >
-                <LogOut size={16} /> Leave
+                <Trash size={16} /> Delete
               </button>
-
-              <form action={deleteProject}>
-                <input type="hidden" name="id" value={projectId} />
-                <button
-                  type="submit"
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
-                >
-                  <Trash size={16} /> Delete
-                </button>
-              </form>
             </div>
           )}
         </div>
