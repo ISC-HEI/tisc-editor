@@ -9,6 +9,7 @@ All notable changes to this project, organized by day.
 - Added responsive in editor (preview not editing)
 - Fixed NoneType error (missing XXXX method) in template.
 - Fixed font installation in dev environment.
+- Updated spellcheck with `typo-js`
 
 ## 2026-09-25
 - Moved preview images on the top of the `README`.
