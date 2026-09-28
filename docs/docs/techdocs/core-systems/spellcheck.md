@@ -162,7 +162,7 @@ public/dictionaries/
 - **No grammar checking.** Only individual words are verified.
 - **Proper names and technical terms** that are not in the dictionary (`Keycloak`, `Typst`, names of authors) are flagged. Use *Ignore* to add them.
 - **Full re-scan on each check.** The whole document is analyzed after every pause in typing. This is fast for typical reports, but very large files may show a small delay.
-- **Read-only users see the markers too.** The spellchecker does not depend on the [user's role](./roles-permissions), it only underlines. Quick fixes can be applied only if the editor is writable.
+- **Read-only users see the markers too.** The spellchecker does not depend on the [user's role](./role-permissions), it only underlines. Quick fixes can be applied only if the editor is writable.
 
 ## Troubleshooting
 
