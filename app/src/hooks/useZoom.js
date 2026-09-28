@@ -5,7 +5,6 @@ import { refs } from './refs';
 export let zoom = 1;
 
 /** @constant {number} The amount to increase or decrease the zoom per click. */
-const zoomStep = 0.1;
 const ZOOM_STEP = 0.1;
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 3;

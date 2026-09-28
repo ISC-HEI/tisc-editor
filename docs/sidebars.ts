@@ -46,6 +46,7 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'techdocs/core-systems/collaboration', label: 'Real-time Collaboration' },
       { type: 'doc', id: 'techdocs/core-systems/templates', label: 'Template Management' },
       { type: 'doc', id: 'techdocs/core-systems/role-permissions', label: 'Role & Permissions' },
+      { type: 'doc', id: 'techdocs/core-systems/spellcheck', label: 'Spellcheck' },
     ]},
     { type: 'doc', id: 'techdocs/devops/ci', label: 'Continuous Integration' },
     { type: 'doc', id: 'techdocs/deployment', label: 'Deployment' },
