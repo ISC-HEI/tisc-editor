@@ -17,8 +17,8 @@ export function ProjectCard({ project }) {
             project.hasThumbnail
               ? 'border-slate-200 bg-white shadow-sm'
               : isSharedWithMe
-              ? 'border-emerald-100 bg-emerald-50'
-              : 'border-slate-200 bg-slate-50 group-hover:border-blue-200 group-hover:bg-blue-50'
+                ? 'border-emerald-100 bg-emerald-50'
+                : 'border-slate-200 bg-slate-50 group-hover:border-blue-200 group-hover:bg-blue-50'
           }`}
         >
           {project.hasThumbnail ? (
