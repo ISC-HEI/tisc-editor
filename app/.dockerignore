@@ -1,0 +1,27 @@
+# Dépendances et builds (recréés dans l'image)
+node_modules
+.next
+out
+build
+dist
+coverage
+
+# Logs et fichiers temporaires
+*.log
+npm-debug.log*
+.DS_Store
+tmp
+.cache
+
+# Éditeur et outils
+.vscode
+.idea
+*.swp
+
+# Docker lui-même
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Docs et tests (inutiles dans l'image)
+README.md
