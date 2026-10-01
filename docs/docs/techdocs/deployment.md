@@ -10,7 +10,7 @@ A `.env` file must exist at the project root, containing at least:
 AUTH_SECRET=
 GITHUB_TOKEN=ghp_
 
-AUTH_URL=http://tisc.isc-vs.ch
+AUTH_URL=https://tisc.isc-vs.ch
 AUTH_KEYCLOAK_ID=your_app_id
 AUTH_KEYCLOAK_SECRET=your_app_secret
 AUTH_KEYCLOAK_ISSUER=https://sso.isc-vs.ch/realms/isc
