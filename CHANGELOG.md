@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-01
+- Fixed dictionnaries loading in prod & nginx scheme for docs
+
 ## 2026-09-28
 - Removed `Leave` option if only owner in project.
 - Added confirmation before deleting a project.
