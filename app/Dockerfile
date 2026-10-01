@@ -34,9 +34,8 @@ RUN chmod +x /tmp/install_fonts.sh && bash /tmp/install_fonts.sh && rm -f /tmp/i
 
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/static ./.next/static
-
-RUN mkdir -p ./public
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
