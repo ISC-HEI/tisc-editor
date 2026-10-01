@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { refs } from './refs';
 
 /** @type {number} The current scale factor (1 = 100%). */
-export let zoom = 1;
+let zoom = 1;
 
 /** @constant {number} The amount to increase or decrease the zoom per click. */
 const ZOOM_STEP = 0.1;

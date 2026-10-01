@@ -92,14 +92,6 @@ Loads a single project (with its tags) for the caller, used when opening a proje
 
 **Returns** the `Project` record with `tags` resolved to `Tag[]`, or `null` if the caller has no `ProjectAssignment` for it (i.e. no access, rather than a thrown error).
 
-### `saveProjectData(projectId, content, fileTree)`
-
-Persists a project's file tree from the dashboard/editor context (distinct from [`POST /api/projects/save`](./api-endpoints#post-apiprojectssave), which is the route used by the editor's autosave and does enforce the quota check on every call).
-
-**Auth:** required. The caller must have a `ProjectAssignment` on the project, otherwise `Access denied`.
-
-**Note:** the `content` parameter is currently unused by the underlying `prisma.project.update` call, which only persists `fileTree`.
-
 ### `setProjectActiveStatus(projectId, isActive)`
 
 Sets `Project.isActive`, the mechanism behind [archiving / unarchiving](../../tutorial/projects/archive) a project.
@@ -204,15 +196,9 @@ Grants another user access to a project by creating a `ProjectAssignment` for th
 
 The new assignment's role is `editor` if `canEdit` is `true`, otherwise `viewer`.
 
-### `getProjectUsers(projectId)`
-
-Returns every member of a project (including the caller), with their `id`, `email` and `role`. Used to render the full member list in the sharing modal.
-
-**Auth:** required (any authenticated user — this action does not check that the caller belongs to the project).
-
 ### `getProjectMembers(projectId)`
 
-Same as `getProjectUsers`, but **excludes the caller** from the result. Used to populate pickers such as the "transfer ownership to…" selector.
+Returns every member of a project, but **excludes the caller** from the result. Used to populate pickers such as the "transfer ownership to…" selector.
 
 **Auth:** required.
 
