@@ -55,7 +55,11 @@ export async function POST(req: Request) {
 
     if (!result.allowed) {
       return new NextResponse(
-        `Quota exceeded (${(result.usage! / 1024 / 1024).toFixed(2)}MB / ${(result.limit! / 1024 / 1024).toFixed(2)}MB)`,
+        `Quota exceeded (${(result.usage! / 1024 / 1024).toFixed(2)}MB / ${(
+          result.limit! /
+          1024 /
+          1024
+        ).toFixed(2)}MB)`,
         { status: 403 },
       );
     }
