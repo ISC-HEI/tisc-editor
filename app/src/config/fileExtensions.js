@@ -1,6 +1,6 @@
 import { FileCode, FileJson, Image, Book, Notebook, Terminal } from 'lucide';
 
-export const FILE_EXTENSIONS = {
+const FILE_EXTENSIONS = {
   // Documents
   typ: {
     language: 'typst',
@@ -520,7 +520,7 @@ export const FILE_EXTENSIONS = {
   },
 };
 
-export const DEFAULT_EXTENSION_CONFIG = {
+const DEFAULT_EXTENSION_CONFIG = {
   language: 'plaintext',
   color: '#94a3b8',
   icon: FileCode,
@@ -533,20 +533,4 @@ export function getExtensionConfig(extension) {
   const ext = extension.toLowerCase().replace(/^\./, '');
 
   return FILE_EXTENSIONS[ext] ?? DEFAULT_EXTENSION_CONFIG;
-}
-
-export function getEditorLanguage(extension) {
-  return getExtensionConfig(extension).language;
-}
-
-export function getExtensionColor(extension) {
-  return getExtensionConfig(extension).color;
-}
-
-export function getExtensionIcon(extension) {
-  return getExtensionConfig(extension).icon;
-}
-
-export function isExtensionAllowed(extension) {
-  return getExtensionConfig(extension).allowed;
 }
