@@ -3,6 +3,8 @@ import Keycloak from 'next-auth/providers/keycloak';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 
+const ADMIN_GROUP = 'app-isc3-prod-tisc-admin';
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   pages: {
@@ -30,6 +32,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id;
         session.user.groups = token.groups;
+        session.user.isAdmin = token.groups?.includes(ADMIN_GROUP) ?? false;
       }
       return session;
     },

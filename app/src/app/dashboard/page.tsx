@@ -1,9 +1,10 @@
 import { auth } from '@/lib/auth';
+import Link from 'next/link';
 import { ProjectList } from '../../components/Dashboard/ProjectList';
 import Footer from '../../components/Footer';
 import CreateProjectModal from '../../components/Dashboard/CreateProjectModal';
 import { SignOutButton } from '@/components/SignOutButton';
-import { LayoutGrid, Users, HandshakeIcon } from 'lucide-react';
+import { LayoutGrid, Users, HandshakeIcon, ShieldCheck } from 'lucide-react';
 import StorageBar from '@/components/Dashboard/StorageBar';
 import { StatCardColor, StatCardProps } from '@/types/statsCard';
 import { getUserProjects } from '@/lib/actions/projects';
@@ -24,6 +25,7 @@ export default async function Dashboard() {
   const guest_projects = projects.filter((p: Project) => !p.isAuthor).length;
 
   const userName = session?.user?.name || 'there';
+  const isAdmin = session?.user?.isAdmin === true;
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
@@ -52,6 +54,18 @@ export default async function Dashboard() {
               <div className="w-[1px] h-8 bg-slate-100 mx-1" />
               <StorageBar storage={storage} />
               <div className="w-[1px] h-8 bg-slate-100 mx-1" />
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                  >
+                    <ShieldCheck size={16} />
+                    Admin
+                  </Link>
+                  <div className="w-[1px] h-8 bg-slate-100 mx-1" />
+                </>
+              )}
               <SignOutButton />
             </div>
           </div>
