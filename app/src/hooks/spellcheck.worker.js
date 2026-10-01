@@ -8,14 +8,33 @@ let origin = '';
 
 // Named arguments in Typst code whose string value is real prose
 const TEXT_KEYS = new Set([
-  'title', 'subtitle', 'caption', 'body', 'description', 'alt',
-  'supplement', 'semester', 'course-name', 'cover-image-caption',
+  'title',
+  'subtitle',
+  'caption',
+  'body',
+  'description',
+  'alt',
+  'supplement',
+  'semester',
+  'course-name',
+  'cover-image-caption',
 ]);
 
 // Typst keywords whose expression runs until the end of the line
 const LINE_KW = new Set([
-  'let', 'set', 'show', 'import', 'include', 'if', 'else', 'for',
-  'while', 'context', 'return', 'break', 'continue',
+  'let',
+  'set',
+  'show',
+  'import',
+  'include',
+  'if',
+  'else',
+  'for',
+  'while',
+  'context',
+  'return',
+  'break',
+  'continue',
 ]);
 
 const URL_RE = /https?:\/\/[^\s\])>"]+/y;
@@ -88,9 +107,14 @@ function findProse(src) {
   const skipBlockComment = (i) => {
     let depth = 0;
     while (i < n) {
-      if (src.startsWith('/*', i)) { depth++; i += 2; }
-      else if (src.startsWith('*/', i)) { depth--; i += 2; if (!depth) return i; }
-      else i++;
+      if (src.startsWith('/*', i)) {
+        depth++;
+        i += 2;
+      } else if (src.startsWith('*/', i)) {
+        depth--;
+        i += 2;
+        if (!depth) return i;
+      } else i++;
     }
     return n;
   };
@@ -173,36 +197,80 @@ function findProse(src) {
   function markup(i, inBlock) {
     let depth = 0;
     let runStart = i;
-    const flush = (end) => { if (end > runStart) ranges.push([runStart, end]); };
-    const jump = (from, to) => { flush(from); runStart = to; return to; };
+    const flush = (end) => {
+      if (end > runStart) ranges.push([runStart, end]);
+    };
+    const jump = (from, to) => {
+      flush(from);
+      runStart = to;
+      return to;
+    };
 
     while (i < n) {
       const c = src[i];
 
-      if (c === '\\') { i = jump(i, i + 2); continue; }
+      if (c === '\\') {
+        i = jump(i, i + 2);
+        continue;
+      }
 
       if (inBlock && c === ']') {
-        if (depth === 0) { flush(i); return i + 1; }
-        depth--; i++; continue;
+        if (depth === 0) {
+          flush(i);
+          return i + 1;
+        }
+        depth--;
+        i++;
+        continue;
       }
-      if (inBlock && c === '[') { depth++; i++; continue; }
+      if (inBlock && c === '[') {
+        depth++;
+        i++;
+        continue;
+      }
 
       if (c === 'h') {
         const u = at(URL_RE, i);
-        if (u) { i = jump(i, i + u.length); continue; }
+        if (u) {
+          i = jump(i, i + u.length);
+          continue;
+        }
       }
-      if (c === '/' && src[i + 1] === '/') { i = jump(i, skipLineComment(i)); continue; }
-      if (c === '/' && src[i + 1] === '*') { i = jump(i, skipBlockComment(i)); continue; }
-      if (c === '`') { i = jump(i, skipRaw(i)); continue; }
-      if (c === '$') { i = jump(i, skipMath(i)); continue; }
-      if (c === '#') { flush(i); i = codeExpr(i + 1); runStart = i; continue; }
+      if (c === '/' && src[i + 1] === '/') {
+        i = jump(i, skipLineComment(i));
+        continue;
+      }
+      if (c === '/' && src[i + 1] === '*') {
+        i = jump(i, skipBlockComment(i));
+        continue;
+      }
+      if (c === '`') {
+        i = jump(i, skipRaw(i));
+        continue;
+      }
+      if (c === '$') {
+        i = jump(i, skipMath(i));
+        continue;
+      }
+      if (c === '#') {
+        flush(i);
+        i = codeExpr(i + 1);
+        runStart = i;
+        continue;
+      }
       if (c === '@') {
         const r = at(REF_RE, i);
-        if (r) { i = jump(i, i + r.length); continue; }
+        if (r) {
+          i = jump(i, i + r.length);
+          continue;
+        }
       }
       if (c === '<') {
         const l = at(LABEL_RE, i);
-        if (l) { i = jump(i, i + l.length); continue; }
+        if (l) {
+          i = jump(i, i + l.length);
+          continue;
+        }
       }
       i++;
     }

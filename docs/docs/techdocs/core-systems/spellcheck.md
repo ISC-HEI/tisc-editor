@@ -177,4 +177,4 @@ public/dictionaries/
 - **Proper names and technical terms** that are not in the dictionary (`Keycloak`, `Typst`, names of authors) are flagged. Use *Ignore* to add them.
 - **Full re-scan on each check.** The whole document is analyzed after every pause in typing. Since this runs off the main thread, it no longer blocks typing or scrolling, but a very large file can still take noticeably longer to get its markers updated.
 - **One dictionary per editor instance.** Each editor spawns its own worker and loads its own copy of the dictionary; see the note under [`initSpellcheck`](#initspellcheckmonaco-editor-initiallang-options).
-- **Read-only users see the markers too.** The spellchecker does not depend on the [user's role](./roles-permissions), it only underlines. Quick fixes can be applied only if the editor is writable.
+- **Read-only users see the markers too.** The spellchecker does not depend on the [user's role](./role-permissions.md), it only underlines. Quick fixes can be applied only if the editor is writable.

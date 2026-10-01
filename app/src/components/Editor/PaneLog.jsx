@@ -83,10 +83,10 @@ function PaneLog() {
                           log.type === 'error'
                             ? 'text-red-500'
                             : log.type === 'warning'
-                              ? 'text-amber-600'
-                              : log.type === 'success'
-                                ? 'text-green-600'
-                                : 'text-blue-600'
+                            ? 'text-amber-600'
+                            : log.type === 'success'
+                            ? 'text-green-600'
+                            : 'text-blue-600'
                         }`}
                       >
                         {log.type === 'error' ? '✖' : log.type === 'warning' ? '⚠' : 'S'}

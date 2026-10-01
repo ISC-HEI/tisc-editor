@@ -4,7 +4,7 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
   const worker = new Worker(new URL('./spellcheck.worker.js', import.meta.url), { type: 'module' });
 
   let timer = null;
-  let latestRequestId = 0;       // ignore stale 'result' messages
+  let latestRequestId = 0; // ignore stale 'result' messages
   let nextSuggestId = 0;
   const pendingSuggestions = new Map(); // requestId -> { resolve, reject }
 
@@ -107,8 +107,10 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
 
       for (const marker of context.markers.filter((m) => m.source === OWNER)) {
         const range = new monaco.Range(
-          marker.startLineNumber, marker.startColumn,
-          marker.endLineNumber, marker.endColumn
+          marker.startLineNumber,
+          marker.startColumn,
+          marker.endLineNumber,
+          marker.endColumn,
         );
         const word = model.getValueInRange(range);
         const suggestions = await suggest(word);
@@ -120,11 +122,13 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
             diagnostics: [marker],
             isPreferred: i === 0,
             edit: {
-              edits: [{
-                resource: model.uri,
-                versionId: model.getVersionId(),
-                textEdit: { range, text: sugg },
-              }],
+              edits: [
+                {
+                  resource: model.uri,
+                  versionId: model.getVersionId(),
+                  textEdit: { range, text: sugg },
+                },
+              ],
             },
           });
         });
@@ -142,7 +146,12 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
 
   const contentListener = editor.onDidChangeModelContent(schedule);
 
-  worker.postMessage({ type: 'init', lang: initialLang, ignored: [...ignored], origin: window.location.origin, });
+  worker.postMessage({
+    type: 'init',
+    lang: initialLang,
+    ignored: [...ignored],
+    origin: window.location.origin,
+  });
 
   return {
     setLanguage(lang) {
