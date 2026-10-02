@@ -8,3 +8,7 @@ export default async function AdminDashboard() {
 
     return <div>Admin Dashboard</div>;
 }
+
+// TODO
+// - List all users
+// - For each user, add possibility to edit quota and possibility to disable account
