@@ -33,6 +33,7 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const [editorFontSize, setEditorFontSize] = useState(14);
   const [wordWrap, setWordWrap] = useState(false);
+  const [panelHost, setPanelHost] = useState(null);
   const separatorRef = useRef(null);
 
   const layoutRef = useRef(null);
@@ -303,9 +304,10 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
             wordWrap={wordWrap}
             onWordWrapChange={handleWordWrapChange}
             canEdit={canEdit}
+            panelHost={panelHost}
           />
 
-          <div className="flex-1 relative min-w-0 overflow-hidden">
+          <div ref={setPanelHost} className="flex-1 relative min-w-0 overflow-hidden">
             <Breadcrumbs path={activePath} />
 
             <FileExplorer canEdit={canEdit} />
