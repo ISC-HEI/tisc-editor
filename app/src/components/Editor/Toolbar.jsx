@@ -9,9 +9,11 @@ import {
   Lock,
   Check,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useEditorWatcher } from '@/hooks/useEditor';
 import { useEffect, useRef, useState } from 'react';
 import { functions, refs, initPreviewRefs, applyLanguageToTypst } from '@/hooks/refs';
+import { SidePanel } from './SidePanel';
 
 const LANGUAGES = [
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
@@ -37,6 +39,7 @@ export function Toolbar({
   wordWrap,
   onWordWrapChange,
   canEdit = true,
+  panelHost,
 }) {
   const btnSaveRef = useRef(null);
   const btnBRef = useRef(null);
@@ -274,119 +277,108 @@ export function Toolbar({
         </button>
       </nav>
 
-      {isLangOpen && canEdit && (
-        <div className="fixed left-14 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-xl z-50 p-4 animate-in slide-in-from-left duration-200">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-700">Language</h3>
+      {panelHost &&
+        isLangOpen &&
+        canEdit &&
+        createPortal(
+          <SidePanel title="Language" icon={Languages} onClose={() => setIsLangOpen(false)}>
+            <div className="flex flex-col gap-2" role="listbox" aria-label="Langue du document">
+              {LANGUAGES.map(({ code, label, flag }) => {
+                const isActive = code === activeLang;
 
-            <button
-              onClick={() => setIsLangOpen(false)}
-              className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2" role="listbox" aria-label="Langue du document">
-            {LANGUAGES.map(({ code, label, flag }) => {
-              const isActive = code === activeLang;
-
-              return (
-                <button
-                  key={code}
-                  role="option"
-                  aria-selected={isActive}
-                  disabled={isApplyingLang}
-                  onClick={() => handleSelectLanguage(code)}
-                  className={`flex justify-between items-center text-left p-3 rounded-xl transition-colors border ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-inner'
-                      : 'border-transparent hover:bg-blue-50 hover:text-blue-600'
-                  } ${isApplyingLang ? 'opacity-60 cursor-wait' : ''}`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-lg leading-none">{flag}</span>
-                    <span className={isActive ? 'font-semibold' : 'font-medium'}>{label}</span>
-                  </span>
-
-                  {isActive && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-600">
-                      <Check size={14} />
-                      Active
+                return (
+                  <button
+                    key={code}
+                    role="option"
+                    aria-selected={isActive}
+                    disabled={isApplyingLang}
+                    onClick={() => handleSelectLanguage(code)}
+                    className={`flex justify-between items-center text-left p-3 rounded-xl transition-colors border ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-inner'
+                        : 'border-transparent hover:bg-blue-50 hover:text-blue-600'
+                    } ${isApplyingLang ? 'opacity-60 cursor-wait' : ''}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-lg leading-none">{flag}</span>
+                      <span className={isActive ? 'font-semibold' : 'font-medium'}>{label}</span>
                     </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      {isSettingsOpen && (
-        <div className="fixed left-14 top-0 h-full w-64 bg-white border-r border-slate-200 shadow-xl z-50 p-4 animate-in slide-in-from-left duration-200">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-700">Editor Settings</h3>
+                    {isActive && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                        <Check size={14} />
+                        Active
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </SidePanel>,
+          panelHost,
+        )}
 
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600"
-            >
-              ✕
-            </button>
-          </div>
+      {panelHost &&
+        isSettingsOpen &&
+        createPortal(
+          <SidePanel
+            title="Editor Settings"
+            icon={Settings2}
+            onClose={() => setIsSettingsOpen(false)}
+          >
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                Text Size
+              </p>
 
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-              Text Size
+              <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                {fontSize}px
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-[11px] text-slate-400 font-medium">A</span>
+
+              <input
+                type="range"
+                min={10}
+                max={28}
+                step={1}
+                value={fontSize}
+                onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
+                className="flex-1 h-1.5 rounded-full appearance-none bg-slate-200 accent-blue-600 cursor-pointer"
+              />
+
+              <span className="text-lg text-slate-400 font-medium">A</span>
+            </div>
+
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">
+              Line Wrapping
             </p>
 
-            <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-              {fontSize}px
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 mb-6">
-            <span className="text-[11px] text-slate-400 font-medium">A</span>
-
-            <input
-              type="range"
-              min={10}
-              max={28}
-              step={1}
-              value={fontSize}
-              onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
-              className="flex-1 h-1.5 rounded-full appearance-none bg-slate-200 accent-blue-600 cursor-pointer"
-            />
-
-            <span className="text-lg text-slate-400 font-medium">A</span>
-          </div>
-
-          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">
-            Line Wrapping
-          </p>
-
-          <button
-            onClick={() => onWordWrapChange?.(!wordWrap)}
-            className="flex justify-between items-center w-full p-3 rounded-xl hover:bg-slate-50 transition-colors"
-          >
-            <span className="font-medium text-sm text-slate-700">Line Wrapping</span>
-
-            <span
-              role="switch"
-              aria-checked={wordWrap}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                wordWrap ? 'bg-blue-600' : 'bg-slate-300'
-              }`}
+            <button
+              onClick={() => onWordWrapChange?.(!wordWrap)}
+              className="flex justify-between items-center w-full p-3 rounded-xl hover:bg-slate-50 transition-colors"
             >
+              <span className="font-medium text-sm text-slate-700">Line Wrapping</span>
+
               <span
-                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                  wordWrap ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                role="switch"
+                aria-checked={wordWrap}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+                  wordWrap ? 'bg-blue-600' : 'bg-slate-300'
                 }`}
-              />
-            </span>
-          </button>
-        </div>
-      )}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                    wordWrap ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                  }`}
+                />
+              </span>
+            </button>
+          </SidePanel>,
+          panelHost,
+        )}
     </>
   );
 }
