@@ -29,6 +29,12 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: getGitVersion(),
   },
+  outputFileTracingIncludes: {
+  '/**': [
+    './node_modules/@img/sharp-libvips-linuxmusl-x64/**/*',
+    './node_modules/@img/sharp-linuxmusl-x64/**/*',
+  ],
+},
 };
 
 export default nextConfig;
