@@ -78,16 +78,21 @@ export default async function AdminDashboard() {
                 <tr className="text-xs uppercase tracking-widest text-slate-400">
                   <th className="px-8 py-3 font-medium">User</th>
                   <th className="px-4 py-3 font-medium">Created</th>
+                  <th className="px-4 py-3 font-medium">Projects</th>
                   <th className="px-4 py-3 font-medium">Quota</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-8 py-3 text-right font-medium">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map((u) => (
+                {users.map(({ _count, ...u }) => (
                   <UserRow
                     key={u.id}
-                    user={{ ...u, createdAt: u.createdAt.toISOString() }}
+                    user={{
+                      ...u,
+                      createdAt: u.createdAt.toISOString(),
+                      projectCount: _count.projectLinks,
+                    }}
                     isSelf={u.id === session.user.id}
                   />
                 ))}
