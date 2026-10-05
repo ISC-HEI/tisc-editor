@@ -16,6 +16,8 @@ model User {
   emailVerified DateTime?
   name          String?
   storageQuota  Int                 @default(10485760)
+  disabled      Boolean             @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
 
   accounts      Account[]
   sessions      Session[]
