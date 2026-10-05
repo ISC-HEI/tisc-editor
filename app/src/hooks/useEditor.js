@@ -281,7 +281,6 @@ function trySyncScrollToCursor() {
   return scrollToSyncMarker(marker);
 }
 
-
 const LOADER_DELAY_MS = 150;
 let loaderEl = null;
 let loaderTimer = null;
