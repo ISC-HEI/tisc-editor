@@ -1,34 +1,32 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
 import { prisma } from "../prisma";
 import { requireAdmin, requireUser } from "./utils";
 
-export async function disableUser(userId: string) {
-    requireAdmin();
-    await requireUser(userId);
+export async function setUserDisabled(userId: string, disabled: boolean) {
+  const admin = await requireAdmin();
+  await requireUser(userId);
 
-    return prisma.user.update({
-        where: { id: userId },
-        data: { disabled: true },
-    });
-}
+  if (admin?.id === userId) {
+    throw new Error("You can't disable your own account");
+  }
 
-export async function enableUser(userId: string) {
-    requireAdmin();
-    await requireUser(userId);
-
-    return prisma.user.update({
-        where: { id: userId },
-        data: { disabled: false },
-    });
+  await prisma.user.update({ where: { id: userId }, data: { disabled } });
+  revalidatePath("/admin");
 }
 
 export async function updateUserQuota(userId: string, quota: number) {
-    requireAdmin();
-    await requireUser(userId);
+  const MAX_INT = 2_147_483_647;
 
-    return prisma.user.update({
-        where: { id: userId },
-        data: { storageQuota: quota },
-    });
+  await requireAdmin();
+  await requireUser(userId);
+  if (!Number.isFinite(quota) || quota < 0 || quota > MAX_INT) {
+    throw new Error("Invalid quota");
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { storageQuota: quota } });
+  revalidatePath("/admin");
 }
 
 export async function getAllUsers() {

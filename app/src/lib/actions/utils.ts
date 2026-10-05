@@ -75,7 +75,7 @@ export async function requireAdmin(message = 'Admin access required') {
     throw new Error(message);
   }
 
-  return session.user.id;
+  return session.user;
 }
 
 
