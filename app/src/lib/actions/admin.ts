@@ -30,3 +30,18 @@ export async function updateUserQuota(userId: string, quota: number) {
         data: { storageQuota: quota },
     });
 }
+
+export async function getAllUsers() {
+    requireAdmin();
+
+    return prisma.user.findMany({
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            disabled: true,
+            storageQuota: true,
+            createdAt: true,
+        },
+    });
+}
