@@ -1329,7 +1329,6 @@ export async function setMainFile(path, root) {
   renderFileExplorer(fileTree);
 }
 
-
 const MAX_ZIP_ENTRIES = 2000;
 const MAX_ZIP_BYTES = 100 * 1024 * 1024;
 
