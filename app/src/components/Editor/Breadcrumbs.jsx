@@ -11,7 +11,9 @@ function Breadcrumbs({ path }) {
         return (
           <div key={index} className="flex items-center">
             <span
-              className={`hover:text-blue-600 cursor-default ${isLast ? 'text-slate-900 font-bold' : ''}`}
+              className={`hover:text-blue-600 cursor-default ${
+                isLast ? 'text-slate-900 font-bold' : ''
+              }`}
             >
               {part}
             </span>

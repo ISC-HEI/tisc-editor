@@ -120,7 +120,9 @@ const buildTreeFromGitHub = async (
  * typst/packages repository.
  */
 export async function getLatestVersion(packageBaseName: string): Promise<string> {
-  const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${encodeURIComponent(packageBaseName)}`;
+  const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${encodeURIComponent(
+    packageBaseName,
+  )}`;
 
   const response = await fetchGitHub(url);
 

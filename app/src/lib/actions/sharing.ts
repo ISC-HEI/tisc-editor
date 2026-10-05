@@ -67,33 +67,6 @@ export async function shareProject(
 }
 
 /**
- * Returns all users assigned to a project (including the caller), with their role.
- */
-export async function getProjectUsers(projectId: string) {
-  await requireUserId();
-
-  const users = await prisma.projectAssignment.findMany({
-    where: {
-      projectId,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-        },
-      },
-    },
-  });
-
-  return users.map((u: { user: { id: string; email: string }; role: string }) => ({
-    id: u.user.id,
-    email: u.user.email,
-    role: u.role,
-  }));
-}
-
-/**
  * Returns all users assigned to a project, excluding the current user, with their role.
  */
 export async function getProjectMembers(projectId: string) {

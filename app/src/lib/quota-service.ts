@@ -28,7 +28,7 @@ export function calcFileTreeSize(node: Prisma.JsonValue | null | undefined): num
   return size;
 }
 
-export async function getOwnedStorageUsage(userId: string, excludeProjectId?: string) {
+async function getOwnedStorageUsage(userId: string, excludeProjectId?: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { projectLinks: { include: { project: true } } },

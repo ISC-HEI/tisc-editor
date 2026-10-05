@@ -8,6 +8,8 @@ All notable changes to this project, organized by day.
 ## 2026-10-01
 - Fixed dictionnaries loading in prod & nginx scheme for docs.
 - Added roles to user (admin)
+- Optimized dictionnaries loading using a worker.
+- Updated CI execution on every branch.
 
 ## 2026-09-28
 - Removed `Leave` option if only owner in project.
