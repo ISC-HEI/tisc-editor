@@ -13,7 +13,9 @@ export async function handleSignOut() {
 
   await signOut({ redirect: false });
 
-  const logoutUrl = `${issuer}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}&client_id=${process.env.AUTH_KEYCLOAK_ID}`;
+  const logoutUrl = `${issuer}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(
+    postLogoutRedirectUri,
+  )}&client_id=${process.env.AUTH_KEYCLOAK_ID}`;
 
   redirect(logoutUrl);
 }

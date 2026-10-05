@@ -136,7 +136,7 @@ export const findMainFile = (node) => {
   return null;
 };
 
-export const findFirstFile = (node) => {
+const findFirstFile = (node) => {
   if (!node) return null;
   if (node.type === 'file') {
     return node.fullPath;
@@ -163,7 +163,7 @@ function decodeDataUrl(str) {
   }
 }
 
-export function toCompileTree(node) {
+function toCompileTree(node) {
   if (!node) return node;
 
   if (node.type === 'file') {

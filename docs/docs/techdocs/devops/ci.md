@@ -78,4 +78,4 @@ Ensures the Docusaurus documentation site builds successfully. Same principle as
 | Build Docs | `bun run build` | `docs` | Confirms the documentation site builds without errors |
 | Check changelog updated | `-` | `./` | Check that on PR the changelog has been updated (bypass by adding `no-changelog`) |
 
-All workflows must pass before a pull request can be merged into `main` (assuming branch protection is enabled on the repository).
+All workflows must pass before a pull request can be merged into any branch.

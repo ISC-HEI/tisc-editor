@@ -3,6 +3,7 @@ import { refs, infos, functions } from './refs';
 import { addLogToPane, debounce, makeToast } from './useUtils';
 import { fetchSvg, exportPdf, exportSvg, findMainFile } from './useApi';
 import { getExtensionConfig } from '@/config/fileExtensions';
+import { exportZip } from './useFileManager';
 
 export let currentProjectId;
 export let fileTree = { type: 'folder', name: 'root', children: {} };
@@ -19,6 +20,7 @@ let syncMarkers = [];
 
 let handleExportPdf = null;
 let handleExportSvg = null;
+let handleExportZip = null;
 
 const debounceFetchCompile = debounce(async () => {
   if (isLoadingFile) return;
@@ -60,6 +62,7 @@ function initEditor() {
     !refs.btnSave ||
     !refs.btnExportPdf ||
     !refs.btnExportSvg ||
+    !refs.btnExportZip ||
     !refs.separator
   ) {
     return;
@@ -104,8 +107,13 @@ function initEditor() {
     };
   }
 
+  if (!handleExportZip) {
+    handleExportZip = () => exportZip(fileTree);
+  }
+
   refs.btnExportPdf.addEventListener('click', handleExportPdf);
   refs.btnExportSvg.addEventListener('click', handleExportSvg);
+  refs.btnExportZip.addEventListener('click', handleExportZip);
 
   setupResizable();
   updateExportButtons();
@@ -150,6 +158,9 @@ export function useEditorWatcher() {
       }
       if (refs.btnExportSvg && handleExportSvg) {
         refs.btnExportSvg.removeEventListener('click', handleExportSvg);
+      }
+      if (refs.btnExportZip && handleExportZip) {
+        refs.btnExportZip.removeEventListener('click', handleExportZip);
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -281,6 +292,62 @@ function trySyncScrollToCursor() {
   return scrollToSyncMarker(marker);
 }
 
+const LOADER_DELAY_MS = 150;
+let loaderEl = null;
+let loaderTimer = null;
+
+function getLoader() {
+  const host = refs.previewContainer?.parentElement; // the `relative` preview root
+  if (!host) return null;
+
+  if (!loaderEl || !host.contains(loaderEl)) {
+    loaderEl = document.createElement('div');
+    loaderEl.setAttribute('role', 'status');
+    loaderEl.className =
+      'absolute top-16 left-1/2 -translate-x-1/2 -translate-y-2 z-20 pointer-events-none ' +
+      'flex items-center gap-2 rounded-full bg-white/90 backdrop-blur border border-slate-200 ' +
+      'shadow-lg px-3.5 py-1.5 text-[12px] font-semibold text-slate-600 ' +
+      'opacity-0 transition-all duration-200';
+    loaderEl.innerHTML = `
+      <span class="relative flex h-4 w-4">
+        <span class="absolute inset-0 rounded-full border-2 border-slate-200"></span>
+        <span class="absolute inset-0 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></span>
+      </span>
+      <span>Compiling…</span>
+    `;
+    host.appendChild(loaderEl);
+  }
+  return loaderEl;
+}
+
+function showLoader() {
+  clearTimeout(loaderTimer);
+  loaderTimer = setTimeout(() => {
+    const el = getLoader();
+    if (!el) return;
+    el.classList.remove('opacity-0', '-translate-y-2');
+    el.classList.add('opacity-100', 'translate-y-0');
+  }, LOADER_DELAY_MS);
+}
+
+function hideLoader() {
+  clearTimeout(loaderTimer);
+  if (!loaderEl) return;
+  loaderEl.classList.remove('opacity-100', 'translate-y-0');
+  loaderEl.classList.add('opacity-0', '-translate-y-2');
+}
+
+const SKELETON_HTML = `
+  <div class="bg-white w-full h-full min-h-[600px] p-12 space-y-4 animate-pulse">
+    <div class="h-6 w-1/3 bg-slate-200 rounded"></div>
+    <div class="h-3 w-full bg-slate-100 rounded"></div>
+    <div class="h-3 w-11/12 bg-slate-100 rounded"></div>
+    <div class="h-3 w-10/12 bg-slate-100 rounded"></div>
+    <div class="h-3 w-full bg-slate-100 rounded"></div>
+    <div class="h-3 w-2/3 bg-slate-100 rounded"></div>
+  </div>
+`;
+
 /**
  * Sets #page's HTML then scrolls the preview to match the edit location
  * using the resolved sync markers. Falls back to preserving the previous
@@ -310,15 +377,10 @@ export async function fetchCompile() {
 
   const scrollState = captureScrollState();
 
-  refs.page.innerHTML = `
-        <div class="flex items-center justify-center h-full w-full bg-gray-50/50">
-            <div class="relative">
-                <div class="w-10 h-10 border-4 border-slate-200 rounded-full"></div>
-                <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-            </div>
-        </div>
-    `;
-
+  if (!refs.page.querySelector('svg')) {
+    refs.page.innerHTML = SKELETON_HTML;
+  }
+  showLoader();
   try {
     const raw = await fetchSvg(fileTree, { sync: true, projectId: currentProjectId });
 
@@ -398,6 +460,8 @@ export async function fetchCompile() {
         `,
       scrollState,
     );
+  } finally {
+    hideLoader();
   }
 }
 

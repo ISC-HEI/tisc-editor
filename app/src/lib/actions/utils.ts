@@ -67,3 +67,26 @@ export async function requireOwnerAssignment(
 
   return assignment;
 }
+
+export async function requireAdmin(message = 'Admin access required') {
+  const session = await auth();
+
+  if (!session?.user?.isAdmin) {
+    throw new Error(message);
+  }
+
+  return session.user;
+}
+
+export async function requireUser(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return user;
+}

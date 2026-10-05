@@ -46,7 +46,6 @@ Owner-only Server Actions all follow the same pattern: look up the caller's `Pro
 
 The distinction between `editor` and `viewer` for **editing** is currently a **client-side convention**, not a server-side guarantee:
 
-- [`saveProjectData`](./server-actions#saveprojectdataprojectid-content-filetree) and [`POST /api/projects/save`](./api-endpoints#post-apiprojectssave) only check that a `ProjectAssignment` exists (any role) — neither excludes `viewer`. `/api/projects/save` doesn't even check for an assignment at all, only that the caller is authenticated.
 - [`POST /api/projects/compile`](./api-endpoints#post-apiprojectscompile) performs no access check whatsoever, for any role.
 - The Socket.io [`join-document`](./collaboration#connecting-and-joining-a-document) handshake fetches the caller's `role` from `ProjectAssignment`, but only uses it to resolve the display email — every subsequent real-time event (`edit-file`, `create-node`, etc.) is relayed as soon as `session.authorized` is `true`, regardless of role.
 

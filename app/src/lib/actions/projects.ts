@@ -256,30 +256,6 @@ export async function getProjectAssignmentRole(projectId: string) {
 }
 
 /**
- * Saves the file tree content of a project for any user with access to it.
- */
-export async function saveProjectData(
-  projectId: string,
-  content: string,
-  fileTree: Prisma.InputJsonValue,
-) {
-  const userId = await requireUserId();
-
-  await requireAssignment(userId, projectId);
-
-  await prisma.project.update({
-    where: {
-      id: projectId,
-    },
-    data: {
-      fileTree,
-    },
-  });
-
-  revalidatePath('/dashboard');
-}
-
-/**
  * Sets a project's active status. Only the owner can perform this action.
  */
 export const setProjectActiveStatus = async (projectId: string, isActive: boolean) => {
