@@ -2,8 +2,12 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-05
+- Added admin dashboard (possibility to disabled user and edit storage quota)
+
 ## 2026-10-01
-- Fixed dictionnaries loading in prod & nginx scheme for docs
+- Fixed dictionnaries loading in prod & nginx scheme for docs.
+- Added roles to user (admin)
 
 ## 2026-09-28
 - Removed `Leave` option if only owner in project.
