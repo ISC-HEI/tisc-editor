@@ -5,6 +5,7 @@ All notable changes to this project, organized by day.
 ## 2026-10-05
 - Added admin dashboard (possibility to disabled user and edit storage quota)
 - Updated side panel design.
+- Updated compilation loader (make it simpler)
 
 ## 2026-10-01
 - Fixed dictionnaries loading in prod & nginx scheme for docs.
