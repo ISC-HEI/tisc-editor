@@ -7,7 +7,6 @@ All notable changes to this project, organized by day.
 - Updated side panel design.
 - Updated compilation loader (make it simpler)
 - Added possibility to upload zip files.
-- Added projects to admin dashboard.
 
 ## 2026-10-01
 - Fixed dictionnaries loading in prod & nginx scheme for docs.

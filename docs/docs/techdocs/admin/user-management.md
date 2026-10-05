@@ -1,6 +1,6 @@
 # User management
 
-The admin dashboard lets instance administrators manage user accounts: view all users, see their projects, edit their storage quota, and enable or disable their access.
+The admin dashboard lets instance administrators manage user accounts: view all users, edit their storage quota, and enable or disable their access.
 
 :::note
 This page is only available to administrators. Non-admin users are redirected to `/dashboard`.
@@ -8,12 +8,11 @@ This page is only available to administrators. Non-admin users are redirected to
 
 ## Overview
 
-| Feature            | Description                                                               |
-| ------------------ | ------------------------------------------------------------------------- |
-| List users         | Name, email, creation date, project count, quota and status of each user |
-| View user projects | Click the project count of a user to list their projects and roles        |
-| Edit storage quota | Set the quota per user, in MB                                             |
-| Disable / enable   | Block or restore a user's access to the editor                            |
+| Feature            | Description                                               |
+| ------------------ | --------------------------------------------------------- |
+| List users         | Name, email, creation date, quota and status of each user |
+| Edit storage quota | Set the quota per user, in MB                             |
+| Disable / enable   | Block or restore a user's access to the editor            |
 
 The page is available at `/admin` and is linked from the **Admin** button on the main dashboard.
 
@@ -27,24 +26,6 @@ Access is checked on two levels:
 :::warning
 Server actions are public HTTP endpoints. The check in the page is not enough, which is why each action verifies the caller's role itself.
 :::
-
-## User projects
-
-Each row of the users table has a **Projects** column showing how many projects the user is assigned to, whatever their role (`owner`, `editor` or `viewer`).
-
-Clicking the count opens a dialog that lists, for this user:
-
-- the title of each project,
-- the user's role on the project,
-- an **Inactive** badge if the project has `isActive` set to `false`.
-
-Details:
-
-- The count comes from `getAllUsers()` (Prisma `_count` on `projectLinks`), so it is loaded with the page.
-- The list of projects is loaded **on demand**, each time the dialog is opened, through `getUserProjects(userId)`. This keeps the admin page light and the data up to date.
-- The `fileTree` field of projects is never selected, because it can be large.
-- The button is disabled when the user has no project.
-- The dialog closes with the **✕** button, a click outside, or the `Escape` key.
 
 ## Storage quota
 
@@ -95,19 +76,18 @@ If the user still has an active Keycloak session, a retry signs them in again si
 
 All actions live in `lib/actions/admin.ts`.
 
-| Action                           | Description                                                                | Errors                                      |
-| -------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------- |
-| `getAllUsers()`                  | Returns all users (id, name, email, status, quota, date, project count)    | Not an admin                                |
-| `getUserProjects(userId)`        | Returns the projects of a user (id, title, `isActive`) with their role     | Not an admin                                |
-| `setUserDisabled(userId, state)` | Enables or disables a user and revokes sessions                            | Not an admin, user not found, self-disable  |
-| `updateUserQuota(userId, bytes)` | Updates the storage quota                                                  | Not an admin, user not found, invalid quota |
+| Action                           | Description                                              | Errors                                      |
+| -------------------------------- | -------------------------------------------------------- | ------------------------------------------- |
+| `getAllUsers()`                  | Returns all users (id, name, email, status, quota, date) | Not an admin                                |
+| `setUserDisabled(userId, state)` | Enables or disables a user and revokes sessions          | Not an admin, user not found, self-disable  |
+| `updateUserQuota(userId, bytes)` | Updates the storage quota                                | Not an admin, user not found, invalid quota |
 
 Both mutating actions call `revalidatePath("/admin")` so the list refreshes without a manual reload.
 
 ## Components
 
-| File                            | Role                                                                          |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `app/admin/page.tsx`            | Server component: auth check, data loading, stats, table                      |
-| `components/Admin/user-row.tsx` | Client component: projects dialog, quota input, save and enable/disable       |
-| `app/login/page.tsx`            | Login redirect and error display                                              |
+| File                            | Role                                                     |
+| ------------------------------- | -------------------------------------------------------- |
+| `app/admin/page.tsx`            | Server component: auth check, data loading, stats, table |
+| `components/Admin/user-row.tsx` | Client component: quota input, save and enable/disable   |
+| `app/login/page.tsx`            | Login redirect and error display                         |
