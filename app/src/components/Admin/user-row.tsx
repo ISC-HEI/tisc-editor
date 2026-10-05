@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { setUserDisabled, updateUserQuota } from '@/lib/actions/admin';
+import { useEffect, useState, useTransition } from 'react';
+import { getUserProjects, setUserDisabled, updateUserQuota } from '@/lib/actions/admin';
 
 const MB = 1024 ** 2;
 
@@ -13,14 +13,29 @@ type Props = {
     disabled: boolean;
     storageQuota: number;
     createdAt: string;
+    projectCount: number;
   };
   isSelf: boolean;
+};
+
+type ProjectItem = Awaited<ReturnType<typeof getUserProjects>>[number];
+
+const ROLE_STYLES: Record<string, string> = {
+  owner: 'bg-blue-50 text-blue-700',
+  editor: 'bg-violet-50 text-violet-700',
+  viewer: 'bg-slate-100 text-slate-600',
 };
 
 export function UserRow({ user, isSelf }: Props) {
   const [quotaMb, setQuotaMb] = useState(String(user.storageQuota / MB));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Projects modal
+  const [open, setOpen] = useState(false);
+  const [projects, setProjects] = useState<ProjectItem[] | null>(null);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [loadingProjects, startLoading] = useTransition();
 
   const run = (fn: () => Promise<unknown>) =>
     startTransition(async () => {
@@ -32,8 +47,29 @@ export function UserRow({ user, isSelf }: Props) {
       }
     });
 
+  const openProjects = () => {
+    setOpen(true);
+    startLoading(async () => {
+      setProjectsError(null);
+      try {
+        setProjects(await getUserProjects(user.id));
+      } catch (e) {
+        setProjectsError(e instanceof Error ? e.message : 'Something went wrong');
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const changed = Math.round(Number(quotaMb) * MB) !== user.storageQuota;
   const initial = (user.name ?? user.email)[0]?.toUpperCase();
+  const displayName = user.name ?? user.email;
+  const projectLabel = `${user.projectCount} ${user.projectCount === 1 ? 'project' : 'projects'}`;
 
   return (
     <tr
@@ -61,6 +97,83 @@ export function UserRow({ user, isSelf }: Props) {
 
       {/* Created */}
       <td className="px-4 py-4 text-slate-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+
+      {/* Projects */}
+      <td className="px-4 py-4">
+        <button
+          type="button"
+          onClick={openProjects}
+          disabled={user.projectCount === 0}
+          title={user.projectCount === 0 ? 'No projects' : 'View projects'}
+          className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          {projectLabel}
+        </button>
+
+        {open && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 text-left"
+            onClick={() => setOpen(false)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Projects of ${displayName}`}
+              className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                <div className="min-w-0">
+                  <h2 className="truncate font-semibold text-slate-900">{displayName}</h2>
+                  <p className="text-xs text-slate-500">{projectLabel}</p>
+                </div>
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  className="rounded-lg px-2 py-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="overflow-y-auto">
+                {loadingProjects && !projects && (
+                  <p className="px-6 py-8 text-center text-sm text-slate-400">Loading…</p>
+                )}
+                {projectsError && (
+                  <p role="alert" className="px-6 py-8 text-center text-sm text-red-600">
+                    {projectsError}
+                  </p>
+                )}
+                {projects && projects.length === 0 && (
+                  <p className="px-6 py-8 text-center text-sm text-slate-400">No projects.</p>
+                )}
+                <ul className="divide-y divide-slate-100">
+                  {projects?.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between gap-3 px-6 py-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className="truncate text-sm font-medium text-slate-900">{p.title}</p>
+                        {!p.isActive && (
+                          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                          ROLE_STYLES[p.role] ?? ROLE_STYLES.viewer
+                        }`}
+                      >
+                        {p.role}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </td>
 
       {/* Quota */}
       <td className="px-4 py-4">
