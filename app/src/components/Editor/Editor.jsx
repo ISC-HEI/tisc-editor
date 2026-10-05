@@ -13,6 +13,7 @@ import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from '@
 import { isLoadingFile, setCanEdit, useEditorWatcher } from '@/hooks/useEditor';
 import { useTypstCollaboration } from '@/hooks/useTypstCollaboration';
 import { findMainFile } from '@/hooks/useApi';
+import { ZipDestinationModal } from './ZipDestinationModal';
 
 const MonacoEditor = dynamic(() => import('./MonacoEditor').then((mod) => mod.MonacoEditor), {
   ssr: false,
@@ -29,6 +30,7 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
     message: '',
     resolve: null,
   });
+  const [zipModal, setZipModal] = useState(null);
 
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const [editorFontSize, setEditorFontSize] = useState(14);
@@ -112,6 +114,7 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
     initPreviewFunctions({
       openCustomPrompt,
       openCustomConfirm,
+      openZipDestination,
     });
   };
 
@@ -119,6 +122,16 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
     setModalConfig({ title, callback });
     setInputValue('');
     setIsModalOpen(true);
+  };
+
+  const openZipDestination = (zipName, defaultFolderName, folders) =>
+    new Promise((resolve) => {
+      setZipModal({ zipName, defaultFolderName, folders, resolve });
+    });
+
+  const closeZipModal = (choice) => {
+    zipModal?.resolve(choice);
+    setZipModal(null);
   };
 
   const openCustomConfirm = (title, message) => {
@@ -354,6 +367,16 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
         onConfirm={handleModalConfirm}
         onClose={() => setIsModalOpen(false)}
       />
+
+      {zipModal && (
+        <ZipDestinationModal
+          zipName={zipModal.zipName}
+          defaultFolderName={zipModal.defaultFolderName}
+          folders={zipModal.folders}
+          onConfirm={closeZipModal}
+          onCancel={() => closeZipModal(null)}
+        />
+      )}
 
       {isConfirmModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">

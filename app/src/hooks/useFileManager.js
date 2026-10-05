@@ -380,8 +380,7 @@ function initFileManager() {
     !refs.btnUploadImages ||
     !refs.imageFilesInput ||
     !refs.rootDropZone ||
-    !refs.btnCreateFile ||
-    !refs.btnExportZip
+    !refs.btnCreateFile
   ) {
     return false;
   }
@@ -448,44 +447,54 @@ function initFileManager() {
     refs.imageFilesInput.click();
   });
 
-  refs.imageFilesInput.addEventListener('change', (event) => {
+  refs.imageFilesInput.addEventListener('change', async (event) => {
     if (!canEdit) return;
-    const files = Array.from(event.target.files);
-    const targetFolder = getFolder(fileTree, selectedFolderPath);
+    const allFiles = Array.from(event.target.files);
+    event.target.value = '';
 
-    if (!targetFolder) {
-      alert('Invalid target folder');
-      return;
+    const zipFiles = allFiles.filter(isZipFile);
+    const files = allFiles.filter((f) => !isZipFile(f));
+
+    if (files.length > 0) {
+      const targetFolder = getFolder(fileTree, selectedFolderPath);
+
+      if (!targetFolder) {
+        alert('Invalid target folder');
+      } else {
+        files.forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            targetFolder.children[file.name] = {
+              type: 'file',
+              name: file.name,
+              fullPath:
+                selectedFolderPath === 'root' ? file.name : `${selectedFolderPath}/${file.name}`,
+              data: e.target.result,
+            };
+            await saveFileTree();
+            renderFileExplorer(fileTree);
+            fetchCompile();
+
+            if (refs.socket?.connected) {
+              const socketPath =
+                selectedFolderPath === 'root'
+                  ? `root/${file.name}`
+                  : `root/${selectedFolderPath}/${file.name}`;
+              refs.socket.emit('create-node', {
+                docId: currentProjectId,
+                path: socketPath,
+                type: 'file',
+              });
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
     }
 
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        targetFolder.children[file.name] = {
-          type: 'file',
-          name: file.name,
-          fullPath:
-            selectedFolderPath === 'root' ? file.name : `${selectedFolderPath}/${file.name}`,
-          data: e.target.result,
-        };
-        await saveFileTree();
-        renderFileExplorer(fileTree);
-        fetchCompile();
-
-        if (refs.socket?.connected) {
-          const socketPath =
-            selectedFolderPath === 'root'
-              ? `root/${file.name}`
-              : `root/${selectedFolderPath}/${file.name}`;
-          refs.socket.emit('create-node', {
-            docId: currentProjectId,
-            path: socketPath,
-            type: 'file',
-          });
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const zipFile of zipFiles) {
+      await importZip(zipFile);
+    }
   });
 
   refs.rootDropZone.addEventListener('click', () => {
@@ -514,10 +523,6 @@ function initFileManager() {
   refs.btnCreateFile.addEventListener('click', () => {
     if (!canEdit) return;
     createFile();
-  });
-
-  refs.btnExportZip.addEventListener('click', () => {
-    exportZip(fileTree, infos.title || 'unknow_project');
   });
 
   if (!initialExpansionDone) {
@@ -1322,4 +1327,173 @@ export async function setMainFile(path, root) {
   await saveFileTree();
   await openFile(path);
   renderFileExplorer(fileTree);
+}
+
+const MAX_ZIP_ENTRIES = 2000;
+const MAX_ZIP_BYTES = 100 * 1024 * 1024;
+
+const MIME_BY_EXT = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  pdf: 'application/pdf',
+  typ: 'text/plain',
+  txt: 'text/plain',
+  json: 'application/json',
+  csv: 'text/csv',
+};
+
+function isZipFile(file) {
+  return (
+    /\.zip$/i.test(file.name) ||
+    file.type === 'application/zip' ||
+    file.type === 'application/x-zip-compressed'
+  );
+}
+
+function sanitizeZipPath(raw) {
+  const parts = raw
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter((p) => p && p !== '.');
+  if (parts.length === 0) return null;
+  if (parts.includes('..')) return null; // zip-slip protection
+  if (parts[0] === '__MACOSX' || parts[parts.length - 1] === '.DS_Store') return null;
+  return parts;
+}
+
+function collectFolderPaths(folder, path = '', out = []) {
+  Object.values(folder.children).forEach((item) => {
+    if (item.type !== 'folder') return;
+    const p = path ? `${path}/${item.name}` : item.name;
+    out.push(p);
+    collectFolderPaths(item, p, out);
+  });
+  return out.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+function ensureFolder(root, parts, created) {
+  let curr = root;
+  let acc = '';
+  for (const part of parts) {
+    acc = acc ? `${acc}/${part}` : part;
+    let next = curr.children[part];
+    if (!next) {
+      next = { type: 'folder', name: part, children: {} };
+      curr.children[part] = next;
+      created.push({ path: acc, type: 'folder' });
+    } else if (next.type !== 'folder') {
+      return null;
+    }
+    curr = next;
+  }
+  return curr;
+}
+
+/**
+ * Asks where to extract a zip, then decompresses it into the local tree,
+ * saves, re-renders and notifies collaborators. Existing files are never overwritten.
+ */
+async function importZip(file) {
+  let zip;
+  try {
+    zip = await JSZip.loadAsync(file);
+  } catch {
+    makeToast(`"${file.name}" is not a valid zip file`, 'error');
+    return;
+  }
+
+  const entries = Object.values(zip.files)
+    .filter((e) => !e.dir)
+    .map((entry) => ({ entry, parts: sanitizeZipPath(entry.name) }))
+    .filter((x) => x.parts);
+
+  if (entries.length === 0) {
+    makeToast(`"${file.name}" contains no usable files`, 'error');
+    return;
+  }
+  if (entries.length > MAX_ZIP_ENTRIES) {
+    makeToast(`Zip too large (max ${MAX_ZIP_ENTRIES} files)`, 'error');
+    return;
+  }
+
+  const zipBase = file.name.replace(/\.zip$/i, '');
+  const choice = await functions.openZipDestination(
+    file.name,
+    zipBase,
+    collectFolderPaths(fileTree),
+  );
+  if (!choice) return;
+
+  let destParts = [];
+  if (choice.mode === 'zipName') destParts = [zipBase];
+  else if (choice.mode === 'folder' && choice.folderPath) destParts = choice.folderPath.split('/');
+
+  const loaded = [];
+  let totalBytes = 0;
+  for (const { entry, parts } of entries) {
+    const base64 = await entry.async('base64');
+    totalBytes += base64.length * 0.75;
+    if (totalBytes > MAX_ZIP_BYTES) {
+      makeToast('Zip too large once decompressed (max 100 MB)', 'error');
+      return;
+    }
+    loaded.push({ parts, base64 });
+  }
+
+  const created = [];
+  let addedFiles = 0;
+  let skipped = 0;
+
+  for (const { parts, base64 } of loaded) {
+    const name = parts[parts.length - 1];
+    const folderParts = [...destParts, ...parts.slice(0, -1)];
+    const folder = ensureFolder(fileTree, folderParts, created);
+
+    if (!folder || folder.children[name]) {
+      skipped++;
+      continue;
+    }
+
+    const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+    const mime = MIME_BY_EXT[ext] || 'application/octet-stream';
+    const fullPath = [...folderParts, name].join('/');
+
+    folder.children[name] = {
+      type: 'file',
+      name,
+      fullPath,
+      data: `data:${mime};base64,${base64}`,
+    };
+    created.push({ path: fullPath, type: 'file' });
+    addedFiles++;
+  }
+
+  if (addedFiles === 0 && created.length === 0) {
+    makeToast('Nothing imported: all files already exist', 'error');
+    return;
+  }
+
+  // Reveal the destination in the tree
+  if (destParts.length > 0) expandAncestors(`${destParts.join('/')}/_`);
+
+  await saveFileTree();
+  renderFileExplorer(fileTree);
+  fetchCompile();
+
+  if (refs.socket?.connected) {
+    created.forEach(({ path, type }) => {
+      refs.socket.emit('create-node', { docId: currentProjectId, path: `root/${path}`, type });
+    });
+  }
+
+  makeToast(
+    skipped > 0
+      ? `${addedFiles} file(s) extracted, ${skipped} skipped (already exist)`
+      : `${addedFiles} file(s) extracted`,
+    'success',
+  );
 }

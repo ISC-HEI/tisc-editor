@@ -12,6 +12,8 @@ If you click on a folder, it becomes the active target: the next action you take
 
 :::
 
+You can also import ZIP files that will be decompressed and added to your destination.
+
 ## Previewing images
 
 Hovering over an image file in the explorer shows a preview of it, without needing to open it.

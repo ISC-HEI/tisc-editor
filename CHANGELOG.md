@@ -6,6 +6,7 @@ All notable changes to this project, organized by day.
 - Added admin dashboard (possibility to disabled user and edit storage quota)
 - Updated side panel design.
 - Updated compilation loader (make it simpler)
+- Added possibility to upload zip files.
 
 ## 2026-10-01
 - Fixed dictionnaries loading in prod & nginx scheme for docs.
