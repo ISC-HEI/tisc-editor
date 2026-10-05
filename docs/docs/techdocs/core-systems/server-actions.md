@@ -4,6 +4,7 @@ The dashboard's business logic does not go through the [API routes](./api-endpoi
 
 | File | Contains |
 | --- | --- |
+| `admin.ts` | Admin-only user management (disable accounts, storage quotas, user listing) |
 | `projects.ts` | Project CRUD, loading, saving, archiving |
 | `tags.ts` | Tag management |
 | `sharing.ts` | Sharing, ownership transfer, member management |
@@ -26,6 +27,48 @@ Almost every action follows the same shape, backed by shared helpers in `utils.t
 Individual sections below only call out what differs from this pattern.
 
 :::
+
+## Admin
+
+*Defined in `admin.ts`.*
+
+:::info[Differs from the common pattern]
+
+Admin actions do not use `requireUserId()` or `ProjectAssignment`. Instead they rely on two helpers from `utils.ts`:
+
+- `requireAdmin()` verifies that the caller is an administrator and returns the admin user. It throws otherwise.
+- `requireUser(userId)` verifies that the target user exists. It throws otherwise.
+
+They also revalidate `/admin` instead of `/dashboard`.
+
+:::
+
+### `setUserDisabled(userId, disabled)`
+
+Enables or disables a user account by setting `User.disabled`.
+
+**Auth:** admin only.
+
+**Validation:** an admin cannot disable their own account, otherwise `You can't disable your own account`.
+
+### `updateUserQuota(userId, quota)`
+
+Updates a user's storage quota (`User.storageQuota`, see [Database Schema](../architecture/database)).
+
+**Auth:** admin only.
+
+**Validation:** `quota` must be a finite number between `0` and `2,147,483,647` (the maximum 32-bit signed integer, matching the column type), otherwise `Invalid quota`.
+
+### `getAllUsers()`
+
+Returns every user, used to populate the admin user table.
+
+**Auth:** admin only.
+
+**Returns** an array of users with the following fields: `id`, `name`, `email`, `disabled`, `storageQuota`, `createdAt`.
+
+---
+
 
 ## Projects
 
