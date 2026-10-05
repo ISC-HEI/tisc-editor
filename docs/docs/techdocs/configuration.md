@@ -49,6 +49,17 @@ If you don't have a Keycloak client ID and secret, contact **Pierre-André Mudry
 | `DATABSE_URL` | Database connection URL already defin in docker-compose | `dev` |
 | `DB_PASSWORD` | Database secret password | `production` |
 
+### Mail
+
+| Variable               | Description                                               |
+| ---------------------- | --------------------------------------------------------- |
+| `SMTP_HOST`            | Hostname or IP address of the SMTP server.                |
+| `SMTP_PORT`            | Port used to connect to the SMTP server.                  |
+| `SMTP_USER`            | Username used to authenticate with the SMTP server.       |
+| `SMTP_PASS`            | Password used to authenticate with the SMTP server.       |
+| `SMTP_FROM`            | Email address used as the sender address.                 |
+
+
 ## Example
 
 ```dotenv
@@ -60,6 +71,12 @@ GITHUB_TOKEN=ghp_
 AUTH_KEYCLOAK_ID=your_app_id
 AUTH_KEYCLOAK_SECRET=your_app_secret
 AUTH_KEYCLOAK_ISSUER=https://sso.isc-vs.ch/realms/isc
+
+SMTP_HOST=mail.infomaniak.com
+SMTP_PORT=587
+SMTP_USER=tisc@isc-vs.ch
+SMTP_PASS=
+SMTP_FROM=tisc@isc-vs.ch
 ```
 
 :::warning[Never commit your `.env`]
