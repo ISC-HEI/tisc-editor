@@ -85,5 +85,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.error = token.error;
       return session;
     },
+    async signIn({ user }) {
+      if (!user.email) return false;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email: user.email },
+        select: { disabled: true },
+      });
+
+      if (dbUser?.disabled) {
+        return "/login?error=AccountDisabled";
+      }
+      return true;
+    },
   },
 });
