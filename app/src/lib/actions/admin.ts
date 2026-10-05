@@ -30,7 +30,7 @@ export async function updateUserQuota(userId: string, quota: number) {
 }
 
 export async function getAllUsers() {
-  requireAdmin();
+  await requireAdmin();
 
   return prisma.user.findMany({
     select: {
@@ -40,6 +40,28 @@ export async function getAllUsers() {
       disabled: true,
       storageQuota: true,
       createdAt: true,
+      _count: { select: { projectLinks: true } },
     },
+    orderBy: { name: 'asc' },
   });
+}
+
+export async function getUserProjects(userId: string) {
+  await requireAdmin();
+
+  const links = await prisma.projectAssignment.findMany({
+    where: { userId },
+    select: {
+      role: true,
+      project: { select: { id: true, title: true, isActive: true } },
+    },
+    orderBy: { project: { title: 'asc' } },
+  });
+
+  return links.map((l) => ({
+    id: l.project.id,
+    title: l.project.title,
+    isActive: l.project.isActive,
+    role: l.role,
+  }));
 }
