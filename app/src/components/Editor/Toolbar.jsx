@@ -315,7 +315,7 @@ export function Toolbar({
               })}
             </div>
           </SidePanel>,
-          panelHost
+          panelHost,
         )}
 
       {panelHost &&
@@ -377,7 +377,7 @@ export function Toolbar({
               </span>
             </button>
           </SidePanel>,
-          panelHost
+          panelHost,
         )}
     </>
   );
