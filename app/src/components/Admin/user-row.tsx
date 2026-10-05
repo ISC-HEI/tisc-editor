@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { setUserDisabled, updateUserQuota } from "@/lib/actions/admin";
+import { useState, useTransition } from 'react';
+import { setUserDisabled, updateUserQuota } from '@/lib/actions/admin';
 
 const MB = 1024 ** 2;
 
@@ -28,7 +28,7 @@ export function UserRow({ user, isSelf }: Props) {
       try {
         await fn();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong");
+        setError(e instanceof Error ? e.message : 'Something went wrong');
       }
     });
 
@@ -36,7 +36,9 @@ export function UserRow({ user, isSelf }: Props) {
   const initial = (user.name ?? user.email)[0]?.toUpperCase();
 
   return (
-    <tr className={`align-middle transition hover:bg-slate-50/60 ${user.disabled ? "opacity-70" : ""}`}>
+    <tr
+      className={`align-middle transition hover:bg-slate-50/60 ${user.disabled ? 'opacity-70' : ''}`}
+    >
       {/* User */}
       <td className="px-8 py-4">
         <div className="flex items-center gap-3">
@@ -45,7 +47,7 @@ export function UserRow({ user, isSelf }: Props) {
           </div>
           <div className="min-w-0">
             <p className="truncate font-medium text-slate-900">
-              {user.name ?? "—"}
+              {user.name ?? '—'}
               {isSelf && (
                 <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600">
                   You
@@ -58,9 +60,7 @@ export function UserRow({ user, isSelf }: Props) {
       </td>
 
       {/* Created */}
-      <td className="px-4 py-4 text-slate-500">
-        {new Date(user.createdAt).toLocaleDateString()}
-      </td>
+      <td className="px-4 py-4 text-slate-500">{new Date(user.createdAt).toLocaleDateString()}</td>
 
       {/* Quota */}
       <td className="px-4 py-4">
@@ -80,25 +80,31 @@ export function UserRow({ user, isSelf }: Props) {
             </span>
           </div>
           <button
-            disabled={pending || !changed || quotaMb === ""}
+            disabled={pending || !changed || quotaMb === ''}
             onClick={() => run(() => updateUserQuota(user.id, Math.round(Number(quotaMb) * MB)))}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
           >
             Save
           </button>
         </div>
-        {error && <p role="alert" className="mt-1 text-xs text-red-600">{error}</p>}
+        {error && (
+          <p role="alert" className="mt-1 text-xs text-red-600">
+            {error}
+          </p>
+        )}
       </td>
 
       {/* Status */}
       <td className="px-4 py-4">
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
-            user.disabled ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+            user.disabled ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
           }`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${user.disabled ? "bg-amber-500" : "bg-emerald-500"}`} />
-          {user.disabled ? "Disabled" : "Active"}
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${user.disabled ? 'bg-amber-500' : 'bg-emerald-500'}`}
+          />
+          {user.disabled ? 'Disabled' : 'Active'}
         </span>
       </td>
 
@@ -110,11 +116,11 @@ export function UserRow({ user, isSelf }: Props) {
           title={isSelf ? "You can't disable your own account" : undefined}
           className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
             user.disabled
-              ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              : "border-red-200 text-red-600 hover:bg-red-50"
+              ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+              : 'border-red-200 text-red-600 hover:bg-red-50'
           }`}
         >
-          {pending ? "…" : user.disabled ? "Enable" : "Disable"}
+          {pending ? '…' : user.disabled ? 'Enable' : 'Disable'}
         </button>
       </td>
     </tr>

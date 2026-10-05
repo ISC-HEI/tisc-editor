@@ -94,7 +94,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       });
 
       if (dbUser?.disabled) {
-        return "/login?error=AccountDisabled";
+        return '/login?error=AccountDisabled';
       }
       return true;
     },

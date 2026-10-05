@@ -1,8 +1,8 @@
-"use server";
+'use server';
 
-import { revalidatePath } from "next/cache";
-import { prisma } from "../prisma";
-import { requireAdmin, requireUser } from "./utils";
+import { revalidatePath } from 'next/cache';
+import { prisma } from '../prisma';
+import { requireAdmin, requireUser } from './utils';
 
 export async function setUserDisabled(userId: string, disabled: boolean) {
   const admin = await requireAdmin();
@@ -13,7 +13,7 @@ export async function setUserDisabled(userId: string, disabled: boolean) {
   }
 
   await prisma.user.update({ where: { id: userId }, data: { disabled } });
-  revalidatePath("/admin");
+  revalidatePath('/admin');
 }
 
 export async function updateUserQuota(userId: string, quota: number) {
@@ -22,24 +22,24 @@ export async function updateUserQuota(userId: string, quota: number) {
   await requireAdmin();
   await requireUser(userId);
   if (!Number.isFinite(quota) || quota < 0 || quota > MAX_INT) {
-    throw new Error("Invalid quota");
+    throw new Error('Invalid quota');
   }
 
   await prisma.user.update({ where: { id: userId }, data: { storageQuota: quota } });
-  revalidatePath("/admin");
+  revalidatePath('/admin');
 }
 
 export async function getAllUsers() {
-    requireAdmin();
+  requireAdmin();
 
-    return prisma.user.findMany({
-        select: {
-            id: true,
-            name: true,
-            email: true,
-            disabled: true,
-            storageQuota: true,
-            createdAt: true,
-        },
-    });
+  return prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      disabled: true,
+      storageQuota: true,
+      createdAt: true,
+    },
+  });
 }

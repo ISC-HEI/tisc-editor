@@ -78,16 +78,15 @@ export async function requireAdmin(message = 'Admin access required') {
   return session.user;
 }
 
-
 export async function requireUser(userId: string) {
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true },
-    });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
 
-    if (!user) {
-        throw new Error("User not found");
-    }
+  if (!user) {
+    throw new Error('User not found');
+  }
 
-    return user;
+  return user;
 }

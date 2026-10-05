@@ -1,21 +1,25 @@
-import Link from "next/link";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { getAllUsers } from "@/lib/actions/admin";
-import { UserRow } from "@/components/Admin/user-row";
+import Link from 'next/link';
+import { auth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { getAllUsers } from '@/lib/actions/admin';
+import { UserRow } from '@/components/Admin/user-row';
 
 export default async function AdminDashboard() {
   const session = await auth();
-  if (!session || session.error === "RefreshTokenError") redirect("/login");
-  if (!session.user?.isAdmin) redirect("/dashboard");
+  if (!session || session.error === 'RefreshTokenError') redirect('/login');
+  if (!session.user?.isAdmin) redirect('/dashboard');
 
   const users = await getAllUsers();
   const disabledCount = users.filter((u) => u.disabled).length;
 
   const stats = [
-    { label: "Total users", value: users.length, color: "bg-blue-50 text-blue-600" },
-    { label: "Active", value: users.length - disabledCount, color: "bg-emerald-50 text-emerald-600" },
-    { label: "Disabled", value: disabledCount, color: "bg-amber-50 text-amber-600" },
+    { label: 'Total users', value: users.length, color: 'bg-blue-50 text-blue-600' },
+    {
+      label: 'Active',
+      value: users.length - disabledCount,
+      color: 'bg-emerald-50 text-emerald-600',
+    },
+    { label: 'Disabled', value: disabledCount, color: 'bg-amber-50 text-amber-600' },
   ];
 
   return (
@@ -32,9 +36,7 @@ export default async function AdminDashboard() {
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">
               User management
             </h1>
-            <p className="mt-2 text-slate-500">
-              Manage storage quotas and account access.
-            </p>
+            <p className="mt-2 text-slate-500">Manage storage quotas and account access.</p>
           </div>
           <Link
             href="/dashboard"
@@ -51,7 +53,9 @@ export default async function AdminDashboard() {
               key={s.label}
               className="flex items-center gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
             >
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-bold ${s.color}`}>
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-bold ${s.color}`}
+              >
                 {s.value}
               </div>
               <p className="text-sm text-slate-500">{s.label}</p>
