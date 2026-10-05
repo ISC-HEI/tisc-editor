@@ -3,6 +3,7 @@ import { refs, infos, functions } from './refs';
 import { addLogToPane, debounce, makeToast } from './useUtils';
 import { fetchSvg, exportPdf, exportSvg, findMainFile } from './useApi';
 import { getExtensionConfig } from '@/config/fileExtensions';
+import { exportZip } from './useFileManager';
 
 export let currentProjectId;
 export let fileTree = { type: 'folder', name: 'root', children: {} };
@@ -19,6 +20,7 @@ let syncMarkers = [];
 
 let handleExportPdf = null;
 let handleExportSvg = null;
+let handleExportZip = null;
 
 const debounceFetchCompile = debounce(async () => {
   if (isLoadingFile) return;
@@ -60,6 +62,7 @@ function initEditor() {
     !refs.btnSave ||
     !refs.btnExportPdf ||
     !refs.btnExportSvg ||
+    !refs.btnExportZip ||
     !refs.separator
   ) {
     return;
@@ -104,8 +107,13 @@ function initEditor() {
     };
   }
 
+  if (!handleExportZip) {
+    handleExportZip = () => exportZip(fileTree);
+  }
+
   refs.btnExportPdf.addEventListener('click', handleExportPdf);
   refs.btnExportSvg.addEventListener('click', handleExportSvg);
+  refs.btnExportZip.addEventListener('click', handleExportZip);
 
   setupResizable();
   updateExportButtons();
@@ -150,6 +158,9 @@ export function useEditorWatcher() {
       }
       if (refs.btnExportSvg && handleExportSvg) {
         refs.btnExportSvg.removeEventListener('click', handleExportSvg);
+      }
+      if (refs.btnExportZip && handleExportZip) {
+        refs.btnExportZip.removeEventListener('click', handleExportZip);
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

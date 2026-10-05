@@ -380,8 +380,7 @@ function initFileManager() {
     !refs.btnUploadImages ||
     !refs.imageFilesInput ||
     !refs.rootDropZone ||
-    !refs.btnCreateFile ||
-    !refs.btnExportZip
+    !refs.btnCreateFile
   ) {
     return false;
   }
@@ -514,10 +513,6 @@ function initFileManager() {
   refs.btnCreateFile.addEventListener('click', () => {
     if (!canEdit) return;
     createFile();
-  });
-
-  refs.btnExportZip.addEventListener('click', () => {
-    exportZip(fileTree, infos.title || 'unknow_project');
   });
 
   if (!initialExpansionDone) {
