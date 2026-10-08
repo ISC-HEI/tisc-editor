@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireUserId, requireOwnerAssignment } from './utils';
+import { sendMail } from '../email';
 
 /**
  * Shares a project with another user by email, granting either editor or
@@ -58,6 +59,12 @@ export async function shareProject(
       role: canEdit ? 'editor' : 'viewer',
     },
   });
+
+  await sendMail(
+    sharedUserEmail,
+    'A project has been shared with you',
+    `You have been granted ${canEdit ? 'editor' : 'viewer'} access to a project.`,
+  );
 
   revalidatePath('/dashboard');
 
@@ -168,6 +175,12 @@ export async function transferProjectOwnership(projectId: string, newOwnerEmail:
       },
     }),
   ]);
+
+  await sendMail(
+    newOwnerEmail,
+    'You are now the owner of a project',
+    'You have been granted ownership of a project. You can now manage access and settings.',
+  );
 
   revalidatePath('/dashboard');
 
