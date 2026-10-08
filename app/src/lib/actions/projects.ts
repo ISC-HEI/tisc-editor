@@ -379,3 +379,50 @@ export async function deleteProject(formData: FormData) {
     };
   });
 }
+
+/**
+ * Duplicates a project. Any member (owner, editor or viewer) can duplicate.
+ * The copy belongs only to the current user and is not shared with anyone.
+ */
+export async function duplicateProject(formData: FormData) {
+  const userId = await requireUserId();
+
+  const projectId = formData.get('id');
+  if (typeof projectId !== 'string' || !projectId) {
+    throw new Error('Missing project id');
+  }
+
+  const assignment = await prisma.projectAssignment.findUnique({
+    where: { userId_projectId: { userId, projectId } },
+  });
+  if (!assignment) {
+    throw new Error('You do not have access to this project');
+  }
+
+  const source = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!source) {
+    throw new Error('Project not found');
+  }
+
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...data } = source;
+
+  const copy = await prisma.$transaction(async (tx) => {
+    const newProject = await tx.project.create({
+      data: {
+        ...data,
+        title: `${source.title} (copy)`,
+        isActive: true,
+      },
+    });
+
+    await tx.projectAssignment.create({
+      data: { userId, projectId: newProject.id, role: 'owner' },
+    });
+
+    return newProject;
+  });
+
+  revalidatePath('/dashboard');
+
+  return { success: true, id: copy.id };
+}
