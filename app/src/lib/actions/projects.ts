@@ -399,18 +399,19 @@ export async function duplicateProject(formData: FormData) {
     throw new Error('You do not have access to this project');
   }
 
-  const source = await prisma.project.findUnique({ where: { id: projectId } });
+  const source = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { title: true, fileTree: true },
+  });
   if (!source) {
     throw new Error('Project not found');
   }
 
-  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...data } = source;
-
   const copy = await prisma.$transaction(async (tx) => {
     const newProject = await tx.project.create({
       data: {
-        ...data,
         title: `${source.title} (copy)`,
+        fileTree: source.fileTree as Prisma.InputJsonValue,
         isActive: true,
       },
     });
