@@ -27,6 +27,7 @@ A project always has **exactly one** `owner` at a time — `transferProjectOwner
 | Save file tree / edit content | ✅ | ✅ | 🟡 *technically allowed* | UI-only (see below) |
 | Compile the project | ✅ | ✅ | 🟡 *technically allowed* | Not checked at all (see below) |
 | Real-time edits (Socket.io) | ✅ | ✅ | 🟡 *technically allowed* | Only checks that an assignment exists, not its role (see below) |
+| Handle access requests | ✅ | ❌ | ❌ | Server (`resolveAccessRequest`) |
 
 ## How the owner-only actions are enforced
 

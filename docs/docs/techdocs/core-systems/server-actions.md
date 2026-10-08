@@ -8,6 +8,7 @@ The dashboard's business logic does not go through the [API routes](./api-endpoi
 | `projects.ts` | Project CRUD, loading, saving, archiving |
 | `tags.ts` | Tag management |
 | `sharing.ts` | Sharing, ownership transfer, member management |
+| `access-requests.ts` | Access requests: asking a project owner for access, and answering the requests |
 | `storage.ts` | Storage quota usage |
 | `github-import.ts` | Template fetching/importing from GitHub (see [Template Management](./templates)) |
 | `auth.ts` | Sign-out |
@@ -20,11 +21,17 @@ Unlike the API routes, these functions are called directly from React components
 Almost every action follows the same shape, backed by shared helpers in `utils.ts`:
 
 1. Read the session and resolve the caller's user ID via `requireUserId()`. If there is no session, it throws `Unauthorized` (or a custom message, e.g. `No authorization`, when the caller passes one).
-2. Look up the caller's `ProjectAssignment` for the target project via `getAssignment()` / `requireAssignment()` to check **that they have access at all**. Owner-only actions additionally check `role === 'owner'` (either inline, or via `requireOwnerAssignment()` for the handful of actions — `shareProject`, `transferProjectOwnership`, `removeSharedUser` — that use a single "not owner" error regardless of whether the caller has no assignment at all or just isn't the owner).
+2. Look up the caller's `ProjectAssignment` for the target project via `getAssignment()` / `requireAssignment()` to check **that they have access at all**. Owner-only actions additionally check `role === 'owner'` (either inline, or via `requireOwnerAssignment()` for the handful of actions — `shareProject`, `transferProjectOwnership`, `removeSharedUser`, `resolveAccessRequest` — that use a single "not owner" error regardless of whether the caller has no assignment at all or just isn't the owner).
 3. Perform the Prisma read/write (occasionally wrapped in `prisma.$transaction`).
 4. Call `revalidatePath('/dashboard')` so the dashboard's server-rendered data is refreshed on the next navigation.
 
 Individual sections below only call out what differs from this pattern.
+
+:::
+
+:::info[Emails]
+
+Some actions send an email with `sendMail` after the database change has succeeded (`shareProject`, `transferProjectOwnership`, `requestProjectAccess`, `resolveAccessRequest`). A sending failure never makes the action fail: `sendMail` catches its own errors and the actions do not check its result. See [Emails](./emails#error-handling).
 
 :::
 
@@ -95,6 +102,8 @@ Returns every project the current user has access to (owned or shared), with eno
 
 Returns the caller's role (`'owner' | 'editor' | 'viewer'`) on a project, or `null` if they have no assignment. Used by client components to decide what UI to show (e.g. hiding owner-only actions) without re-fetching the whole project.
 
+The editor page also relies on it: when it returns `null`, the page displays the [access request](./access-requests#editor-page) screen instead of the editor. It must therefore return `null`, not throw, when there is no assignment.
+
 **Auth:** required.
 
 ### `createProject(formData)`
@@ -157,7 +166,7 @@ Removes the caller's `ProjectAssignment` from a project.
 
 ### `deleteProject(formData)`
 
-Permanently deletes a project and all its related data (assignments, tags, thumbnail — all cascade on `Project` deletion, see [Database Schema](../architecture/database)).
+Permanently deletes a project and all its related data (assignments, tags, thumbnail, access requests — all cascade on `Project` deletion, see [Database Schema](../architecture/database)).
 
 **Auth:** required. Only the `owner` may delete a project, otherwise `Only project owners can delete the project`.
 
@@ -239,6 +248,8 @@ Grants another user access to a project by creating a `ProjectAssignment` for th
 
 The new assignment's role is `editor` if `canEdit` is `true`, otherwise `viewer`.
 
+**Email:** once the assignment is created, the shared user receives an email (label `SHARING`) naming the project and the person who shared it, with a button to the dashboard. See [Emails](./emails#emails-sent-by-the-app).
+
 ### `getProjectMembers(projectId)`
 
 Returns every member of a project, but **excludes the caller** from the result. Used to populate pickers such as the "transfer ownership to…" selector.
@@ -264,11 +275,92 @@ Swaps the `owner` role between the caller and another existing member.
 
 **How it works:** both role updates (new owner → `owner`, caller → `editor`) happen inside a single `prisma.$transaction`, so the project is never left without an owner.
 
+**Email:** once the transfer is done, the new owner receives an email (label `OWNERSHIP`) naming the project, with a button to the dashboard. See [Emails](./emails#emails-sent-by-the-app).
+
 ### `removeSharedUser(projectId, sharedUserEmail)`
 
 Revokes another user's access by deleting their `ProjectAssignment`.
 
 **Auth:** required. Only the `owner` may remove users, otherwise `Only owner can remove users`. An owner cannot remove themselves this way (`Owner cannot remove themselves`) — see `leaveProject` or `transferProjectOwnership` instead.
+
+No email is sent to the removed user.
+
+---
+
+## Access requests
+
+*Defined in `access-requests.ts`.* These actions let a user without access ask the project owner for it, and let the owner answer. See [Access Requests](./access-requests) for the full flow, and [Requesting access to a project](../../tutorial/projects/request-access.md) for the user-facing guide.
+
+:::info[Differs from the common pattern]
+
+- `requestProjectAccess` is the only project-related action that is meant to be called by a user who has **no** `ProjectAssignment` on the project.
+- Expected failures of `requestProjectAccess` are **returned** as `{ error }` rather than thrown, because the action is used with `useActionState`.
+- `resolveAccessRequest` revalidates `/access-requests/<id>` instead of `/dashboard`.
+
+:::
+
+### `requestProjectAccess(prevState, formData)`
+
+Creates or renews an access request for a project the caller is not assigned to, then emails the project owner with a link to the review page. It is meant to be used with `useActionState` in the `RequestAccess` component.
+
+**Auth:** required (any signed-in user).
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `prevState` | `{ success?: boolean; error?: string }` | Previous state, provided by `useActionState`. Unused |
+| `formData` | `FormData` | Must contain a `projectId` field |
+
+**Returns** `{ success?: boolean; error?: string }`.
+
+| Condition | Result |
+| --- | --- |
+| `projectId` is not a valid UUID | `error: 'Invalid project'` |
+| The project does not exist | `success: true`, nothing is created or sent (so the response does not reveal which projects exist) |
+| The caller already has a `ProjectAssignment` | `error: 'You already have access to this project'` |
+| The previous request was denied | `error: 'Your previous request was declined by the owner'` |
+| A pending request was made less than 24 h ago | `error: 'You already requested access. The owner has been notified.'` |
+| Otherwise | The request is created (or reset to `pending`), an email is sent to the owner, `success: true` |
+
+**How it works:** the request is stored with an `upsert` on the `[userId, projectId]` unique key, so there is at most one row per user and project. A pending request older than 24 h, or an approved one whose assignment was later removed, is reset to `pending` and the owner is notified again.
+
+**Email:** the project owner receives an email (label `ACCESS REQUEST`) with a **Review request** button to `/access-requests/<id>`. See [Emails](./emails#emails-sent-by-the-app).
+
+### `resolveAccessRequest(requestId, decision)`
+
+Approves or denies an access request. When approved, the requester is assigned to the project with the chosen role.
+
+**Auth:** required. Only the `owner` of the project may answer, otherwise `Only the owner can handle access requests`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `requestId` | `string` | UUID of the `AccessRequest` |
+| `decision` | `'viewer' \| 'editor' \| 'deny'` | Role to grant, or `'deny'` to refuse the request |
+
+**Returns** `Promise<void>`. The review page is revalidated so it displays the new status.
+
+**Errors thrown:**
+
+| Error | Cause |
+| --- | --- |
+| `Invalid request` | `requestId` is not a UUID, or `decision` is not one of the three allowed values |
+| `Request not found` | No request with this id |
+| `Only the owner can handle access requests` | The caller is not the owner of the request's project |
+| `This request has already been handled` | The request is no longer `pending` |
+
+**How it works:**
+
+| Decision | Effect |
+| --- | --- |
+| `'deny'` | `status = 'denied'` and `resolvedAt` is set. No email is sent |
+| `'viewer'` / `'editor'` | In a single `prisma.$transaction`: upserts the `ProjectAssignment` with this role (an existing assignment is left unchanged) and sets `status = 'approved'`. Then the requester is emailed |
+
+**Email:** on approval, the requester receives an email (label `ACCESS GRANTED`) with a button to open the project. See [Emails](./emails#emails-sent-by-the-app).
+
+:::warning[Called from the client]
+
+Server Actions are public endpoints and can be called directly, bypassing the review page. For this reason `resolveAccessRequest` validates its arguments and checks ownership itself instead of relying on the page.
+
+:::
 
 ---
 
