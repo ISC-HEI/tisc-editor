@@ -1,6 +1,10 @@
 import nodemailer from 'nodemailer';
 
-export async function sendMail(to: string, subject: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+export async function sendMail(
+  to: string,
+  subject: string,
+  message: string,
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -22,7 +26,7 @@ export async function sendMail(to: string, subject: string, message: string): Pr
 
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error("Error during mail sending:", error);
+    console.error('Error during mail sending:', error);
     return { success: false, error: 'Internal error' };
   }
 }
