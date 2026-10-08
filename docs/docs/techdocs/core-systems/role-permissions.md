@@ -22,6 +22,7 @@ A project always has **exactly one** `owner` at a time — `transferProjectOwner
 | Remove a shared user | ✅ | ❌ | ❌ | Server (`removeSharedUser`) |
 | Transfer ownership | ✅ (as current owner) | ❌ | ❌ | Server (`transferProjectOwnership`) |
 | Leave the project | ✅ *(only if not the sole member — see below)* | ✅ | ✅ | Server (`leaveProject`) |
+| Duplicate the project | ✅  | ✅ | ✅ | Server (`duplicateProject`) |
 | Add / remove tags | ✅ | ✅ | ✅ | Server, but **not role-restricted** — any assignment qualifies |
 | Load / view the project | ✅ | ✅ | ✅ | Server (`loadProject`) |
 | Save file tree / edit content | ✅ | ✅ | 🟡 *technically allowed* | UI-only (see below) |

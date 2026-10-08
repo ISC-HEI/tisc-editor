@@ -23,6 +23,8 @@ Everything you need to create, organize, and share your projects.
 - **[Creating a project](./projects/create)** — Start a new project from scratch or a template
 - **[Sharing a project](./projects/sharing)** — Collaborate with your team
 - **[Archiving a project](./projects/archive)** — Keep your workspace clean
+- **[Duplicate a project](./projects/duplicate)** — Make a copy of an existing project
+- **[Request Access](./projects/request-access.md)** — Request access to a project
 
 ---
 

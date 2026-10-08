@@ -180,6 +180,49 @@ There is no soft-delete or trash for this action — unlike [archiving](../../tu
 
 :::
 
+### `duplicateProject(formData)`
+
+Creates an independent copy of a project. The caller becomes the `owner` of the copy, whatever their role on the source project.
+
+**Auth:** required. The caller must have a `ProjectAssignment` on the source project (any role: `owner`, `editor` or `viewer`), otherwise `You do not have access to this project`.
+
+**Form fields**
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | ID of the project to duplicate (required) |
+
+**Validation**
+
+- `id` is required, otherwise `Missing project id`.
+- The source project must exist, otherwise `Project not found`.
+
+**How it works**
+
+1. The source project is loaded with its tags.
+2. The size of its file tree is checked against the caller's storage quota (`checkUserQuota`, see [Database Schema](../architecture/database)). If it would be exceeded, the action throws `Quota exceeded (X MB / Y MB). Cannot duplicate project.` **before** any database write. The copy is owned by the caller, so it counts toward their quota even if the source belongs to someone else.
+3. The new `Project` and its owner `ProjectAssignment` are written inside a single `prisma.$transaction`:
+   - the title is the source title suffixed with ` (copy)`;
+   - the file tree is copied as is;
+   - `isActive` is set to `true`, so the copy of an archived project appears in the active list;
+   - the source project's tags are attached to the copy (existing `Tag` records are reused, none are created).
+
+**What is not copied**
+
+| Data | Why |
+| --- | --- |
+| Members (`ProjectAssignment`) | The copy is private to the caller; share it explicitly with [`shareProject`](#shareprojectprojectid-shareduseremail-canedit--false) |
+| Access requests | They belong to the source project |
+| Thumbnail (`ProjectThumbnail`) | Regenerated the next time the copy is saved |
+
+**Returns** `{ success: true, id: string }`, where `id` is the ID of the new project.
+
+:::info[Not restricted to owners]
+
+Unlike [`deleteProject`](#deleteprojectformdata) or [`setProjectActiveStatus`](#setprojectactivestatusprojectid-isactive), duplication is open to every member, including viewers. Anyone who can read the project can already export its content, and the copy is entirely independent of the original.
+
+:::
+
 ---
 
 ## Storage
