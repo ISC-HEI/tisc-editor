@@ -10,8 +10,6 @@ This page explains how to **ask for access** and how, as a project owner, to **a
 
 Open the link you were given. If you do not have access yet, you will see a page titled **You need access**.
 
-<!-- TODO: add a screenshot of the "You need access" page -->
-
 The page shows the email address you are signed in with. Check that it is the account you expect: if the owner shared the project with a different address, sign out and sign in with the right account.
 
 ### 2. Click "Request access"

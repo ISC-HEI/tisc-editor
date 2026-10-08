@@ -22,7 +22,7 @@ Every email uses the same HTML layout, which mirrors the style of the app's erro
 | Project shared | [`shareProject`](./server-actions#shareprojectprojectid-shareduseremail-canedit--false) | The user the project is shared with | `SHARING` | `editor access granted` or `viewer access granted` | **Open the project** → `/dashboard` |
 | Ownership transferred | [`transferProjectOwnership`](./server-actions#transferprojectownershipprojectid-newowneremail) | The new owner | `OWNERSHIP` | `ownership transferred` | **Open the project** → `/dashboard` |
 | Access request | [`requestProjectAccess`](./server-actions#requestprojectaccessprevstate-formdata) | The project owner | `ACCESS REQUEST` | `pending approval` | **Review request** → `/access-requests/<id>` |
-| Access granted | [`resolveAccessRequest`](./server-actions#resolveaccessrequestrequestid-decision) (`viewer` or `editor`) | The user who requested access | `ACCESS GRANTED` | `viewer access granted` or `editor access granted` | **Open the project** → editor page <!-- TODO: confirm editor route --> |
+| Access granted | [`resolveAccessRequest`](./server-actions#resolveaccessrequestrequestid-decision) (`viewer` or `editor`) | The user who requested access | `ACCESS GRANTED` | `viewer access granted` or `editor access granted` | **Open the project** → editor page |
 
 No email is sent when an access request is denied. See [Access Requests](./access-requests#emails).
 
