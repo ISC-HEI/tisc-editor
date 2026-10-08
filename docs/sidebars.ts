@@ -20,6 +20,8 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'tutorial/projects/create', label: 'Create Project' },
       { type: 'doc', id: 'tutorial/projects/sharing', label: 'Collaborate on Project' },
       { type: 'doc', id: 'tutorial/projects/archive', label: 'Archive Project' },
+      { type: 'doc', id: 'tutorial/projects/duplicate', label: 'Duplicate Project' },
+      { type: 'doc', id: 'tutorial/projects/request-access', label: 'Request Access' },
     ]},
     { type: 'category', label: 'Using the Editor', items: [
       { type: 'doc', id: 'tutorial/editor/compilation', label: 'Code Compilation' },
