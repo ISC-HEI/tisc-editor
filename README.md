@@ -153,6 +153,18 @@ AUTH_KEYCLOAK_SECRET=app-secret
 AUTH_KEYCLOAK_ISSUER=https://sso.isc-vs.ch/realms/isc
 ```
 
+### Mail Configuration
+
+1. Add required variables in your `.env`
+
+```env
+SMTP_HOST=mail.infomaniak.com
+SMTP_PORT=587
+SMTP_USER=tisc@isc-vs.ch
+SMTP_PASS=
+SMTP_FROM=tisc@isc-vs.ch
+```
+
 ## Getting Started
 
 ### Prerequisites

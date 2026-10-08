@@ -5,7 +5,18 @@ import { useRouter } from 'next/navigation';
 
 import SharedUserWindows from './SharedUserWindow';
 import EditProjectTagsModal from './EditProjectTagsModal';
-import { Ellipsis, Share2, Trash, Crown, Loader2, X, LogOut, Tag, Archive } from 'lucide-react';
+import {
+  Ellipsis,
+  Share2,
+  Trash,
+  Crown,
+  Loader2,
+  X,
+  LogOut,
+  Tag,
+  Archive,
+  Copy,
+} from 'lucide-react';
 import {
   getProjectMembers,
   getUsersEmailFromId,
@@ -13,6 +24,7 @@ import {
 } from '@/lib/actions/sharing';
 import {
   deleteProject,
+  duplicateProject,
   getProjectAssignmentRole,
   leaveProject,
   setProjectActiveStatus,
@@ -189,6 +201,7 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
   const [isEditingTags, setIsEditingTags] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   const [emails, setEmails] = useState([]);
   const [members, setMembers] = useState([]);
@@ -209,7 +222,7 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
         const role = await getProjectAssignmentRole(projectId);
         if (role) setCurrentRole(role);
       } catch (err) {
-        console.error('Erreur rôle:', err);
+        console.error('Role error:', err);
       }
     };
     fetchRole();
@@ -221,7 +234,7 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
       try {
         setEmails(await getUsersEmailFromId(usersSharing));
       } catch (err) {
-        console.error('Erreur emails:', err);
+        console.error('Emails error:', err);
       }
     };
     fetchEmails();
@@ -250,11 +263,11 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
       }
 
       const otherMembers = await getProjectMembers(projectId);
-      if (otherMembers.length === 0) return; // jamais de projet sans owner
+      if (otherMembers.length === 0) return;
       setMembers(otherMembers);
       setIsTransferring(true);
     } catch (err) {
-      console.error('Erreur leave:', err);
+      console.error('Leave error:', err);
     }
   };
 
@@ -269,7 +282,21 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
       await setProjectActiveStatus(projectId, !isActive);
       router.refresh();
     } catch (err) {
-      console.error('Archiving Error:', err);
+      console.error('Archiving error:', err);
+    }
+  };
+
+  const handleDuplicateClick = async () => {
+    if (isDuplicating) return;
+    setIsDuplicating(true);
+    try {
+      await duplicateProject(projectFormData(projectId));
+      router.refresh();
+    } catch (err) {
+      console.error('Duplicate error:', err);
+    } finally {
+      setIsDuplicating(false);
+      setIsOpen(false);
     }
   };
 
@@ -280,14 +307,14 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
       setIsConfirmingDelete(false);
       router.refresh();
     } catch (err) {
-      console.error('Delete Error:', err);
+      console.error('Delete error:', err);
     } finally {
       setIsDeleting(false);
     }
   };
 
   const menuItem =
-    'w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2';
+    'w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50';
 
   return (
     <>
@@ -325,73 +352,81 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
         />
       )}
 
-      {isOwner ? (
-        <div className="relative" ref={menuRef}>
-          <button
-            type="button"
-            onClick={() => setIsOpen((prev) => !prev)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors font-bold text-gray-500"
-          >
-            <Ellipsis />
-          </button>
-
-          {isOpen && (
-            <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-xl z-50 py-1 border-gray-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSharing(true);
-                  setIsOpen(false);
-                }}
-                className={menuItem}
-              >
-                <Share2 size={16} /> Share
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditingTags(true);
-                  setIsOpen(false);
-                }}
-                className={menuItem}
-              >
-                <Tag size={16} /> Edit Tags
-              </button>
-
-              <button type="button" onClick={handleArchiveClick} className={menuItem}>
-                <Archive size={16} /> {isActive ? 'Archive' : 'Unarchive'}
-              </button>
-
-              {hasOtherMembers && (
-                <button type="button" onClick={handleLeaveClick} className={menuItem}>
-                  <LogOut size={16} /> Leave
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsConfirmingDelete(true);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
-              >
-                <Trash size={16} /> Delete
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
+      <div className="relative" ref={menuRef}>
         <button
           type="button"
-          onClick={handleLeaveClick}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
-          title="Leave project"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors font-bold text-gray-500"
         >
-          <LogOut size={16} /> Leave
+          <Ellipsis />
         </button>
-      )}
+
+        {isOpen && (
+          <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-xl z-50 py-1 border-gray-100">
+            {/* Visible for everyone */}
+            <button
+              type="button"
+              onClick={handleDuplicateClick}
+              disabled={isDuplicating}
+              className={menuItem}
+            >
+              {isDuplicating ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
+              Duplicate
+            </button>
+
+            {isOwner ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSharing(true);
+                    setIsOpen(false);
+                  }}
+                  className={menuItem}
+                >
+                  <Share2 size={16} /> Share
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingTags(true);
+                    setIsOpen(false);
+                  }}
+                  className={menuItem}
+                >
+                  <Tag size={16} /> Edit Tags
+                </button>
+
+                <button type="button" onClick={handleArchiveClick} className={menuItem}>
+                  <Archive size={16} /> {isActive ? 'Archive' : 'Unarchive'}
+                </button>
+
+                {hasOtherMembers && (
+                  <button type="button" onClick={handleLeaveClick} className={menuItem}>
+                    <LogOut size={16} /> Leave
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsConfirmingDelete(true);
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                >
+                  <Trash size={16} /> Delete
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={handleLeaveClick} className={menuItem}>
+                <LogOut size={16} /> Leave
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 }

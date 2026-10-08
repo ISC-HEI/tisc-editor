@@ -20,6 +20,8 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'tutorial/projects/create', label: 'Create Project' },
       { type: 'doc', id: 'tutorial/projects/sharing', label: 'Collaborate on Project' },
       { type: 'doc', id: 'tutorial/projects/archive', label: 'Archive Project' },
+      { type: 'doc', id: 'tutorial/projects/duplicate', label: 'Duplicate Project' },
+      { type: 'doc', id: 'tutorial/projects/request-access', label: 'Request Access' },
     ]},
     { type: 'category', label: 'Using the Editor', items: [
       { type: 'doc', id: 'tutorial/editor/compilation', label: 'Code Compilation' },
@@ -47,6 +49,7 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'techdocs/core-systems/templates', label: 'Template Management' },
       { type: 'doc', id: 'techdocs/core-systems/role-permissions', label: 'Role & Permissions' },
       { type: 'doc', id: 'techdocs/core-systems/spellcheck', label: 'Spellcheck' },
+      { type: 'doc', id: 'techdocs/core-systems/emails', label: 'Email Management' },
     ]},
     { type: 'doc', id: 'techdocs/devops/ci', label: 'Continuous Integration' },
     { type: 'doc', id: 'techdocs/admin/user-management', label: 'User Management (Admin)' },
