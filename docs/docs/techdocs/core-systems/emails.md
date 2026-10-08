@@ -21,11 +21,14 @@ Every email uses the same HTML layout, which mirrors the style of the app's erro
 | --- | --- | --- | --- | --- | --- |
 | Project shared | [`shareProject`](./server-actions#shareprojectprojectid-shareduseremail-canedit--false) | The user the project is shared with | `SHARING` | `editor access granted` or `viewer access granted` | **Open the project** → `/dashboard` |
 | Ownership transferred | [`transferProjectOwnership`](./server-actions#transferprojectownershipprojectid-newowneremail) | The new owner | `OWNERSHIP` | `ownership transferred` | **Open the project** → `/dashboard` |
+| Access request | [`requestProjectAccess`](./server-actions#requestprojectaccessprevstate-formdata) | The project owner | `ACCESS REQUEST` | `pending approval` | **Review request** → `/access-requests/<id>` |
+| Access granted | [`resolveAccessRequest`](./server-actions#resolveaccessrequestrequestid-decision) (`viewer` or `editor`) | The user who requested access | `ACCESS GRANTED` | `viewer access granted` or `editor access granted` | **Open the project** → editor page <!-- TODO: confirm editor route --> |
 
+No email is sent when an access request is denied. See [Access Requests](./access-requests#emails).
 
 :::info[Link target]
 
-Both buttons currently point to `/dashboard`, not directly to the project.
+The sharing and ownership buttons currently point to `/dashboard`, not directly to the project.
 
 :::
 
@@ -40,7 +43,7 @@ The transport is configured entirely through environment variables:
 | `SMTP_USER` | SMTP login | `tisc@isc-vs.ch` |
 | `SMTP_PASS` | SMTP password | *(secret)* |
 | `SMTP_FROM` | Address shown in the `From` header | `tisc@isc-vs.ch` |
-| `AUTH_URL` | Public base URL of the app, used to build the button links | `https://tisc.isc-vs.ch` |
+| `AUTH_URL` | Public base URL of the app, used to build the button links | `https://<domain>` <!-- TODO: production URL --> |
 
 - **Port and TLS.** `secure` is enabled only when `SMTP_PORT` is `465` (implicit TLS). On `587`, Nodemailer upgrades the connection with STARTTLS.
 - **Transporter reuse.** The transporter is created once, when the module is loaded, so the SMTP connection settings are reused across sends. Changing an environment variable therefore requires restarting (recreating) the container.
