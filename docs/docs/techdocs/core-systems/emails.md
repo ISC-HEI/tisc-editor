@@ -43,7 +43,7 @@ The transport is configured entirely through environment variables:
 | `SMTP_USER` | SMTP login | `tisc@isc-vs.ch` |
 | `SMTP_PASS` | SMTP password | *(secret)* |
 | `SMTP_FROM` | Address shown in the `From` header | `tisc@isc-vs.ch` |
-| `AUTH_URL` | Public base URL of the app, used to build the button links | `https://<domain>` <!-- TODO: production URL --> |
+| `AUTH_URL` | Public base URL of the app, used to build the button links | `https://tisc.isc-vs.ch` |
 
 - **Port and TLS.** `secure` is enabled only when `SMTP_PORT` is `465` (implicit TLS). On `587`, Nodemailer upgrades the connection with STARTTLS.
 - **Transporter reuse.** The transporter is created once, when the module is loaded, so the SMTP connection settings are reused across sends. Changing an environment variable therefore requires restarting (recreating) the container.

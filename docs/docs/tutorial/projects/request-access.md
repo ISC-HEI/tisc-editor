@@ -22,7 +22,7 @@ When the request is sent, the page confirms it: *"Request sent. The owner has be
 
 If the owner accepts, you receive an email with a button to open the project. You can then open it from the email, or from your dashboard.
 
-If the owner denies the request, you are not notified by email. <!-- TODO: update if a denial email is added -->
+If the owner denies the request, you are not notified by email. 
 
 ### What you get
 
@@ -82,10 +82,10 @@ Once you have answered, the page shows the final status of the request. A reques
 
 ### Changing access later
 
-You can change or remove someone's access at any time from the project's sharing options. <!-- TODO: link to the sharing documentation -->
+You can change or remove someone's access at any time from the project's sharing options.
 
 ### Good to know
 
 - **Check who is asking.** The email address is shown on the review page. Only grant access to people you recognize.
 - **Prefer viewer when in doubt.** You can always share the project again as editor later.
-- **Sharing directly.** You do not have to wait for a request: you can share a project with someone at any time from the sharing options. <!-- TODO: link to the sharing documentation -->
+- **Sharing directly.** You do not have to wait for a request: you can share a project with someone at any time from the sharing options.
