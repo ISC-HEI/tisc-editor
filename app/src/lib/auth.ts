@@ -56,6 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: CLIENT_ID,
       clientSecret: process.env.AUTH_KEYCLOAK_SECRET,
       issuer: ISSUER,
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   session: { strategy: 'jwt' },

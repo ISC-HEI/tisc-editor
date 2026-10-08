@@ -27,6 +27,7 @@ This section is dedicated to the **technical part**: everything you need to know
 **[Real-time Collaboration](./core-systems/collaboration)** — Learn how the WebSocket integration works.  
 **[Role & Permissions](./core-systems/role-permissions)** — Understand the differents roles and permissions.
 **[spellcheck](./core-systems/spellcheck)** — Understand how the spellcheck work.
+**[Emails](./core-systems/emails.md)** — Learn how the email system works.
 
 ## DevOps
 

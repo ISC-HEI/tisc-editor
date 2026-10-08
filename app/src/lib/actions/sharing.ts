@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireUserId, requireOwnerAssignment } from './utils';
+import { sendMail } from '../email';
 
 /**
  * Shares a project with another user by email, granting either editor or
@@ -58,6 +59,22 @@ export async function shareProject(
       role: canEdit ? 'editor' : 'viewer',
     },
   });
+
+  const [project, owner] = await Promise.all([
+    prisma.project.findUnique({ where: { id: projectId }, select: { title: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
+  ]);
+
+  await sendMail(
+    sharedUserEmail,
+    'A project has been shared with you',
+    `${owner?.name ?? owner?.email} shared the project "${project?.title ?? 'Untitled'}" with you.`,
+    {
+      label: 'SHARING',
+      code: canEdit ? 'editor access granted' : 'viewer access granted',
+      cta: { label: 'Open the project', url: `${process.env.AUTH_URL}/dashboard` },
+    },
+  );
 
   revalidatePath('/dashboard');
 
@@ -168,6 +185,22 @@ export async function transferProjectOwnership(projectId: string, newOwnerEmail:
       },
     }),
   ]);
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { title: true },
+  });
+
+  await sendMail(
+    newOwnerEmail,
+    'You are now the owner of a project',
+    `You are now the owner of the project "${project?.title ?? 'Untitled'}". You can manage its access and settings.`,
+    {
+      label: 'OWNERSHIP',
+      code: 'ownership transferred',
+      cta: { label: 'Open the project', url: `${process.env.AUTH_URL}/dashboard` },
+    },
+  );
 
   revalidatePath('/dashboard');
 

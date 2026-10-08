@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-08
+- Added email sending when sharing a project and when transfer ownership.
+
 ## 2026-10-05
 - Added admin dashboard (possibility to disabled user and edit storage quota)
 - Updated side panel design.
