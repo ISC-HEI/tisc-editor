@@ -22,6 +22,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   projectLinks  ProjectAssignment[]
+  accessRequests AccessRequest[]
 
   @@map("users")
 }
@@ -35,6 +36,7 @@ model Project {
   thumbnail ProjectThumbnail?
   userLinks ProjectAssignment[]
   tags      ProjectTag[]
+  accessRequests AccessRequest[]
 
   @@map("projects")
 }
@@ -56,6 +58,21 @@ model Tag {
   projects ProjectTag[]
 
   @@map("tags")
+}
+
+model AccessRequest {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  projectId   String    @map("project_id") @db.Uuid
+  status      String    @default("pending") // "pending", "approved" or "denied"
+  requestedAt DateTime  @default(now()) @map("requested_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("access_requests")
 }
 
 // ----------------

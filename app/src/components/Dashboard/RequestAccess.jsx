@@ -1,10 +1,11 @@
+'use client';
+
+import { useActionState } from 'react';
 import Link from 'next/link';
+import { requestProjectAccess } from '@/lib/actions/access-requests';
 
 export default function RequestAccess({ projectId, email }) {
-  async function requestAccess() {
-    'use server';
-    console.log('Access requested for project', projectId);
-  }
+  const [state, formAction, pending] = useActionState(requestProjectAccess, {});
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6">
@@ -40,15 +41,31 @@ export default function RequestAccess({ projectId, email }) {
           )}
         </div>
 
+        {state.success && (
+          <p role="status" className="mx-auto mt-6 max-w-sm text-sm leading-6 text-emerald-600">
+            Request sent. The owner has been notified by email.
+          </p>
+        )}
+
+        {state.error && (
+          <p role="alert" className="mx-auto mt-6 max-w-sm text-sm leading-6 text-red-600">
+            {state.error}
+          </p>
+        )}
+
         <div className="mt-8 flex items-center justify-center gap-3">
-          <form action={requestAccess}>
-            <button
-              type="submit"
-              className="inline-flex items-center rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700"
-            >
-              Request access
-            </button>
-          </form>
+          {!state.success && (
+            <form action={formAction}>
+              <input type="hidden" name="projectId" value={projectId} />
+              <button
+                type="submit"
+                disabled={pending}
+                className="inline-flex items-center rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-50"
+              >
+                {pending ? 'Sending…' : 'Request access'}
+              </button>
+            </form>
+          )}
 
           <Link
             href="/dashboard"
