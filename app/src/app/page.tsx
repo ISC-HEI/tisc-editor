@@ -1,13 +1,16 @@
-import { redirect } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { auth } from '@/lib/auth';
 import type { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
 import { getProjectAssignmentRole, loadProject } from '@/lib/actions/projects';
+import RequestAccess from '../components/Dashboard/RequestAccess';
 
 const Editor = dynamic(() => import('../components/Editor/Editor'), {
   loading: () => <h2>The editor is loading</h2>,
 });
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function asString(value: Prisma.JsonValue | undefined, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
@@ -65,15 +68,19 @@ export default async function Page({
     redirect('/dashboard');
   }
 
-  const project = await loadProject(projectId);
-
-  if (!project) {
-    redirect('/dashboard');
+  if (!UUID_RE.test(projectId)) {
+    notFound();
   }
 
   const role = await getProjectAssignmentRole(projectId);
 
   if (!role) {
+    return <RequestAccess projectId={projectId} email={session.user.email} />;
+  }
+
+  const project = await loadProject(projectId);
+
+  if (!project) {
     redirect('/dashboard');
   }
 
