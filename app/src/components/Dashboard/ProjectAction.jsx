@@ -5,7 +5,18 @@ import { useRouter } from 'next/navigation';
 
 import SharedUserWindows from './SharedUserWindow';
 import EditProjectTagsModal from './EditProjectTagsModal';
-import { Ellipsis, Share2, Trash, Crown, Loader2, X, LogOut, Tag, Archive, Copy } from 'lucide-react';
+import {
+  Ellipsis,
+  Share2,
+  Trash,
+  Crown,
+  Loader2,
+  X,
+  LogOut,
+  Tag,
+  Archive,
+  Copy,
+} from 'lucide-react';
 import {
   getProjectMembers,
   getUsersEmailFromId,
@@ -359,11 +370,7 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
               disabled={isDuplicating}
               className={menuItem}
             >
-              {isDuplicating ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Copy size={16} />
-              )}
+              {isDuplicating ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
               Duplicate
             </button>
 
