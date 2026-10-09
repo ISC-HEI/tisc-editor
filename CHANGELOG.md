@@ -4,6 +4,7 @@ All notable changes to this project, organized by day.
 
 ## 2026-10-08
 - Added complete compiler documentation
+- Updated default loader for editor loading
 
 ## 2026-10-08
 - Added email sending when sharing a project and when transfer ownership.
