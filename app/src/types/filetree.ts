@@ -9,7 +9,7 @@ export interface FileTreeNode {
 export interface FileNode {
   type: 'file' | 'folder';
   name: string;
-  fullPath: string;
+  fullPath?: string;
   data?: string;
   content?: string;
   isMain?: boolean;
