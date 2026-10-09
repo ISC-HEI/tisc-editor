@@ -1,6 +1,6 @@
 const sk = 'h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse';
 
-function Lines(widths) {
+function Lines({ widths }) {
   return (
     <div className="flex flex-col gap-3">
       {widths.map((w, i) =>
