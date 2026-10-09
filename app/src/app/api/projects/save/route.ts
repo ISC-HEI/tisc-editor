@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';

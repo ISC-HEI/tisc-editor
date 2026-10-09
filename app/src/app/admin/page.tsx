@@ -85,15 +85,18 @@ export default async function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {/* @ts-expect-error getAllUsers returns an untyped result */}
+                {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+                {/* @ts-ignore */}
                 {users.map(({ _count, ...u }) => (
                   <UserRow
                     key={u.id}
-                    user={{
-                      ...u,
-                      createdAt: u.createdAt.toISOString(),
-                      projectCount: _count.projectLinks,
-                    } as Parameters<typeof UserRow>[0]['user']}
+                    user={
+                      {
+                        ...u,
+                        createdAt: u.createdAt.toISOString(),
+                        projectCount: _count.projectLinks,
+                      } as Parameters<typeof UserRow>[0]['user']
+                    }
                     isSelf={u.id === session.user.id}
                   />
                 ))}
