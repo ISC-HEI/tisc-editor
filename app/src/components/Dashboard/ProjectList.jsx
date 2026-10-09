@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X, ChevronDown, Tag as TagIcon, Archive } from 'lucide-react';
+import { X, ChevronDown, Tag as TagIcon, Archive, FolderPlus, SearchX } from 'lucide-react';
 import { ProjectCard } from './ProjectCard';
 import { getTagsByUser } from '@/lib/actions/tags';
+import CreateProjectModal from './CreateProjectModal';
 
 export function ProjectList({ initialProjects }) {
   const [search, setSearch] = useState('');
@@ -101,6 +102,12 @@ export function ProjectList({ initialProjects }) {
     }
   };
 
+  const clearFilters = () => {
+    setSearch('');
+    setSelectedTags([]);
+    setTagInput('');
+  };
+
   const filteredTagSuggestions = availableTags.filter((tag) => {
     const alreadySelected = selectedTags.some((selectedTag) => selectedTag.name === tag.name);
 
@@ -127,6 +134,8 @@ export function ProjectList({ initialProjects }) {
 
   const activeProjects = filteredProjects.filter((project) => project.isActive !== false);
   const inactiveProjects = filteredProjects.filter((project) => project.isActive === false);
+
+  const hasFilters = selectedTags.length > 0 || search.trim() !== '';
 
   return (
     <div className="space-y-6">
@@ -271,7 +280,7 @@ export function ProjectList({ initialProjects }) {
         </div>
 
         {/* Active filters / result count */}
-        {(selectedTags.length > 0 || search) && (
+        {hasFilters && (
           <div className="flex items-center justify-between text-xs text-gray-400">
             <span>
               {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'}{' '}
@@ -293,8 +302,46 @@ export function ProjectList({ initialProjects }) {
 
       <div className="grid grid-cols-1 gap-3" data-test="project-list">
         {activeProjects.length === 0 ? (
-          <div className="text-center py-20 bg-white border-2 border-dashed border-gray-200 rounded-2xl">
-            <p className="text-gray-400">No project found.</p>
+          <div className="flex flex-col items-center text-center py-16 px-6 bg-white border-2 border-dashed border-gray-200 rounded-2xl">
+            {hasFilters ? (
+              <>
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                  <SearchX size={26} />
+                </div>
+
+                <h3 className="text-base font-semibold text-gray-800">No matching projects</h3>
+
+                <p className="mt-1 max-w-sm text-sm text-gray-500">
+                  We couldn&apos;t find anything for your search. Try another keyword or remove some
+                  tags.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                >
+                  Clear filters
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  <FolderPlus size={26} />
+                </div>
+
+                <h3 className="text-base font-semibold text-gray-800">No projects yet</h3>
+
+                <p className="mt-1 max-w-sm text-sm text-gray-500">
+                  Start from a template or a blank page. Your first project is only a few seconds
+                  away.
+                </p>
+
+                <div className="mt-6 flex justify-center">
+                  <CreateProjectModal />
+                </div>
+              </>
+            )}
           </div>
         ) : (
           activeProjects.map((project) => <ProjectCard key={project.id} project={project} />)
