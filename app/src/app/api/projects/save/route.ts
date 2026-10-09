@@ -54,11 +54,7 @@ export async function POST(req: Request) {
 
     const existingByPath = new Map(existing.map((file) => [file.path, file]));
 
-    const files = prepareFiles(
-      id,
-      flat,
-      new Map(existing.map((file) => [file.path, file.id])),
-    );
+    const files = prepareFiles(id, flat, new Map(existing.map((file) => [file.path, file.id])));
 
     const dataSize = files.reduce((sum, file) => sum + file.size, 0);
     const previousSize = existing.reduce((sum, file) => sum + file.size, 0);
@@ -78,11 +74,9 @@ export async function POST(req: Request) {
       const usage = otherProjectsUsage + previousSize;
 
       return new NextResponse(
-        `Quota exceeded (${(usage / 1024 / 1024).toFixed(2)}MB / ${(
-          limit /
-          1024 /
-          1024
-        ).toFixed(2)}MB)`,
+        `Quota exceeded (${(usage / 1024 / 1024).toFixed(2)}MB / ${(limit / 1024 / 1024).toFixed(
+          2,
+        )}MB)`,
         { status: 403 },
       );
     }
@@ -90,7 +84,9 @@ export async function POST(req: Request) {
     // The whole tree is sent on every save: only upload what actually changed.
     const toUpload = files.filter((file) => {
       const previous = existingByPath.get(file.path);
-      return !previous || previous.sha256 !== file.sha256 || previous.storageKey !== file.storageKey;
+      return (
+        !previous || previous.sha256 !== file.sha256 || previous.storageKey !== file.storageKey
+      );
     });
 
     const uploadedPaths = new Set(toUpload.map((file) => file.path));
