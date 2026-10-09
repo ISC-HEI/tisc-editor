@@ -2,7 +2,8 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { flattenTree } from '@/lib/filetree';
-import { Prisma } from '@prisma/client';
+import { deleteObjects } from '@/lib/storage';
+import { prepareFiles, uploadFiles } from '@/lib/project-storage';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -19,116 +20,130 @@ export async function POST(req: Request) {
       return new NextResponse('Invalid payload', { status: 400 });
     }
 
-    const files = flattenTree(fileTree).map((file) => {
-      const content = Buffer.from(file.content, 'utf8');
-
-      return {
-        path: file.path,
-        isMain: file.isMain,
-        content,
-        size: content.byteLength,
-      };
-    });
-
-    const paths = files.map((file) => file.path);
+    const flat = flattenTree(fileTree);
+    const paths = flat.map((file) => file.path);
 
     if (paths.some((path) => !path) || new Set(paths).size !== paths.length) {
       return new NextResponse('Invalid or duplicate file paths', { status: 400 });
     }
 
+    // Only owners and editors may save.
+    const assignment = await prisma.projectAssignment.findUnique({
+      where: { userId_projectId: { userId, projectId: id } },
+    });
+
+    if (!assignment || assignment.role === 'viewer') {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // The quota that counts is the one of the project's owner.
+    const ownerLink = await prisma.projectAssignment.findFirst({
+      where: { projectId: id, role: 'owner' },
+      select: { userId: true, user: { select: { storageQuota: true } } },
+    });
+
+    if (!ownerLink) throw new Error('Project owner not found');
+
+    const ownerId = ownerLink.userId;
+    const limit = ownerLink.user.storageQuota;
+
+    const existing = await prisma.projectFile.findMany({
+      where: { projectId: id },
+      select: { id: true, path: true, isMain: true, size: true, sha256: true, storageKey: true },
+    });
+
+    const existingByPath = new Map(existing.map((file) => [file.path, file]));
+
+    const files = prepareFiles(
+      id,
+      flat,
+      new Map(existing.map((file) => [file.path, file.id])),
+    );
+
     const dataSize = files.reduce((sum, file) => sum + file.size, 0);
+    const previousSize = existing.reduce((sum, file) => sum + file.size, 0);
 
-    const result = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        // Only owners and editors may save.
-        const assignment = await tx.projectAssignment.findUnique({
-          where: { userId_projectId: { userId, projectId: id } },
-        });
+    const others = await prisma.projectFile.aggregate({
+      _sum: { size: true },
+      where: {
+        projectId: { not: id },
+        project: { userLinks: { some: { userId: ownerId, role: 'owner' } } },
+      },
+    });
 
-        if (!assignment || assignment.role === 'viewer') {
-          return { status: 'forbidden' as const };
-        }
+    const otherProjectsUsage = others._sum.size ?? 0;
+    const isGrowing = dataSize > previousSize;
 
-        // The quota that counts is the one of the project's owner.
-        const ownerLink = await tx.projectAssignment.findFirst({
-          where: { projectId: id, role: 'owner' },
-          select: { userId: true, user: { select: { storageQuota: true } } },
-        });
+    if (isGrowing && otherProjectsUsage + dataSize > limit) {
+      const usage = otherProjectsUsage + previousSize;
 
-        if (!ownerLink) throw new Error('Project owner not found');
+      return new NextResponse(
+        `Quota exceeded (${(usage / 1024 / 1024).toFixed(2)}MB / ${(
+          limit /
+          1024 /
+          1024
+        ).toFixed(2)}MB)`,
+        { status: 403 },
+      );
+    }
 
-        const ownerId = ownerLink.userId;
-        const limit = ownerLink.user.storageQuota;
+    // The whole tree is sent on every save: only upload what actually changed.
+    const toUpload = files.filter((file) => {
+      const previous = existingByPath.get(file.path);
+      return !previous || previous.sha256 !== file.sha256 || previous.storageKey !== file.storageKey;
+    });
 
-        const [previous, others] = await Promise.all([
-          tx.projectFile.aggregate({
-            _sum: { size: true },
-            where: { projectId: id },
-          }),
-          tx.projectFile.aggregate({
-            _sum: { size: true },
-            where: {
-              projectId: { not: id },
-              project: { userLinks: { some: { userId: ownerId, role: 'owner' } } },
-            },
-          }),
-        ]);
+    const uploadedPaths = new Set(toUpload.map((file) => file.path));
 
-        const previousSize = previous._sum.size ?? 0;
-        const otherProjectsUsage = others._sum.size ?? 0;
+    const toWrite = files.filter((file) => {
+      const previous = existingByPath.get(file.path);
+      return uploadedPaths.has(file.path) || previous?.isMain !== file.isMain;
+    });
 
-        const totalAttempted = otherProjectsUsage + dataSize;
-        const isGrowing = dataSize > previousSize;
+    // Objects first: a failure afterwards only leaves harmless orphans.
+    await uploadFiles(toUpload);
 
-        if (isGrowing && totalAttempted > limit) {
-          return {
-            status: 'quota' as const,
-            usage: otherProjectsUsage + previousSize,
-            limit,
-          };
-        }
-
+    await prisma.$transaction(
+      async (tx) => {
         // Remove files that no longer exist in the tree.
         await tx.projectFile.deleteMany({
           where: { projectId: id, path: { notIn: paths } },
         });
 
-        // Create or update the others.
-        for (const file of files) {
+        for (const file of toWrite) {
           await tx.projectFile.upsert({
             where: { projectId_path: { projectId: id, path: file.path } },
             create: {
+              id: file.id,
               projectId: id,
               path: file.path,
               isMain: file.isMain,
-              content: file.content,
               size: file.size,
+              sha256: file.sha256,
+              storageKey: file.storageKey,
             },
             update: {
               isMain: file.isMain,
-              content: file.content,
               size: file.size,
+              sha256: file.sha256,
+              storageKey: file.storageKey,
+              content: null, // migrated: the object store is now the source of truth
             },
           });
         }
-
-        return { status: 'ok' as const };
       },
       { timeout: 20000 },
     );
 
-    if (result.status === 'forbidden') {
-      return new NextResponse('Forbidden', { status: 403 });
-    }
+    // Delete the objects of removed files (best effort, rows are already gone).
+    const pathSet = new Set(paths);
+    const removedKeys = existing
+      .filter((file) => !pathSet.has(file.path) && file.storageKey)
+      .map((file) => file.storageKey as string);
 
-    if (result.status === 'quota') {
-      return new NextResponse(
-        `Quota exceeded (${(result.usage / 1024 / 1024).toFixed(2)}MB / ${(
-          result.limit /
-          1024 /
-          1024
-        ).toFixed(2)}MB)`,
-        { status: 403 },
+    if (removedKeys.length > 0) {
+      deleteObjects(removedKeys).catch((error) =>
+        console.error('Failed to delete removed objects:', error),
       );
     }
 
