@@ -1,11 +1,12 @@
 # Project Structure
 
-This page describes how the `app` directory is organized.
+This page describes how the repository and the `app` directory are organized.
 
 ## Root files
- 
 - **`Dockerfile`** — Container image definition for the app.
-- **`docker-compose-dev.yml`** — The docker compose use in development.
+- **`docker-compose-dev.yml`** — The docker compose use in development (database, Garage object store, app, docs and reverse proxy).
+- **`garage/garage.toml`** — Configuration of the Garage object store.
+- **`scripts/garage-init.sh`** — One-time initialization of Garage (layout, bucket, access key).
 - **`prisma/schema.prisma`** — Database schema definition.
 - **`prisma.config.ts`** — Prisma configuration (used with `@prisma/adapter-pg`).
 - **`next.config.ts`** — Next.js configuration.
@@ -15,7 +16,7 @@ This page describes how the `app` directory is organized.
 Follows the Next.js App Router convention. Contains pages, layouts, and API routes.
 
 - **`api/[auth]/[...nextauth]`** — NextAuth catch-all route, handles the OIDC flow with Keycloak.
-- **`api/projects`** — REST endpoints for project operations: compiling (`compile`), saving (`save`), and generating thumbnails (`[id]/thumbnail`).
+- **`api/projects`** — REST endpoints for project operations: compiling (`compile`), saving (`save`, which checks the user's role and quota, then uploads the changed files to the object store), and generating thumbnails (`[id]/thumbnail`).
 - **`dashboard`** — The project dashboard page.
 - **`login`** — The login page.
 
@@ -43,10 +44,13 @@ Custom React hooks encapsulating stateful logic, notably:
 ## `src/lib`
 
 Server-side logic and integrations:
-- **`actions/`** — Server actions functions.
+- **`actions/`** — Server actions functions (project creation, loading, duplication, deletion, storage usage).
 - **`auth.ts`** / **`auth.config.ts`** — NextAuth setup and configuration.
 - **`prisma.ts`** — Prisma client instance.
-- **`quota-service.ts`** — Storage quota calculation logic.
+- **`storage.ts`** — S3 client and low-level object operations (put, get, copy, delete, delete by prefix).
+- **`project-storage.ts`** — Project-level storage logic: prepares files (encoding, size, hash, storage key), uploads them, reads their content and cleans up the objects of a deleted project.
+- **`filetree.ts`** — Converts between the nested file tree used by the editor and the flat list of files stored in the database (`flattenTree` / `buildTree`), including the encoding of binary files.
+- **`quota-service.ts`** — Storage quota calculation logic (sum of the size of the files of the projects a user owns).
 - **`socketServer.ts`** — Socket.io server setup.
 - **`template.ts`** — List of the [templates](../core-systems/templates).
 

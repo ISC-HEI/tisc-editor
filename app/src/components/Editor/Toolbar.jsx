@@ -107,6 +107,13 @@ const ToolbarButton = forwardRef(function ToolbarButton(
   );
 });
 
+/** Horizontal separator, declared at module level so it is not re-created on each render. */
+function Divider({ expanded }) {
+  return <div className={`h-px shrink-0 bg-slate-200 ${expanded ? 'w-full' : 'w-10'}`} />;
+}
+
+const readonlyTitle = 'Readonly mode';
+
 export function Toolbar({
   fontSize,
   onFontSizeChange,
@@ -133,26 +140,15 @@ export function Toolbar({
 
   const currentLang = LANGUAGES.find((l) => l.code === activeLang) ?? LANGUAGES[0];
 
-  const showImageExplorer = (visible) => {
+  // Keep the legacy image explorer DOM node in sync with the active panel
+  useEffect(() => {
     if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = visible ? 'block' : 'none';
+      refs.imageExplorer.style.display = activePanel === 'files' ? 'block' : 'none';
     }
-  };
+  }, [activePanel]);
 
-  const openPanel = (name) => {
-    setActivePanel(name);
-    showImageExplorer(name === 'files');
-  };
-
-  const closePanel = () => {
-    setActivePanel(null);
-    showImageExplorer(false);
-  };
-
-  const togglePanel = (name) => {
-    if (activePanel === name) closePanel();
-    else openPanel(name);
-  };
+  const closePanel = () => setActivePanel(null);
+  const togglePanel = (name) => setActivePanel((prev) => (prev === name ? null : name));
 
   const toggleExpanded = () => {
     setIsExpanded((prev) => {
@@ -197,36 +193,28 @@ export function Toolbar({
     });
   }, [btnSaveEl, btnBEl, btnIEl, btnUEl, btnLangEl, btnShowImagesEl]);
 
-  // Expose panel actions to the rest of the app (setters are stable, no stale closures)
+  // Expose panel actions to the rest of the app (setState is stable, no stale closures)
   useEffect(() => {
-    functions.openLanguageMenu = () => openPanel('lang');
-    functions.openFileExplorer = () => openPanel('files');
-    functions.closeFileExplorer = () => closePanel();
+    functions.openLanguageMenu = () => setActivePanel('lang');
+    functions.openFileExplorer = () => setActivePanel('files');
+    functions.closeFileExplorer = () => setActivePanel(null);
 
     return () => {
       functions.openLanguageMenu = null;
       functions.openFileExplorer = null;
       functions.closeFileExplorer = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Escape closes the open panel
   useEffect(() => {
     if (!activePanel) return;
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') closePanel();
+      if (e.key === 'Escape') setActivePanel(null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePanel]);
-
-  const Divider = () => (
-    <div className={`h-px shrink-0 bg-slate-200 ${isExpanded ? 'w-full' : 'w-10'}`} />
-  );
-
-  const readonlyTitle = 'Readonly mode';
 
   return (
     <>
@@ -259,7 +247,7 @@ export function Toolbar({
           </div>
         )}
 
-        <Divider />
+        <Divider expanded={isExpanded} />
 
         <div className="flex w-full flex-col gap-1">
           <ToolbarButton
@@ -273,7 +261,7 @@ export function Toolbar({
           />
         </div>
 
-        <Divider />
+        <Divider expanded={isExpanded} />
 
         <div className="flex w-full flex-col gap-1">
           <ToolbarButton
@@ -305,7 +293,7 @@ export function Toolbar({
           />
         </div>
 
-        <Divider />
+        <Divider expanded={isExpanded} />
 
         <div className="flex w-full flex-col gap-1">
           <ToolbarButton
@@ -320,7 +308,7 @@ export function Toolbar({
           />
         </div>
 
-        <Divider />
+        <Divider expanded={isExpanded} />
 
         <div className="flex w-full flex-col gap-1">
           <ToolbarButton

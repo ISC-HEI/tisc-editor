@@ -10,7 +10,7 @@ export default async function AdminDashboard() {
   if (!session.user?.isAdmin) redirect('/dashboard');
 
   const users = await getAllUsers();
-  const disabledCount = users.filter((u) => u.disabled).length;
+  const disabledCount = users.filter((u: { disabled: boolean }) => u.disabled).length;
 
   const stats = [
     { label: 'Total users', value: users.length, color: 'bg-blue-50 text-blue-600' },
@@ -85,14 +85,18 @@ export default async function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+                {/* @ts-ignore */}
                 {users.map(({ _count, ...u }) => (
                   <UserRow
                     key={u.id}
-                    user={{
-                      ...u,
-                      createdAt: u.createdAt.toISOString(),
-                      projectCount: _count.projectLinks,
-                    }}
+                    user={
+                      {
+                        ...u,
+                        createdAt: u.createdAt.toISOString(),
+                        projectCount: _count.projectLinks,
+                      } as Parameters<typeof UserRow>[0]['user']
+                    }
                     isSelf={u.id === session.user.id}
                   />
                 ))}

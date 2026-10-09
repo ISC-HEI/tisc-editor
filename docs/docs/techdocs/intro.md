@@ -17,7 +17,8 @@ This section is dedicated to the **technical part**: everything you need to know
 
 **[Architecture](./architecture/)** — Understand the project's structure and tech stack.  
 **[Structure](./architecture/structure)** — Understand the file structure.  
-**[Database](./architecture/database)** — Understand the database schema.
+**[Database](./architecture/database)** — Understand the database schema.  
+**[Object Storage (Garage)](./architecture/object-storage-garage)** — Learn how project files are stored and how to operate the storage.
 
 ## Core Systems
 

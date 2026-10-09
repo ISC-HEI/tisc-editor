@@ -7,6 +7,7 @@ All notable changes to this project, organized by day.
 - Added toolbar extensible
 - Updated default loader for editor loading
 - Added create project button on dashboard if no project
+- Added new database (`garage`) for file storage
 
 ## 2026-10-08
 - Added email sending when sharing a project and when transfer ownership.

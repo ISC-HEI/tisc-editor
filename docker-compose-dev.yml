@@ -17,6 +17,27 @@ services:
       timeout: 5s
       retries: 5
 
+  garage:
+    image: dxflrs/garage:v2.4.1
+    container_name: tisc-garage
+    userns_mode: "host"
+    restart: always
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+    expose:
+      - "3900" # S3 API (internal network only)
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    networks:
+      - tisc-network
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     build:
       context: .
@@ -26,6 +47,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      garage:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
       interval: 10s
@@ -46,23 +69,23 @@ services:
       - DATABASE_URL=postgresql://tisc_user:qaywsxedc@db:5432/tisc_db
     command: >
       sh -c "
-      git config --global --add safe.directory /app &&
-      bun install &&
-      bun x prisma generate &&
-      bun x prisma db push &&
-      bun dev &
-      until curl -sf http://localhost:3000/api/ws; do
-        echo 'Waiting for Next.js...';
-        sleep 1;
-      done;
-      echo 'Socket.IO initialized';
-      wait
+        git config --global --add safe.directory /app &&
+        bun install &&
+        bun x prisma generate &&
+        bun x prisma db push &&
+        bun dev &
+        until curl -sf http://localhost:3000/api/ws; do
+          echo 'Waiting for Next.js...';
+          sleep 1;
+        done;
+        echo 'Socket.IO initialized';
+        wait
       "
     deploy:
       resources:
         limits:
           cpus: '1.0' # Limit to 1 CPU core
-          memory: 1.5G  # If request > 1.5Go, the container will be killed
+          memory: 1.5G # If request > 1.5Go, the container will be killed
         reservations:
           memory: 512M
 
@@ -88,9 +111,9 @@ services:
       start_period: 60s
     command: >
       sh -c "
-      cp /CHANGELOG.md docs/techdocs/changelog.md &&
-      bun install &&
-      bunx docusaurus start --host 0.0.0.0 --port 3001 --no-open
+        cp /CHANGELOG.md docs/techdocs/changelog.md &&
+        bun install &&
+        bunx docusaurus start --host 0.0.0.0 --port 3001 --no-open
       "
     deploy:
       resources:
@@ -113,6 +136,10 @@ services:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - tisc-network
+
+volumes:
+  garage-meta:
+  garage-data:
 
 networks:
   tisc-network:
