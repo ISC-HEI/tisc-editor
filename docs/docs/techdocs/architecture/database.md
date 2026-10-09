@@ -1,6 +1,6 @@
 # Database Schema
 
-The database uses **PostgreSQL**, accessed through **Prisma**. It stores users, permissions and file **metadata**; the **content** of project files lives in an S3-compatible object store (see [Object storage](./architecture#object-storage)). The schema is split into three groups: core application models, Auth.js tables, and relation (join) tables.
+The database uses **PostgreSQL**, accessed through **Prisma**. It stores users, permissions and file **metadata**; the **content** of project files lives in an S3-compatible object store. The schema is split into three groups: core application models, Auth.js tables, and relation (join) tables.
 
 ## Diagram
 

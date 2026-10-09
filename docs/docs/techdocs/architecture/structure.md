@@ -6,7 +6,7 @@ This page describes how the repository and the `app` directory are organized.
 - **`Dockerfile`** — Container image definition for the app.
 - **`docker-compose-dev.yml`** — The docker compose use in development (database, Garage object store, app, docs and reverse proxy).
 - **`garage/garage.toml`** — Configuration of the Garage object store.
-- **`scripts/garage-init.sh`** — One-time initialization of Garage (layout, bucket, access key). See [Object storage](./architecture#object-storage).
+- **`scripts/garage-init.sh`** — One-time initialization of Garage (layout, bucket, access key).
 - **`prisma/schema.prisma`** — Database schema definition.
 - **`prisma.config.ts`** — Prisma configuration (used with `@prisma/adapter-pg`).
 - **`next.config.ts`** — Next.js configuration.
