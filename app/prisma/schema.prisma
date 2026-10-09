@@ -49,6 +49,7 @@ model ProjectFile {
   mimeType   String   @default("text/plain") @map("mime_type")
   size       Int
   content    Bytes?
+  isMain Boolean @default(false) @map("is_main")
   storageKey String?  @map("storage_key")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")

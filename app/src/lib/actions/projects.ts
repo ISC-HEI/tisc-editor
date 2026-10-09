@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { checkUserQuota } from '@/lib/quota-service';
 import { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
+import { flattenTree, buildTree } from '@/lib/filetree';
 import { getLatestVersion, importPackageAsTree } from './github-import';
 import { requireUserId, getAssignment, requireAssignment } from './utils';
 
@@ -71,7 +72,18 @@ export async function createProject(formData: FormData) {
     };
   }
 
-  const dataSize = Buffer.byteLength(JSON.stringify(projectData.fileTree), 'utf8');
+  const flatFiles = flattenTree(projectData.fileTree).map((file) => {
+    const content = Buffer.from(file.content, 'utf8');
+
+    return {
+      path: file.path,
+      isMain: file.isMain,
+      content,
+      size: content.byteLength,
+    };
+  });
+
+  const dataSize = flatFiles.reduce((sum, file) => sum + file.size, 0);
 
   const quota = await checkUserQuota(userId, dataSize);
 
@@ -89,7 +101,6 @@ export async function createProject(formData: FormData) {
     const project = await tx.project.create({
       data: {
         title,
-        fileTree: projectData.fileTree as unknown as Prisma.InputJsonValue,
 
         userLinks: {
           create: {
@@ -103,6 +114,18 @@ export async function createProject(formData: FormData) {
         },
       },
     });
+
+    if (flatFiles.length > 0) {
+      await tx.projectFile.createMany({
+        data: flatFiles.map((file) => ({
+          projectId: project.id,
+          path: file.path,
+          isMain: file.isMain,
+          content: file.content,
+          size: file.size,
+        })),
+      });
+    }
 
     for (const tagName of uniqueTags) {
       const tagRecord = await tx.tag.upsert({
@@ -141,7 +164,8 @@ export async function loadProject(id: string) {
 }
 
 /**
- * Fetches a project with its tags, scoped to a user's assignment (private helper).
+ * Fetches a project with its tags and its file tree (rebuilt from ProjectFile
+ * rows), scoped to a user's assignment (private helper).
  */
 async function getProjectById(projectId: string, userId: string) {
   const assignment = await prisma.projectAssignment.findUnique({
@@ -159,6 +183,11 @@ async function getProjectById(projectId: string, userId: string) {
               tag: true,
             },
           },
+          files: {
+            orderBy: {
+              path: 'asc',
+            },
+          },
         },
       },
     },
@@ -168,9 +197,12 @@ async function getProjectById(projectId: string, userId: string) {
     return null;
   }
 
+  const { files, ...project } = assignment.project;
+
   return {
-    ...assignment.project,
-    tags: assignment.project.tags.map((projectTag) => projectTag.tag),
+    ...project,
+    fileTree: buildTree(files),
+    tags: project.tags.map((projectTag) => projectTag.tag),
   };
 }
 
@@ -401,7 +433,19 @@ export async function duplicateProject(formData: FormData) {
 
   const source = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { title: true, fileTree: true },
+    select: {
+      title: true,
+      files: {
+        select: {
+          path: true,
+          mimeType: true,
+          size: true,
+          content: true,
+          storageKey: true,
+          isMain: true,
+        },
+      },
+    },
   });
   if (!source) {
     throw new Error('Project not found');
@@ -411,10 +455,18 @@ export async function duplicateProject(formData: FormData) {
     const newProject = await tx.project.create({
       data: {
         title: `${source.title} (copy)`,
-        fileTree: source.fileTree as Prisma.InputJsonValue,
         isActive: true,
       },
     });
+
+    if (source.files.length > 0) {
+      await tx.projectFile.createMany({
+        data: source.files.map((file) => ({
+          ...file,
+          projectId: newProject.id,
+        })),
+      });
+    }
 
     await tx.projectAssignment.create({
       data: { userId, projectId: newProject.id, role: 'owner' },
