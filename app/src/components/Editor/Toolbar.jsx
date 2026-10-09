@@ -8,10 +8,12 @@ import {
   Settings2,
   Lock,
   Check,
+  PanelLeftOpen,
+  PanelLeftClose,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useEditorWatcher } from '@/hooks/useEditor';
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import { functions, refs, initPreviewRefs, applyLanguageToTypst } from '@/hooks/refs';
 import { SidePanel } from './SidePanel';
 
@@ -23,6 +25,7 @@ const LANGUAGES = [
 
 const DEFAULT_LANG = 'en';
 const LANG_STORAGE_KEY = 'typst-language';
+const EXPANDED_STORAGE_KEY = 'toolbar-expanded';
 
 function loadInitialLang() {
   try {
@@ -33,6 +36,77 @@ function loadInitialLang() {
   }
 }
 
+function loadInitialExpanded() {
+  try {
+    const saved = localStorage.getItem(EXPANDED_STORAGE_KEY);
+    return saved === null ? true : saved === 'true';
+  } catch {
+    return true;
+  }
+}
+
+const disabledClass = 'opacity-30 cursor-not-allowed pointer-events-none';
+
+/**
+ * A toolbar button that shows only the icon when collapsed,
+ * and icon + label (+ optional trailing content) when expanded.
+ */
+const ToolbarButton = forwardRef(function ToolbarButton(
+  {
+    icon: Icon,
+    iconSize = 18,
+    label,
+    expanded,
+    active = false,
+    disabled = false,
+    disabledTitle,
+    onClick,
+    hoverText = 'hover:text-blue-600',
+    badge,
+    trailing,
+    pressed,
+  },
+  ref,
+) {
+  const title = disabled && disabledTitle ? disabledTitle : expanded ? undefined : label;
+
+  return (
+    <button
+      ref={ref}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={label}
+      aria-pressed={pressed}
+      className={`relative flex items-center rounded-xl transition-all ${
+        expanded ? 'w-full gap-3 p-2.5' : 'justify-center p-3'
+      } ${
+        active
+          ? 'bg-blue-50 text-blue-600 shadow-inner'
+          : `text-slate-500 hover:bg-white hover:shadow-sm ${hoverText}`
+      } ${disabled ? disabledClass : ''}`}
+    >
+      <span className="relative inline-flex shrink-0">
+        <Icon size={iconSize} />
+
+        {badge && (
+          <span className="absolute -bottom-2 -right-3 flex h-4 min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold uppercase leading-none text-white shadow-sm ring-2 ring-slate-50">
+            {badge}
+          </span>
+        )}
+      </span>
+
+      {expanded && (
+        <span className="flex-1 truncate whitespace-nowrap text-left text-sm font-medium">
+          {label}
+        </span>
+      )}
+
+      {expanded && trailing}
+    </button>
+  );
+});
+
 export function Toolbar({
   fontSize,
   onFontSizeChange,
@@ -41,17 +115,17 @@ export function Toolbar({
   canEdit = true,
   panelHost,
 }) {
-  const btnSaveRef = useRef(null);
-  const btnBRef = useRef(null);
-  const btnIRef = useRef(null);
-  const btnURef = useRef(null);
-  const btnLangRef = useRef(null);
-  const btnShowImagesRef = useRef(null);
-  const btnSettingsRef = useRef(null);
+  // Refs handed to the preview/editor logic (initPreviewRefs)
+  const [btnSaveEl, setBtnSaveEl] = useState(null);
+  const [btnBEl, setBtnBEl] = useState(null);
+  const [btnIEl, setBtnIEl] = useState(null);
+  const [btnUEl, setBtnUEl] = useState(null);
+  const [btnLangEl, setBtnLangEl] = useState(null);
+  const [btnShowImagesEl, setBtnShowImagesEl] = useState(null);
 
-  const [isLangOpen, setIsLangOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isFileExplorerOpen, setIsFileExplorerOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(loadInitialExpanded);
+  // Single source of truth for the open side panel: null | 'lang' | 'settings' | 'files'
+  const [activePanel, setActivePanel] = useState(null);
   const [activeLang, setActiveLang] = useState(loadInitialLang);
   const [isApplyingLang, setIsApplyingLang] = useState(false);
 
@@ -59,57 +133,40 @@ export function Toolbar({
 
   const currentLang = LANGUAGES.find((l) => l.code === activeLang) ?? LANGUAGES[0];
 
-  const closeFileExplorer = () => {
-    setIsFileExplorerOpen(false);
-
+  const showImageExplorer = (visible) => {
     if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = 'none';
+      refs.imageExplorer.style.display = visible ? 'block' : 'none';
     }
   };
 
-  const openFileExplorer = () => {
-    setIsFileExplorerOpen(true);
-    setIsLangOpen(false);
-    setIsSettingsOpen(false);
-
-    if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = 'block';
-    }
+  const openPanel = (name) => {
+    setActivePanel(name);
+    showImageExplorer(name === 'files');
   };
 
-  const openLanguage = () => {
-    setIsLangOpen(true);
-    setIsSettingsOpen(false);
-    setIsFileExplorerOpen(false);
-
-    if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = 'none';
-    }
+  const closePanel = () => {
+    setActivePanel(null);
+    showImageExplorer(false);
   };
 
-  const openSettings = () => {
-    setIsSettingsOpen(true);
-    setIsLangOpen(false);
-    setIsFileExplorerOpen(false);
-
-    if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = 'none';
-    }
+  const togglePanel = (name) => {
+    if (activePanel === name) closePanel();
+    else openPanel(name);
   };
 
-  const closeAllPanels = () => {
-    setIsLangOpen(false);
-    setIsSettingsOpen(false);
-    setIsFileExplorerOpen(false);
-
-    if (refs.imageExplorer) {
-      refs.imageExplorer.style.display = 'none';
-    }
+  const toggleExpanded = () => {
+    setIsExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(EXPANDED_STORAGE_KEY, String(next));
+      } catch {}
+      return next;
+    });
   };
 
   const handleSelectLanguage = (code) => {
     if (code === activeLang) {
-      setIsLangOpen(false);
+      closePanel();
       return;
     }
 
@@ -120,169 +177,190 @@ export function Toolbar({
       try {
         localStorage.setItem(LANG_STORAGE_KEY, code);
       } catch {}
-      setIsLangOpen(false);
+      closePanel();
     } catch (err) {
-      console.error('Impossible de changer la langue :', err);
+      console.error('Unable to change the language:', err);
     } finally {
       setIsApplyingLang(false);
     }
   };
 
+  // Expose the DOM buttons to the preview logic once they are mounted
   useEffect(() => {
     initPreviewRefs({
-      btnSave: btnSaveRef.current,
-      btnBold: btnBRef.current,
-      btnItalic: btnIRef.current,
-      btnUnderline: btnURef.current,
-      btnLang: btnLangRef.current,
-      btnShowImages: btnShowImagesRef.current,
+      btnSave: btnSaveEl,
+      btnBold: btnBEl,
+      btnItalic: btnIEl,
+      btnUnderline: btnUEl,
+      btnLang: btnLangEl,
+      btnShowImages: btnShowImagesEl,
     });
+  }, [btnSaveEl, btnBEl, btnIEl, btnUEl, btnLangEl, btnShowImagesEl]);
 
-    functions.openLanguageMenu = openLanguage;
-    functions.openFileExplorer = openFileExplorer;
-    functions.closeFileExplorer = closeFileExplorer;
+  // Expose panel actions to the rest of the app (setters are stable, no stale closures)
+  useEffect(() => {
+    functions.openLanguageMenu = () => openPanel('lang');
+    functions.openFileExplorer = () => openPanel('files');
+    functions.closeFileExplorer = () => closePanel();
 
     return () => {
       functions.openLanguageMenu = null;
       functions.openFileExplorer = null;
       functions.closeFileExplorer = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const disabledClass = 'opacity-30 cursor-not-allowed pointer-events-none';
+  // Escape closes the open panel
+  useEffect(() => {
+    if (!activePanel) return;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') closePanel();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePanel]);
+
+  const Divider = () => (
+    <div className={`h-px shrink-0 bg-slate-200 ${isExpanded ? 'w-full' : 'w-10'}`} />
+  );
+
+  const readonlyTitle = 'Readonly mode';
 
   return (
     <>
-      <nav className="w-14 border-r border-slate-200 flex flex-col items-center py-4 gap-4 shrink-0 bg-slate-50/50">
+      <nav
+        aria-label="Editor toolbar"
+        className={`flex shrink-0 flex-col gap-3 overflow-hidden border-r border-slate-200 bg-slate-50/50 py-4 transition-[width] duration-200 ${
+          isExpanded ? 'w-52 items-stretch px-2' : 'w-[72px] items-center'
+        }`}
+      >
+        {/* Collapse / expand */}
+        <ToolbarButton
+          icon={isExpanded ? PanelLeftClose : PanelLeftOpen}
+          iconSize={20}
+          label={isExpanded ? 'Collapse toolbar' : 'Expand toolbar'}
+          expanded={isExpanded}
+          onClick={toggleExpanded}
+        />
+
         {!canEdit && (
-          <div title="Readonly mode" className="p-2 rounded-lg bg-amber-50 text-amber-500">
-            <Lock size={16} />
+          <div
+            title={readonlyTitle}
+            className={`flex items-center gap-3 rounded-lg bg-amber-50 p-2 text-amber-500 ${
+              isExpanded ? 'w-full' : 'justify-center'
+            }`}
+          >
+            <Lock size={16} className="shrink-0" />
+            {isExpanded && (
+              <span className="truncate whitespace-nowrap text-xs font-medium">Readonly mode</span>
+            )}
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
-          <button
-            ref={btnSaveRef}
+        <Divider />
+
+        <div className="flex w-full flex-col gap-1">
+          <ToolbarButton
+            ref={setBtnSaveEl}
+            icon={ArrowDownToLine}
+            iconSize={20}
+            label="Save"
+            expanded={isExpanded}
             disabled={!canEdit}
-            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm hover:text-blue-600 transition-all text-slate-500 ${
-              !canEdit ? disabledClass : ''
-            }`}
-            title={canEdit ? 'Save' : 'Readonly mode'}
-          >
-            <ArrowDownToLine size={20} />
-          </button>
+            disabledTitle={readonlyTitle}
+          />
         </div>
 
-        <div className="w-8 h-[1px] bg-slate-200" />
+        <Divider />
 
-        <div className="flex flex-col gap-2">
-          <button
-            ref={btnBRef}
+        <div className="flex w-full flex-col gap-1">
+          <ToolbarButton
+            ref={setBtnBEl}
+            icon={Bold}
+            label="Bold"
+            expanded={isExpanded}
             disabled={!canEdit}
-            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500 ${
-              !canEdit ? disabledClass : ''
-            }`}
-            title={canEdit ? 'Bold' : 'Readonly mode'}
-          >
-            <Bold size={18} />
-          </button>
-
-          <button
-            ref={btnIRef}
+            disabledTitle={readonlyTitle}
+            hoverText=""
+          />
+          <ToolbarButton
+            ref={setBtnIEl}
+            icon={Italic}
+            label="Italic"
+            expanded={isExpanded}
             disabled={!canEdit}
-            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500 ${
-              !canEdit ? disabledClass : ''
-            }`}
-            title={canEdit ? 'Italic' : 'Readonly mode'}
-          >
-            <Italic size={18} />
-          </button>
-
-          <button
-            ref={btnURef}
+            disabledTitle={readonlyTitle}
+            hoverText=""
+          />
+          <ToolbarButton
+            ref={setBtnUEl}
+            icon={Underline}
+            label="Underline"
+            expanded={isExpanded}
             disabled={!canEdit}
-            className={`p-2.5 rounded-xl hover:bg-white hover:shadow-sm text-slate-500 ${
-              !canEdit ? disabledClass : ''
-            }`}
-            title={canEdit ? 'Underline' : 'Readonly mode'}
-          >
-            <Underline size={18} />
-          </button>
+            disabledTitle={readonlyTitle}
+            hoverText=""
+          />
         </div>
 
-        <div className="w-8 h-[1px] bg-slate-200" />
+        <Divider />
 
-        <button
-          ref={btnShowImagesRef}
-          onClick={() => {
-            if (isFileExplorerOpen) {
-              closeFileExplorer();
-            } else {
-              openFileExplorer();
+        <div className="flex w-full flex-col gap-1">
+          <ToolbarButton
+            ref={setBtnShowImagesEl}
+            icon={Folders}
+            iconSize={20}
+            label="Files Explorer"
+            expanded={isExpanded}
+            active={activePanel === 'files'}
+            pressed={activePanel === 'files'}
+            onClick={() => togglePanel('files')}
+          />
+        </div>
+
+        <Divider />
+
+        <div className="flex w-full flex-col gap-1">
+          <ToolbarButton
+            icon={Settings2}
+            label="Editor Settings"
+            expanded={isExpanded}
+            active={activePanel === 'settings'}
+            pressed={activePanel === 'settings'}
+            hoverText=""
+            onClick={() => togglePanel('settings')}
+          />
+
+          <ToolbarButton
+            ref={setBtnLangEl}
+            icon={Languages}
+            label={isExpanded ? 'Language' : `Language: ${currentLang.label}`}
+            expanded={isExpanded}
+            active={activePanel === 'lang'}
+            pressed={activePanel === 'lang'}
+            disabled={!canEdit}
+            disabledTitle={readonlyTitle}
+            hoverText=""
+            badge={isExpanded ? undefined : currentLang.code}
+            trailing={
+              <span className="flex items-center gap-1 text-xs text-slate-400">
+                <span className="text-base leading-none">{currentLang.flag}</span>
+                <span className="font-bold uppercase">{currentLang.code}</span>
+              </span>
             }
-          }}
-          className={`p-2.5 rounded-xl transition-all ${
-            isFileExplorerOpen
-              ? 'bg-blue-50 text-blue-600 shadow-inner'
-              : 'hover:bg-white hover:shadow-sm hover:text-blue-600 text-slate-500'
-          }`}
-          title="Files Explorer"
-        >
-          <Folders size={20} />
-        </button>
-
-        <div className="w-8 h-[1px] bg-slate-200" />
-
-        <button
-          ref={btnSettingsRef}
-          onClick={() => {
-            if (isSettingsOpen) {
-              closeAllPanels();
-            } else {
-              openSettings();
-            }
-          }}
-          className={`p-2.5 rounded-xl transition-all ${
-            isSettingsOpen
-              ? 'bg-blue-50 text-blue-600 shadow-inner'
-              : 'hover:bg-white hover:shadow-sm text-slate-500'
-          }`}
-          title="Editor Settings"
-        >
-          <Settings2 size={18} />
-        </button>
-
-        <button
-          ref={btnLangRef}
-          disabled={!canEdit}
-          onClick={() => {
-            if (isLangOpen) {
-              closeAllPanels();
-            } else {
-              openLanguage();
-            }
-          }}
-          className={`relative p-2.5 rounded-xl transition-all ${
-            isLangOpen
-              ? 'bg-blue-50 text-blue-600 shadow-inner'
-              : 'hover:bg-white hover:shadow-sm text-slate-500'
-          } ${!canEdit ? disabledClass : ''}`}
-          title={canEdit ? `Language : ${currentLang.label}` : 'Readonly mode'}
-        >
-          <Languages size={18} />
-
-          <span className="absolute -bottom-1 -right-1 min-w-[18px] px-1 h-4 flex items-center justify-center rounded-full bg-blue-600 text-white text-[9px] font-bold uppercase leading-none shadow-sm">
-            {currentLang.code}
-          </span>
-        </button>
+            onClick={() => togglePanel('lang')}
+          />
+        </div>
       </nav>
 
       {panelHost &&
-        isLangOpen &&
+        activePanel === 'lang' &&
         canEdit &&
         createPortal(
-          <SidePanel title="Language" icon={Languages} onClose={() => setIsLangOpen(false)}>
-            <div className="flex flex-col gap-2" role="listbox" aria-label="Langue du document">
+          <SidePanel title="Language" icon={Languages} onClose={closePanel}>
+            <div className="flex flex-col gap-2" role="listbox" aria-label="Document language">
               {LANGUAGES.map(({ code, label, flag }) => {
                 const isActive = code === activeLang;
 
@@ -293,11 +371,11 @@ export function Toolbar({
                     aria-selected={isActive}
                     disabled={isApplyingLang}
                     onClick={() => handleSelectLanguage(code)}
-                    className={`flex justify-between items-center text-left p-3 rounded-xl transition-colors border ${
+                    className={`flex items-center justify-between rounded-xl border p-3 text-left transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-inner'
+                        ? 'border-blue-200 bg-blue-50 text-blue-600 shadow-inner'
                         : 'border-transparent hover:bg-blue-50 hover:text-blue-600'
-                    } ${isApplyingLang ? 'opacity-60 cursor-wait' : ''}`}
+                    } ${isApplyingLang ? 'cursor-wait opacity-60' : ''}`}
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-lg leading-none">{flag}</span>
@@ -319,25 +397,21 @@ export function Toolbar({
         )}
 
       {panelHost &&
-        isSettingsOpen &&
+        activePanel === 'settings' &&
         createPortal(
-          <SidePanel
-            title="Editor Settings"
-            icon={Settings2}
-            onClose={() => setIsSettingsOpen(false)}
-          >
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+          <SidePanel title="Editor Settings" icon={Settings2} onClose={closePanel}>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Text Size
               </p>
 
-              <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+              <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600">
                 {fontSize}px
               </span>
             </div>
 
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-[11px] text-slate-400 font-medium">A</span>
+            <div className="mb-6 flex items-center gap-3">
+              <span className="text-[11px] font-medium text-slate-400">A</span>
 
               <input
                 type="range"
@@ -346,21 +420,22 @@ export function Toolbar({
                 step={1}
                 value={fontSize}
                 onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
-                className="flex-1 h-1.5 rounded-full appearance-none bg-slate-200 accent-blue-600 cursor-pointer"
+                aria-label="Text size"
+                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-blue-600"
               />
 
-              <span className="text-lg text-slate-400 font-medium">A</span>
+              <span className="text-lg font-medium text-slate-400">A</span>
             </div>
 
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Line Wrapping
             </p>
 
             <button
               onClick={() => onWordWrapChange?.(!wordWrap)}
-              className="flex justify-between items-center w-full p-3 rounded-xl hover:bg-slate-50 transition-colors"
+              className="flex w-full items-center justify-between rounded-xl p-3 transition-colors hover:bg-slate-50"
             >
-              <span className="font-medium text-sm text-slate-700">Line Wrapping</span>
+              <span className="text-sm font-medium text-slate-700">Line Wrapping</span>
 
               <span
                 role="switch"
