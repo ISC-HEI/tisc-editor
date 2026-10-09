@@ -1,6 +1,6 @@
 # Database Schema
 
-The database uses **PostgreSQL**, accessed through **Prisma**. The schema is split into three groups: core application models, Auth.js tables, and relation (join) tables.
+The database uses **PostgreSQL**, accessed through **Prisma**. It stores users, permissions and file **metadata**; the **content** of project files lives in an S3-compatible object store (see [Object storage](./architecture#object-storage)). The schema is split into three groups: core application models, Auth.js tables, and relation (join) tables.
 
 ## Diagram
 
@@ -18,8 +18,20 @@ erDiagram
     Project {
         uuid id PK
         string title
-        json fileTree
         boolean isActive
+    }
+    ProjectFile {
+        uuid id PK
+        uuid projectId FK
+        string path
+        string mimeType
+        boolean isMain
+        int size
+        string sha256
+        string storageKey
+        bytes content
+        datetime createdAt
+        datetime updatedAt
     }
     ProjectThumbnail {
         uuid projectId PK, FK
@@ -64,6 +76,7 @@ erDiagram
     User ||--o{ AccessRequest : makes
     Project ||--o{ ProjectAssignment : has
     Project ||--o{ AccessRequest : receives
+    Project ||--o{ ProjectFile : contains
     Project ||--o| ProjectThumbnail : has
     Project ||--o{ ProjectTag : has
     Tag ||--o{ ProjectTag : has
@@ -73,7 +86,7 @@ erDiagram
 
 ### User
 
-Represents an application user. `storageQuota` is stored in bytes and defaults to `10485760` (10 MB), matching the [storage quota](../../tutorial/storage) described in the user documentation.
+Represents an application user. `storageQuota` is stored in bytes and defaults to `10485760` (10 MB), matching the [storage quota](../../tutorial/storage) described in the user documentation. The quota is checked against the total `size` of the files of the projects the user owns (see [ProjectFile](#projectfile)).
 
 `disabled` (default `false`) blocks the user from signing in: the `signIn` callback refuses disabled accounts and redirects to the login page with an `AccountDisabled` error. `createdAt` records the creation date of the account.
 
@@ -81,13 +94,48 @@ A user is linked to their projects through `ProjectAssignment`, rather than thro
 
 ### Project
 
-Represents a project. `fileTree` stores the entire file/folder structure as JSON. `isActive` distinguishes active projects from archived ones.
+Represents a project. `isActive` distinguishes active projects from archived ones.
 
-A project can have one thumbnail, several tags, several user assignments and several access requests.
+A project does not store its files directly: they are described by [`ProjectFile`](#projectfile) rows, and their content is kept in the object store. A project can also have one thumbnail, several tags, several user assignments and several access requests.
+
+### ProjectFile
+
+Describes one file of a project (a `.typ` source, an image, a font, and so on). The table holds only metadata; the bytes are stored in the object store under `storageKey`.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key. Also the last segment of the storage key |
+| `projectId` | `uuid` | The project the file belongs to |
+| `path` | `string` | Full path inside the project, for example `src/main.typ`. Folders are not stored: they are implied by the paths |
+| `mimeType` | `string` | `text/plain` for text files, the real MIME type (`image/png`, …) for binary files |
+| `isMain` | `boolean` | Marks the entry file of the project |
+| `size` | `int` | Size of the stored content in bytes. This is the value used for the storage quota |
+| `sha256` | `string?` | Hash of the content. Lets a save skip files that did not change |
+| `storageKey` | `string?` | Object key in the bucket, `projects/<projectId>/<fileId>`. `null` only for files not migrated yet |
+| `content` | `bytes?` | Legacy inline content. `null` once the file has been moved to the object store |
+| `createdAt` / `updatedAt` | `datetime` | Creation and last modification dates |
+
+The unique constraint on `[projectId, path]` guarantees one file per path in a project, and doubles as the index used to list a project's files. Rows are deleted automatically when the project is deleted (`onDelete: Cascade`); the matching objects are removed by the application, since the database cannot do it.
+
+The table is named `project_files` in the database (`@@map`), with snake_case columns (`project_id`, `mime_type`, `is_main`, `storage_key`, `created_at`, `updated_at`).
+
+#### File tree and binary files
+
+The rest of the application still works with a `fileTree` (nested folders and files). It is no longer stored: it is **rebuilt on load** from the `ProjectFile` rows, and **flattened on save** into one row per file.
+
+Text files are stored as UTF-8. Binary files travel in the tree as base64 `data:` URLs; on save they are decoded into real bytes (with their MIME type) before being stored, and re-encoded when the project is loaded. As a result, `size` and the quota reflect the real size of the files.
+
+#### Consistency between the database and the object store
+
+The two stores cannot share a transaction, so writes follow a fixed order:
+
+- **Create / save / duplicate** — objects are uploaded first, then the rows are written. A failure in between leaves unreferenced objects, which are harmless, but never a row pointing to a missing object.
+- **Delete** — rows are deleted first, then the objects (best effort).
+- **Load** — a missing object makes the load fail instead of returning an empty file, so that a later save cannot overwrite real data with nothing.
 
 ### ProjectThumbnail
 
-Stores the thumbnail image shown on the dashboard, as raw bytes (`data`) with its `mimeType`. It has a one-to-one relation with `Project` and is deleted automatically when the project is (`onDelete: Cascade`).
+Stores the thumbnail image shown on the dashboard, as raw bytes (`data`) with its `mimeType`. It has a one-to-one relation with `Project` and is deleted automatically when the project is (`onDelete: Cascade`). Thumbnails are still stored in the database.
 
 ### Tag
 
@@ -140,4 +188,10 @@ The Prisma models use PascalCase names, but the tables and columns use snake_cas
 
 ```bash
 docker exec <db-container> psql -U <user> -d <database> -c 'SELECT * FROM users LIMIT 5;'
+```
+
+To check where the files of a project are stored:
+
+```sql
+SELECT path, mime_type, size, storage_key FROM project_files WHERE project_id = '<project-id>';
 ```
