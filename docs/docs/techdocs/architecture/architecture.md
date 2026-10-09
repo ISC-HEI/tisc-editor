@@ -47,7 +47,7 @@ The data is split across two stores: PostgreSQL keeps users, permissions and the
 Project files are stored in a private bucket of [Garage](https://garagehq.deuxfleurs.fr/), a lightweight S3-compatible object store that runs as one more container of the stack. The server accesses it through the S3 API (`@aws-sdk/client-s3`), so any S3-compatible service can replace Garage by changing the environment variables.
 
 - **Key format** — `projects/<projectId>/<fileId>`. Deleting a project removes everything under its prefix.
-- **Metadata** — path, size, hash, MIME type and storage key of each file are in the `project_files` table (see [Database Schema](./database-schema#projectfile)).
+- **Metadata** — path, size, hash, MIME type and storage key of each file are in the `project_files` table (see [Database Schema](./database#projectfile)).
 - **Access control** — the bucket is private and not exposed outside the Docker network. Permissions stay in PostgreSQL, which remains the single source of truth.
 - **Saves** — the editor sends the whole file tree, and the server uploads only the files whose hash changed.
 

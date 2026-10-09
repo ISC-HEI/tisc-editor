@@ -2,7 +2,7 @@
 
 The content of project files (source files, images, fonts) is stored in [Garage](https://garagehq.deuxfleurs.fr/), a lightweight S3-compatible object store. PostgreSQL keeps only the metadata and the permissions. This page explains how Garage is set up, how to operate it, and what to do when something goes wrong.
 
-For the data model, see [Database Schema](./database-schema#projectfile). For the place of Garage in the stack, see the [Architecture Overview](./architecture#object-storage).
+For the data model, see [Database Schema](./database#projectfile). For the place of Garage in the stack, see the [Architecture Overview](./architecture#object-storage).
 
 ## Why Garage
 
