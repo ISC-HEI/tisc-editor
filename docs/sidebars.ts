@@ -51,6 +51,13 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'techdocs/core-systems/spellcheck', label: 'Spellcheck' },
       { type: 'doc', id: 'techdocs/core-systems/emails', label: 'Email Management' },
     ]},
+    { type: 'category', label: 'Compiler', items: [
+      { type: 'doc', id: 'techdocs/compiler/index', label: 'Compiler Overview' },
+      { type: 'doc', id: 'techdocs/compiler/api', label: 'Compiler API' },
+      { type: 'doc', id: 'techdocs/compiler/file-handling', label: 'File Handling' },
+      { type: 'doc', id: 'techdocs/compiler/sync-markers', label: 'Sync Markers' },
+      { type: 'doc', id: 'techdocs/compiler/thumbnails', label: 'Thumbnails' },
+    ]},
     { type: 'doc', id: 'techdocs/devops/ci', label: 'Continuous Integration' },
     { type: 'doc', id: 'techdocs/admin/user-management', label: 'User Management (Admin)' },
     { type: 'doc', id: 'techdocs/deployment', label: 'Deployment' },

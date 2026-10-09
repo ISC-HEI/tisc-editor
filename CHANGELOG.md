@@ -3,6 +3,9 @@
 All notable changes to this project, organized by day.
 
 ## 2026-10-08
+- Added complete compiler documentation
+
+## 2026-10-08
 - Added email sending when sharing a project and when transfer ownership.
 - Added possibility to request access to a project if the user land on the URL.
 - Added duplicate project method.
