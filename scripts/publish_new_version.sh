@@ -17,9 +17,17 @@ echo "Error : garage config $GARAGE_CONFIG not found."
 exit 1
 fi
 
-set -a
-source "$ENV_FILE"
-set +a
+# Read a single variable from .env literally (no shell expansion, so values
+# containing '$' are safe). The same file is passed as-is to docker --env-file.
+get_env() {
+grep -E "^$1=" "$ENV_FILE" | tail -n1 | cut -d= -f2- || true
+}
+
+DB_PASSWORD="$(get_env DB_PASSWORD)"
+AUTH_SECRET="$(get_env AUTH_SECRET)"
+GITHUB_TOKEN="$(get_env GITHUB_TOKEN)"
+GARAGE_RPC_SECRET="$(get_env GARAGE_RPC_SECRET)"
+AUTH_URL="$(get_env AUTH_URL)"
 
 : "${DB_PASSWORD:?DB_PASSWORD missing in $ENV_FILE}"
 : "${AUTH_SECRET:?AUTH_SECRET missing in $ENV_FILE}"
@@ -80,15 +88,15 @@ if [[ "${1:-}" == "--db" ]]; then
   docker rm -f tisc-garage >/dev/null 2>&1 || true
 
   docker run -d \
-  --name tisc-garage \
-  --network tisc-network \
-  --network-alias garage \
-  -e GARAGE_RPC_SECRET="$GARAGE_RPC_SECRET" \
-  -v "$GARAGE_CONFIG":/etc/garage.toml:ro \
-  -v tisc_garage_meta:/var/lib/garage/meta \
-  -v tisc_garage_data:/var/lib/garage/data \
-  --restart unless-stopped \
-  dxflrs/garage:v2.4.1
+    --name tisc-garage \
+    --network tisc-network \
+    --network-alias garage \
+    -e GARAGE_RPC_SECRET="$GARAGE_RPC_SECRET" \
+    -v "$GARAGE_CONFIG":/etc/garage.toml:ro \
+    -v tisc_garage_meta:/var/lib/garage/meta \
+    -v tisc_garage_data:/var/lib/garage/data \
+    --restart unless-stopped \
+    dxflrs/garage:v2.4.1
 
   echo "==> Waiting for Garage to be ready..."
   until docker exec tisc-garage /garage status >/dev/null 2>&1; do
