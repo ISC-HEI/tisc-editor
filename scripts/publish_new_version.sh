@@ -4,11 +4,17 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 ENV_FILE=".env"
+GARAGE_CONFIG="$(pwd)/garage/garage.toml"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Error : file $ENV_FILE not found in $(pwd)."
   echo "Create it from .env.example before running this script."
   exit 1
+fi
+
+if [ ! -f "$GARAGE_CONFIG" ]; then
+echo "Error : garage config $GARAGE_CONFIG not found."
+exit 1
 fi
 
 set -a
@@ -18,6 +24,7 @@ set +a
 : "${DB_PASSWORD:?DB_PASSWORD missing in $ENV_FILE}"
 : "${AUTH_SECRET:?AUTH_SECRET missing in $ENV_FILE}"
 : "${GITHUB_TOKEN:?GITHUB_TOKEN missing in $ENV_FILE}"
+: "${GARAGE_RPC_SECRET:?GARAGE_RPC_SECRET missing in $ENV_FILE}"
 AUTH_URL="${AUTH_URL:-https://tisc.isc-vs.dev}"
 
 DATABASE_URL="postgresql://tisc_user:${DB_PASSWORD}@tisc-db:5432/tisc_db"
@@ -48,9 +55,9 @@ docker build \
 # ---- Ensure the Docker network exists ----
 docker network inspect tisc-network >/dev/null 2>&1 || docker network create tisc-network
 
-# ---- If --db is passed, (re)start the database ----
+# ---- If --db is passed, (re)start the database and garage ----
 if [[ "${1:-}" == "--db" ]]; then
-  echo "==> Starting the db..."
+  echo "==> Starting the postgres db..."
   docker rm -f tisc-db >/dev/null 2>&1 || true
 
   docker run -d \
@@ -68,6 +75,27 @@ if [[ "${1:-}" == "--db" ]]; then
     sleep 1
   done
   echo "==> Postgres ready."
+
+  echo "==> Starting garage (S3 storage)..."
+  docker rm -f tisc-garage >/dev/null 2>&1 || true
+
+  docker run -d \
+  --name tisc-garage \
+  --network tisc-network \
+  --network-alias garage \
+  -e GARAGE_RPC_SECRET="$GARAGE_RPC_SECRET" \
+  -v "$GARAGE_CONFIG":/etc/garage.toml:ro \
+  -v tisc_garage_meta:/var/lib/garage/meta \
+  -v tisc_garage_data:/var/lib/garage/data \
+  --restart unless-stopped \
+  dxflrs/garage:v2.4.1
+
+  echo "==> Waiting for Garage to be ready..."
+  until docker exec tisc-garage /garage status >/dev/null 2>&1; do
+    sleep 1
+  done
+  echo "==> Garage ready."
+
 fi
 
 # ---- Start the app (remove the old instance if it exists) ----

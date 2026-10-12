@@ -1,10 +1,20 @@
 'use server';
 
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { checkUserQuota } from '@/lib/quota-service';
 import { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
+import { flattenTree, buildTree } from '@/lib/filetree';
+import { putObject, copyObject, mapLimit } from '@/lib/storage';
+import {
+  prepareFiles,
+  uploadFiles,
+  readFileContents,
+  cleanupProjectObjects,
+  projectPrefix,
+} from '@/lib/project-storage';
 import { getLatestVersion, importPackageAsTree } from './github-import';
 import { requireUserId, getAssignment, requireAssignment } from './utils';
 
@@ -71,7 +81,9 @@ export async function createProject(formData: FormData) {
     };
   }
 
-  const dataSize = Buffer.byteLength(JSON.stringify(projectData.fileTree), 'utf8');
+  const projectId = randomUUID();
+  const files = prepareFiles(projectId, flattenTree(projectData.fileTree));
+  const dataSize = files.reduce((sum, file) => sum + file.size, 0);
 
   const quota = await checkUserQuota(userId, dataSize);
 
@@ -85,50 +97,72 @@ export async function createProject(formData: FormData) {
     );
   }
 
-  const project = await prisma.$transaction(async (tx) => {
-    const project = await tx.project.create({
-      data: {
-        title,
-        fileTree: projectData.fileTree as unknown as Prisma.InputJsonValue,
+  try {
+    // Objects first: a failure afterwards only leaves orphans, never broken rows.
+    await uploadFiles(files);
 
-        userLinks: {
-          create: {
-            user: {
-              connect: {
-                id: userId,
+    const project = await prisma.$transaction(async (tx) => {
+      const project = await tx.project.create({
+        data: {
+          id: projectId,
+          title,
+
+          userLinks: {
+            create: {
+              user: {
+                connect: {
+                  id: userId,
+                },
               },
+              role: 'owner',
             },
-            role: 'owner',
           },
         },
-      },
+      });
+
+      if (files.length > 0) {
+        await tx.projectFile.createMany({
+          data: files.map((file) => ({
+            id: file.id,
+            projectId,
+            path: file.path,
+            isMain: file.isMain,
+            size: file.size,
+            sha256: file.sha256,
+            storageKey: file.storageKey,
+          })),
+        });
+      }
+
+      for (const tagName of uniqueTags) {
+        const tagRecord = await tx.tag.upsert({
+          where: {
+            name: tagName,
+          },
+          update: {},
+          create: {
+            name: tagName,
+          },
+        });
+
+        await tx.projectTag.create({
+          data: {
+            projectId: project.id,
+            tagId: tagRecord.id,
+          },
+        });
+      }
+
+      return project;
     });
 
-    for (const tagName of uniqueTags) {
-      const tagRecord = await tx.tag.upsert({
-        where: {
-          name: tagName,
-        },
-        update: {},
-        create: {
-          name: tagName,
-        },
-      });
-
-      await tx.projectTag.create({
-        data: {
-          projectId: project.id,
-          tagId: tagRecord.id,
-        },
-      });
-    }
+    revalidatePath('/dashboard');
 
     return project;
-  });
-
-  revalidatePath('/dashboard');
-
-  return project;
+  } catch (error) {
+    await cleanupProjectObjects(projectId);
+    throw error;
+  }
 }
 
 /**
@@ -141,7 +175,8 @@ export async function loadProject(id: string) {
 }
 
 /**
- * Fetches a project with its tags, scoped to a user's assignment (private helper).
+ * Fetches a project with its tags and its file tree (rebuilt from ProjectFile
+ * rows and the object store), scoped to a user's assignment (private helper).
  */
 async function getProjectById(projectId: string, userId: string) {
   const assignment = await prisma.projectAssignment.findUnique({
@@ -159,6 +194,11 @@ async function getProjectById(projectId: string, userId: string) {
               tag: true,
             },
           },
+          files: {
+            orderBy: {
+              path: 'asc',
+            },
+          },
         },
       },
     },
@@ -168,9 +208,20 @@ async function getProjectById(projectId: string, userId: string) {
     return null;
   }
 
+  const { files, ...project } = assignment.project;
+
+  const contents = await readFileContents(files);
+
   return {
-    ...assignment.project,
-    tags: assignment.project.tags.map((projectTag) => projectTag.tag),
+    ...project,
+    fileTree: buildTree(
+      files.map((file, index) => ({
+        path: file.path,
+        isMain: file.isMain,
+        content: contents[index],
+      })),
+    ),
+    tags: project.tags.map((projectTag) => projectTag.tag),
   };
 }
 
@@ -308,6 +359,8 @@ export async function leaveProject(formData: FormData) {
         },
       });
 
+      await cleanupProjectObjects(projectId);
+
       revalidatePath('/dashboard');
 
       return {
@@ -348,7 +401,7 @@ export async function deleteProject(formData: FormData) {
     throw new Error('Missing project id');
   }
 
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const assignment = await tx.projectAssignment.findUnique({
       where: {
         userId_projectId: {
@@ -372,12 +425,17 @@ export async function deleteProject(formData: FormData) {
       },
     });
 
-    revalidatePath('/dashboard');
-
     return {
       action: 'deleted',
     };
   });
+
+  // Rows are gone: now remove the objects (best effort, outside the transaction).
+  await cleanupProjectObjects(projectId);
+
+  revalidatePath('/dashboard');
+
+  return result;
 }
 
 /**
@@ -401,29 +459,89 @@ export async function duplicateProject(formData: FormData) {
 
   const source = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { title: true, fileTree: true },
+    select: {
+      title: true,
+      files: {
+        select: {
+          path: true,
+          mimeType: true,
+          size: true,
+          sha256: true,
+          isMain: true,
+          content: true,
+          storageKey: true,
+        },
+      },
+    },
   });
   if (!source) {
     throw new Error('Project not found');
   }
 
-  const copy = await prisma.$transaction(async (tx) => {
-    const newProject = await tx.project.create({
-      data: {
-        title: `${source.title} (copy)`,
-        fileTree: source.fileTree as Prisma.InputJsonValue,
-        isActive: true,
-      },
-    });
+  const newProjectId = randomUUID();
 
-    await tx.projectAssignment.create({
-      data: { userId, projectId: newProject.id, role: 'owner' },
-    });
+  const copies = source.files.map((file) => {
+    const id = randomUUID();
 
-    return newProject;
+    return {
+      id,
+      path: file.path,
+      mimeType: file.mimeType,
+      size: file.size,
+      sha256: file.sha256,
+      isMain: file.isMain,
+      storageKey: `${projectPrefix(newProjectId)}${id}`,
+      sourceKey: file.storageKey,
+      sourceContent: file.content,
+    };
   });
 
-  revalidatePath('/dashboard');
+  try {
+    await mapLimit(copies, 8, async (copy) => {
+      if (copy.sourceKey) {
+        await copyObject(copy.sourceKey, copy.storageKey);
+      } else {
+        // Not migrated yet: the content still lives in the database.
+        await putObject(copy.storageKey, copy.sourceContent ?? new Uint8Array());
+      }
+    });
 
-  return { success: true, id: copy.id };
+    const newProject = await prisma.$transaction(async (tx) => {
+      const created = await tx.project.create({
+        data: {
+          id: newProjectId,
+          title: `${source.title} (copy)`,
+          isActive: true,
+        },
+      });
+
+      if (copies.length > 0) {
+        await tx.projectFile.createMany({
+          data: copies.map((copy) => ({
+            id: copy.id,
+            projectId: newProjectId,
+            path: copy.path,
+            mimeType: copy.mimeType,
+            size: copy.size,
+            sha256: copy.sha256,
+            isMain: copy.isMain,
+            storageKey: copy.storageKey,
+          })),
+        });
+      }
+
+      await tx.projectAssignment.create({
+        data: { userId, projectId: created.id, role: 'owner' },
+      });
+
+      return created;
+    });
+
+    revalidatePath('/dashboard');
+
+    return { success: true, id: newProject.id };
+  } catch (error) {
+    await cleanupProjectObjects(newProjectId);
+    throw error;
+  }
 }

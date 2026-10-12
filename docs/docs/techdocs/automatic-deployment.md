@@ -40,6 +40,10 @@ sequenceDiagram
    - On failure, the SHA is **not** recorded, so the deployment is automatically retried on the next tick.
 5. A lock file (`flock`) prevents two runs from overlapping if a deployment takes longer than a minute.
 
+:::info
+Because the script runs without `--db`, an automatic deployment only redeploys the app, the docs and nginx. The PostgreSQL (`tisc-db`) and Garage (`tisc-garage`) containers are never restarted by the automatic mechanism, so the database and the object storage are not interrupted.
+:::
+
 ## File locations
 
 | File | Purpose |
@@ -64,6 +68,10 @@ cp /root/tisc-editor/scripts/tisc-deploy-check.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now tisc-deploy-check.timer
 ```
+
+:::warning
+Before enabling the timer on a fresh server, run `./scripts/publish_new_version.sh --db` manually once and complete the **First-time Garage setup** described in the [Production Deployment](./deployment.md) page. The automatic deployment does not start the database or Garage, and the app needs both to be running.
+:::
 
 ## Checking that it's running
 
@@ -91,3 +99,4 @@ systemctl start tisc-deploy-check.service
 
 - Deployment can take up to a minute after the push, since it waits for the timer to fire.
 - A failure in `publish_new_version.sh` is automatically retried on every tick until the underlying issue is fixed — keep an eye on the logs if you see repeated failures.
+- The `.env` file and `garage/garage.toml` changes are not part of the automatic flow for the running Garage container: if you change `garage.toml` or `GARAGE_RPC_SECRET`, run `./scripts/publish_new_version.sh --db` manually. If a new version requires new variables in `.env` (for example new `S3_*` values), add them on the server **before** pushing, since `.env` is not versioned and a missing variable makes the deployment fail and retry every minute.

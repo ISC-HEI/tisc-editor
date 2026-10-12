@@ -5,9 +5,10 @@ import type { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
 import { getProjectAssignmentRole, loadProject } from '@/lib/actions/projects';
 import RequestAccess from '../components/Dashboard/RequestAccess';
+import EditorLoader from '../components/Editor/EditorLoader';
 
 const Editor = dynamic(() => import('../components/Editor/Editor'), {
-  loading: () => <h2>The editor is loading</h2>,
+  loading: () => <EditorLoader />,
 });
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
