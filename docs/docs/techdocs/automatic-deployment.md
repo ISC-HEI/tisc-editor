@@ -70,7 +70,7 @@ systemctl enable --now tisc-deploy-check.timer
 ```
 
 :::warning
-Before enabling the timer on a fresh server, run `./scripts/publish_new_version.sh --db` manually once and complete the **First-time Garage setup** described in the [Production Deployment](./production) page. The automatic deployment does not start the database or Garage, and the app needs both to be running.
+Before enabling the timer on a fresh server, run `./scripts/publish_new_version.sh --db` manually once and complete the **First-time Garage setup** described in the [Production Deployment](./deployment.md) page. The automatic deployment does not start the database or Garage, and the app needs both to be running.
 :::
 
 ## Checking that it's running
