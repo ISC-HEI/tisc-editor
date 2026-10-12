@@ -40,6 +40,7 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'techdocs/architecture/architecture', label: 'Architecture Overview' },
       { type: 'doc', id: 'techdocs/architecture/structure', label: 'Project Structure' },
       { type: 'doc', id: 'techdocs/architecture/database', label: 'Database Schema' },
+      { type: 'doc', id: 'techdocs/architecture/object-storage-garage', label: 'Object Storage (Garage)' },
     ]},
     { type: 'category', label: 'Core Systems', items: [
       { type: 'doc', id: 'techdocs/core-systems/authentication', label: 'Authentication & SSO' },

@@ -1,7 +1,6 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { calcFileTreeSize } from '../quota-service';
 import { requireUserId } from './utils';
 
 /**
@@ -12,34 +11,26 @@ export async function getUserStorage() {
   const userId = await requireUserId();
 
   const user = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
-    select: {
-      storageQuota: true,
-      projectLinks: {
-        include: {
-          project: {
-            select: {
-              fileTree: true,
-            },
-          },
-        },
-      },
-    },
+    where: { id: userId },
+    select: { storageQuota: true },
   });
 
   if (!user) {
     return null;
   }
 
-  type ProjectLink = (typeof user.projectLinks)[number];
+  const { _sum } = await prisma.projectFile.aggregate({
+    _sum: { size: true },
+    where: {
+      project: {
+        userLinks: {
+          some: { userId, role: 'owner' },
+        },
+      },
+    },
+  });
 
-  const ownedLinks = user.projectLinks.filter((link: ProjectLink) => link.role === 'owner');
-
-  const usage = ownedLinks.reduce((acc: number, link: ProjectLink) => {
-    return acc + calcFileTreeSize(link.project.fileTree);
-  }, 0);
+  const usage = _sum.size ?? 0;
 
   return {
     usage,

@@ -49,7 +49,7 @@ TISC Editor is a **Dockerized repo** providing a professional environment for cl
 
 - **Web Editor:** VSCode-like interface, live preview, template gallery, collaboration.
 - **Compilation API:** Stateless Typst to PDF/SVG rendering, Base64 asset handling.
-- **Database Layer:** PostgreSQL managed with Prisma ORM.
+- **Database Layer:** PostgreSQL managed with Prisma ORM and Garage for files.
 - **Documentation:** User and technical documentation, built with Docusaurus.
 - **CI/CD:** Automated build, formatting and linting checks on every push and pull request via GitHub Actions.
 
@@ -80,7 +80,7 @@ The documentation will be available at `http://localhost:3001`.
 |---------------|------------|
 | Frontend      | Next.js 16, TailwindCSS, Lucide Icons, Socket.io-client |
 | Backend       | Node.js API with Typst binary integration, Socket.io-server |
-| Database      | PostgreSQL, Prisma ORM |
+| Database      | PostgreSQL, Prisma ORM, Garage |
 | Documentation | Docusaurus |
 | DevOps        | Docker Compose, GitHub Actions |
 
@@ -165,6 +165,20 @@ SMTP_PASS=
 SMTP_FROM=tisc@isc-vs.ch
 ```
 
+### Garage Configuration
+
+1. Add required variables in your `.env`
+
+```env
+GARAGE_RPC_SECRET=
+S3_ENDPOINT=http://garage:3900
+S3_REGION=garage
+S3_BUCKET=tisc-projects
+S3_FORCE_PATH_STYLE=true
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -236,7 +250,7 @@ This script is executed automatically by the mechanism above.
 | **1. Versioning** | Determines the version from `git describe` (suffixed with the branch name if not `main`). |
 | **2. Build** | Builds the Docker images for the app (`isc-hei/tis-editor`) and the docs (`isc-hei/tisc-docs`). |
 | **3. Network** | Creates the `tisc-network` Docker network if it doesn't exist. |
-| **4. Database** *(if `--db`)* | Starts PostgreSQL and waits for it to be ready (`pg_isready`). |
+| **4. Database** *(if `--db`)* | Starts PostgreSQL and Garage and waits for it to be ready (`pg_isready`). |
 | **5. Application** | Starts the `tisc-app-prod` container and waits for the API to respond. |
 | **6. Prisma** | Applies the database schema via `prisma db push`. |
 | **7. Documentation** | Starts the `tisc-docs` container and waits for it to be ready. |
@@ -305,11 +319,12 @@ graph TD
     end
 
     subgraph Storage
-        DB[(PostgreSQL)]
+        DB[(PostgreSQL<br/>metadata, permissions)]
+        S3[(Garage<br/>S3 object storage<br/>file contents)]
     end
 
     subgraph External
-        SSO[Keycloak SSO]
+        SSO[Keycloak SSO<br/>sso.isc-vs.ch]
     end
 
     %% Interactions
@@ -318,6 +333,7 @@ graph TD
     SIOS <--> Prisma
     NextJS <--> Prisma
     Prisma <--> DB
+    NextJS <-->|S3 API| S3
     NextJS -->|Exec| Typst
     NextJS <-->|OIDC Auth| SSO
 ```
