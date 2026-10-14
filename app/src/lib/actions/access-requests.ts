@@ -125,6 +125,20 @@ export async function resolveAccessRequest(
       where: { id: requestId },
       data: { status: 'denied', resolvedAt: new Date() },
     });
+
+    await sendMail(
+      request.user.email,
+      'Your project access request was declined',
+      `Unfortunately, the owner of the project "${request.project.title}" has declined your access request. If you believe this was a mistake, please contact the project owner directly.`,
+      {
+        label: 'ACCESS DENIED',
+        code: 'Request declined',
+        cta: {
+          label: 'Open the dashboard',
+          url: `${process.env.AUTH_URL}/dashboard`,
+        },
+      },
+    );
   } else {
     await prisma.$transaction([
       prisma.projectAssignment.upsert({
