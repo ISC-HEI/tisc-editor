@@ -25,6 +25,8 @@ You must use the `hevs` email.
 
 When you click on **Share** on the dashboard, you also have the list of people who have access to the project. You can remove them here by clicking on the trash icon.
 
+> An email will also be sent to the removed user to notify them that they no longer have access to the project.
+
 ### Leaving the project
 
 If you were invited to the project, you can leave it without any problem.
