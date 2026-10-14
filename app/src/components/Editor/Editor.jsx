@@ -6,6 +6,7 @@ import { EditorHeader } from './EditorHeader';
 import { Toolbar } from './Toolbar.jsx';
 import { FileExplorer } from './FileExplorer';
 import { PreviewPane } from './PreviewPane';
+import { ImageViewer } from './ImageViewer';
 import { PromptModal } from './PromptModal';
 import Breadcrumbs from './Breadcrumbs';
 import PaneLog from '../../components/Editor/PaneLog';
@@ -355,6 +356,7 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
         </div>
 
         <PreviewPane />
+        <ImageViewer />
       </div>
 
       <PaneLog />
