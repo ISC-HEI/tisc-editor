@@ -35,7 +35,7 @@ const sidebars: SidebarsConfig = {
     { type: 'doc', id: 'techdocs/intro', label: 'Getting Started' },
     { type: 'doc', id: 'techdocs/installation', label: 'Start the project' },
     { type: 'doc', id: 'techdocs/configuration', label: 'Configure your setup' },
-    { type: 'doc', id: 'techdocs/fonts-management', label: 'Configure your setup' },
+    { type: 'doc', id: 'techdocs/fonts-management', label: 'Fonts Management' },
     { type: 'category', label: 'Architecture & Data', items: [
       { type: 'doc', id: 'techdocs/architecture/architecture', label: 'Architecture Overview' },
       { type: 'doc', id: 'techdocs/architecture/structure', label: 'Project Structure' },
