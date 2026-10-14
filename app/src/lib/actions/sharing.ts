@@ -72,7 +72,10 @@ export async function shareProject(
     {
       label: 'SHARING',
       code: canEdit ? 'editor access granted' : 'viewer access granted',
-      cta: { label: 'Open the project', url: `${process.env.AUTH_URL}/dashboard` },
+      cta: {
+        label: 'Open the project',
+        url: `${process.env.AUTH_URL}/dashboard?projectId=${projectId}`,
+      },
     },
   );
 
@@ -240,6 +243,22 @@ export async function removeSharedUser(projectId: string, sharedUserEmail: strin
       },
     },
   });
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { title: true },
+  });
+
+  await sendMail(
+    sharedUserEmail,
+    'Access to a project has been revoked',
+    `Your access to the project "${project?.title ?? 'Untitled'}" has been removed by the project owner.`,
+    {
+      label: 'SHARING',
+      code: 'access revoked',
+      cta: { label: 'Go to dashboard', url: `${process.env.AUTH_URL}/dashboard` },
+    },
+  );
 
   revalidatePath('/dashboard');
 

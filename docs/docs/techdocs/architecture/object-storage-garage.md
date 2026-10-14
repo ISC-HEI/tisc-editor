@@ -84,28 +84,6 @@ api_bind_addr = "[::]:3900"
 
 With `replication_factor = 1`, every object exists **once**. There is no redundancy: a lost volume means lost files. See [Backups](#backups).
 
-## Environment variables
-
-| Variable | Description |
-| --- | --- |
-| `GARAGE_RPC_SECRET` | Internal secret of the node, 64 hexadecimal characters. Read by the `garage` container only |
-| `S3_ENDPOINT` | `http://garage:3900` inside the Docker network |
-| `S3_REGION` | `garage` (must match `s3_region` in `garage.toml`) |
-| `S3_BUCKET` | Name of the bucket, for example `tisc-projects` |
-| `S3_FORCE_PATH_STYLE` | `true` |
-| `S3_ACCESS_KEY_ID` | `GK` followed by 24 hexadecimal characters |
-| `S3_SECRET_ACCESS_KEY` | 64 hexadecimal characters |
-
-The format of the key is imposed by Garage. Generate the values with:
-
-```bash
-echo "GARAGE_RPC_SECRET=$(openssl rand -hex 32)"
-echo "S3_ACCESS_KEY_ID=GK$(openssl rand -hex 12)"
-echo "S3_SECRET_ACCESS_KEY=$(openssl rand -hex 32)"
-```
-
-Never commit `.env`. Use a different set of values for each environment.
-
 ## First start
 
 Garage needs a one-time initialization: assign a storage layout to the node, create the bucket, and import the access key from `.env`. The script does all three and can safely be run again (it stops if the bucket already exists):
@@ -117,18 +95,6 @@ docker compose -f docker-compose-dev.yml up -d
 ```
 
 The script only reads the three `S3_*` values it needs from `.env`; it does not execute the file. The storage layout is created with a capacity of 10 GB, which is a limit for Garage's data placement and not a disk reservation: adjust it in the script if you expect more data.
-
-## Migrating existing files
-
-Projects created before Garage was introduced have their content in the `content` column of `project_files`. Both kinds of files are supported at the same time: a file without `storage_key` is read from the database, and is moved to Garage the next time its project is saved.
-
-To move everything at once, run the migration script inside the app container:
-
-```bash
-docker compose -f docker-compose-dev.yml exec app bun scripts/migrate-files-to-s3.ts
-```
-
-It only handles rows that still have content and no `storage_key`, so it can be interrupted and run again. Once it reports `Done.` and a project can be opened and saved, the `content` column is no longer needed. Dropping it does not free disk space by itself: run `VACUUM FULL project_files;` afterwards.
 
 ## Inspecting the storage
 
@@ -160,19 +126,6 @@ SELECT path, mime_type, size, storage_key FROM project_files WHERE project_id = 
 ```
 
 To check that a migration is complete, compare the number of rows that have a `storage_key` with the object count shown by `bucket info`.
-
-## Backups
-
-Garage keeps its data in two Docker volumes, and a backup must cover both **and** the PostgreSQL database, because rows and objects only make sense together.
-
-| Volume | Content |
-| --- | --- |
-| `garage-meta` | Garage's internal metadata (which objects exist, where) |
-| `garage-data` | The objects themselves |
-
-- Back up the database and both volumes at the same moment, so that the rows do not reference objects that the backup does not contain.
-- For the metadata, prefer a consistent snapshot to copying the live files. Garage provides a `garage meta snapshot` command for this; check `garage meta --help` for the exact syntax of the version in use.
-- Since there is no replication, test a restore at least once.
 
 ## Updating Garage
 
@@ -206,5 +159,4 @@ The development compose file is not suitable as is for production:
 - Keep port `3900` unpublished; only the app container should reach Garage.
 - Provide the secrets (`GARAGE_RPC_SECRET`, `S3_SECRET_ACCESS_KEY`) through the deployment environment, not in a file stored in the repository.
 - Use new values for the credentials: never reuse the development ones.
-- Set up and test the [backups](#backups).
 - Size the storage layout capacity according to the disk available for `garage-data`.

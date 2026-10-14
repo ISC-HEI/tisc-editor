@@ -49,6 +49,16 @@ If you don't have a Keycloak client ID and secret, contact **Pierre-André Mudry
 | `DATABSE_URL` | Database connection URL already defin in docker-compose | `dev` |
 | `DB_PASSWORD` | Database secret password | `production` |
 
+| Variable | Description |
+| --- | --- |
+| `S3_ENDPOINT` | URL of the S3 API, `http://garage:3900` inside the Docker network |
+| `S3_REGION` | Region name, `garage` |
+| `S3_BUCKET` | Bucket that holds the project files |
+| `S3_FORCE_PATH_STYLE` | `true`: the bucket is addressed in the path, not in the host name |
+| `S3_ACCESS_KEY_ID` | Access key, `GK` followed by 24 hexadecimal characters |
+| `S3_SECRET_ACCESS_KEY` | Secret key, 64 hexadecimal characters |
+| `GARAGE_RPC_SECRET` | Internal secret of the Garage node (read by the `garage` container only) |
+
 ### Mail
 
 | Variable               | Description                                               |
