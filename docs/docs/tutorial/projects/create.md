@@ -2,11 +2,11 @@
 
 :::tip[Good to see you here]
 
-If you can see this page, it means you have access to the editor.
+If you arrive at this page, it means you have access to the editor.
 
 :::
 
-Now that you want to create a project, you just have to click on the **New project** button at the top of the dashboard.
+Now that you want to create a project, you just have to click on the **New project** button.
 
 ## Templates
 
@@ -37,4 +37,4 @@ A maximum of 10 tags is authorized per project.
 
 Just click on **Confirm and Create** and your project will be created.
 
-This step can take up to 20 to 30 seconds if you use a template, because it needs to download it from GitHub.
+This step can take up to 10 seconds if you use a template, because it needs to download it from GitHub.

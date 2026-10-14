@@ -19,7 +19,7 @@ You must use the `hevs` email.
 
 3. Choose if you want the person to edit the project. By default the person can only view the project.
 
-4. The person will see the project in their dashboard, and you will see a tag next to it indicating that the project is shared.
+4. The person will see the project in their dashboard and receive an email, and you will see a tag next to it indicating that the project is shared.
 
 ### Removing a user from the project
 
@@ -36,7 +36,7 @@ If you are the owner, you need to transfer ownership to someone else. You can ei
 
 ## Seeing collaborators in the editor
 
-When you are in the editor, you can see the people collaborating with you by hovering over the component at the top middle of the screen. The list of users will appear.
+When you are in the editor, you can see the people collaborating with you by hovering over the component at the top middle of the screen. The list of users emails will appear.
 
 ## How actions impact others
 
