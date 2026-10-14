@@ -530,9 +530,7 @@ export async function openFile(path, options = {}) {
   const ext = node.name.split('.').pop().toLowerCase();
   const config = getExtensionConfig(ext);
 
-  const isImage =
-    options.type === 'image' ||
-    config.type === 'image'
+  const isImage = options.type === 'image' || config.type === 'image';
 
   if (isImage) {
     let imageSrc = node.data ?? node.content ?? '';
