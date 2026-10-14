@@ -72,7 +72,10 @@ export async function shareProject(
     {
       label: 'SHARING',
       code: canEdit ? 'editor access granted' : 'viewer access granted',
-      cta: { label: 'Open the project', url: `${process.env.AUTH_URL}/dashboard?projectId=${projectId}` },
+      cta: {
+        label: 'Open the project',
+        url: `${process.env.AUTH_URL}/dashboard?projectId=${projectId}`,
+      },
     },
   );
 
