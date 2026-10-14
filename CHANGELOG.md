@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-14
+- Added redirection to the project directly when shared.
+
 ## 2026-10-08
 - Added complete compiler documentation
 - Added toolbar extensible
