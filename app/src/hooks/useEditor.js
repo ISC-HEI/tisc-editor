@@ -516,8 +516,8 @@ function setupResizable() {
   });
 }
 
-export async function openFile(path) {
-  if (!path || !refs.editor) return;
+export async function openFile(path, options = {}) {
+  if (!path) return;
 
   const parts = path.replace('root/', '').split('/');
   let node = fileTree;
@@ -530,8 +530,49 @@ export async function openFile(path) {
   const ext = node.name.split('.').pop().toLowerCase();
   const config = getExtensionConfig(ext);
 
-  if (config.allowed == false) {
-    // We use == false, because it can be null
+  const isImage = options.type === 'image' || config.type === 'image';
+
+  if (isImage) {
+    let imageSrc = node.data ?? node.content ?? '';
+
+    if (imageSrc instanceof Blob) {
+      imageSrc = URL.createObjectURL(imageSrc);
+    } else if (
+      typeof imageSrc === 'string' &&
+      !imageSrc.startsWith('data:') &&
+      !imageSrc.startsWith('blob:') &&
+      !/^https?:\/\//i.test(imageSrc)
+    ) {
+      const mimeTypes = {
+        png: 'image/png',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        svg: 'image/svg+xml',
+        bmp: 'image/bmp',
+        avif: 'image/avif',
+      };
+
+      imageSrc = `data:${mimeTypes[ext] || 'image/png'};base64,${imageSrc}`;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('open-image', {
+        detail: {
+          path,
+          name: node.name,
+          src: imageSrc,
+          type: 'image',
+        },
+      }),
+    );
+
+    functions.closeFileExplorer();
+    return;
+  }
+
+  if (config.allowed === false) {
     makeToast(`Interrupted: .${ext} is a binary file.`, 'error');
     return;
   }
@@ -539,13 +580,14 @@ export async function openFile(path) {
   if (config.allowed == null) {
     const confirmForce = await functions.openCustomConfirm(
       'Unknown file type',
-      `Unknown extension .${ext}. \n\nOpening this as text might corrupt the file if it's not a plain text format. Do you want to proceed?`,
+      `Unknown extension .${ext}. Opening this as text might corrupt the file. Do you want to proceed?`,
     );
 
     if (!confirmForce) return;
   }
 
-  const model = refs.editor.getModel();
+  const model = refs.editor?.getModel();
+
   if (model) {
     refs.monaco.editor.setModelLanguage(model, config.language);
   }
@@ -558,19 +600,6 @@ export async function openFile(path) {
   }
 
   let content = node.content ?? node.data ?? '';
-
-  if (content.startsWith('data:')) {
-    try {
-      const base64 = content.split(',')[1];
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      content = new TextDecoder().decode(bytes);
-      node.content = content;
-    } catch (e) {
-      console.error('Erreur décodage fichier secondaire:', e);
-    }
-  }
 
   refs.editor.setValue(content);
   functions.closeFileExplorer();

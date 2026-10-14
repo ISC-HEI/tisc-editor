@@ -167,7 +167,13 @@ function applyActiveFile(path) {
  */
 async function openFileAndTrack(path) {
   applyActiveFile(path);
-  await openFile(path);
+
+  const extension = path.split('.').pop().toLowerCase();
+  const config = getExtensionConfig(extension);
+
+  await openFile(path, {
+    type: config.type === 'image' ? 'image' : 'code',
+  });
 }
 
 /**
