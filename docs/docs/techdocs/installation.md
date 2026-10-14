@@ -66,12 +66,22 @@ bun run serve
 
 The documentation runs on port `3001`.
 
+**Databases**
+
+You also need to run the `postgres` and `garage` databases
+
+```bash
+docker compose -f docker-compose-dev.yml up -d garage db
+```
+
 ### Docker setup
 
 For a development environment with Docker, use:
 
 ```bash
-docker-compose -f docker-compose-dev.yml up
+docker-compose -f docker-compose-dev.yml up -d garage
+./scripts/garage-init.sh
+docker-compose -f docker-compose-dev.yml up -d
 ```
 
 Thanks to the Nginx server behind it, the app is accessible on port `3000`, and the docs are bound to `/docs/`.
