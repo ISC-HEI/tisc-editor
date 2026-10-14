@@ -6,6 +6,7 @@ All notable changes to this project, organized by day.
 - Added redirection to the project directly when shared.
 - Added email sending when acces revoked from a project
 - Added email sending when acces denied from a project
+- Added possibility to open image in the editor.
 
 ## 2026-10-08
 - Added complete compiler documentation
