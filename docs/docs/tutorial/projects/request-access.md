@@ -10,7 +10,7 @@ This page explains how to **ask for access** and how, as a project owner, to **a
 
 Open the link you were given. If you do not have access yet, you will see a page titled **You need access**.
 
-The page shows the email address you are signed in with. Check that it is the account you expect: if the owner shared the project with a different address, sign out and sign in with the right account.
+The page shows the email address you are signed in with. Check that this is the account you expect: if the owner shared the project with a different address, sign out and sign in with the right account.
 
 ### 2. Click "Request access"
 
@@ -20,9 +20,9 @@ When the request is sent, the page confirms it: *"Request sent. The owner has be
 
 ### 3. Wait for the answer
 
-If the owner accepts, you receive an email with a button to open the project. You can then open it from the email, or from your dashboard.
+If the owner accepts, you receive an email with a button to open the project. You can then open it from the email or from your dashboard.
 
-If the owner denies the request, you are not notified by email. 
+If the owner declines the request, you also receive an email explaining that access was denied. If you believe this was a mistake, contact the project owner directly.
 
 ### What you get
 
@@ -30,8 +30,8 @@ The owner chooses the level of access:
 
 | Access | What you can do |
 | --- | --- |
-| **Viewer** | Open and read the project. You cannot edit it |
-| **Editor** | Open the project and edit its content |
+| **Viewer** | Open and read the project. You cannot edit it. |
+| **Editor** | Open the project and edit its content. |
 
 Only the owner can manage sharing or delete the project.
 
@@ -39,14 +39,14 @@ Only the owner can manage sharing or delete the project.
 
 | Message | Meaning | What to do |
 | --- | --- | --- |
-| *You already requested access. The owner has been notified.* | You already asked within the last 24 hours | Wait for the owner to answer. You can ask again after 24 hours |
-| *You already have access to this project* | You are already a member of the project | Open it from your dashboard |
-| *Your previous request was declined by the owner* | The owner denied your earlier request | Contact the owner directly if you think this is a mistake |
-| *Invalid project* | The link is incomplete or incorrect | Ask the owner to send the link again |
+| *You already requested access. The owner has been notified.* | You already asked within the last 24 hours. | Wait for the owner to answer. You can ask again after 24 hours. |
+| *You already have access to this project* | You are already a member of the project. | Open it from your dashboard. |
+| *Your previous request was declined by the owner* | The owner denied your earlier request. | Contact the owner directly if you think this is a mistake. |
+| *Invalid project* | The link is incomplete or incorrect. | Ask the owner to send the link again. |
 
 :::info[No answer?]
 
-Requests are sent by email, so the owner may not see it right away. If you are in a hurry, contact them directly and ask them to share the project with your email address.
+Requests are sent by email, so the owner may not see the notification right away. If you are in a hurry, contact them directly and ask them to share the project with your email address.
 
 :::
 
@@ -54,7 +54,7 @@ Requests are sent by email, so the owner may not see it right away. If you are i
 
 ### 1. You receive an email
 
-When someone asks for access to your project, you receive an email titled **Access request for your project**. It tells you who is asking and for which project.
+When someone asks for access to your project, you receive an email titled **Access request for your project**. It tells you who is asking and which project they want to access.
 
 ### 2. Click "Review request"
 
@@ -68,15 +68,15 @@ Only the owner of the project can open this page. If you see a "not found" page,
 
 ### 3. Choose an answer
 
-The page shows the person's name and email address, and three choices:
+The page shows the person's name and email address, along with three choices:
 
 | Button | Result |
 | --- | --- |
-| **Grant viewer access** | The person can open and read the project, but cannot edit it |
-| **Grant editor access** | The person can open and edit the project |
-| **Deny** | The person does not get access |
+| **Grant viewer access** | The person can open and read the project, but cannot edit it. |
+| **Grant editor access** | The person can open and edit the project. |
+| **Deny** | The person is not granted access and receives an email explaining that the request was declined. |
 
-When you grant access, the person receives an email letting them know they can open the project. When you deny it, they are not notified.
+When you grant access, the person receives an email confirming that they can open the project. When you deny the request, they are also notified by email.
 
 Once you have answered, the page shows the final status of the request. A request can only be answered once.
 
