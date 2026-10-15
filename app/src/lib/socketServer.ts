@@ -41,6 +41,12 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
       const userId = typeof token?.id === 'string' ? token.id : null;
       if (!userId) return next(new Error('Unauthorized'));
 
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { disabled: true },
+      });
+      if (!user || user.disabled) return next(new Error('Unauthorized'));
+
       socket.data.userId = userId;
       next();
     } catch (err) {
