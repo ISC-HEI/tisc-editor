@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { requireUserId, requireOwnerAssignment } from './utils';
+import { requireUserId, requireAssignment, requireOwnerAssignment } from './utils';
 import { sendMail } from '../email';
 
 /**
@@ -92,6 +92,8 @@ export async function shareProject(
 export async function getProjectMembers(projectId: string) {
   const userId = await requireUserId();
 
+  await requireAssignment(userId, projectId);
+
   const members = await prisma.projectAssignment.findMany({
     where: {
       projectId,
@@ -110,13 +112,23 @@ export async function getProjectMembers(projectId: string) {
 }
 
 /**
- * Returns id/email pairs for a list of user ids.
+ * Returns id/email pairs for a list of user ids. Only users sharing at least
+ * one project with the current user are returned.
  */
 export async function getUsersEmailFromId(usersId: string[]) {
+  const userId = await requireUserId();
+
+  if (!Array.isArray(usersId) || usersId.some((id) => typeof id !== 'string')) {
+    throw new Error('Invalid payload');
+  }
+
   return await prisma.user.findMany({
     where: {
       id: {
         in: usersId,
+      },
+      projectLinks: {
+        some: { project: { userLinks: { some: { userId } } } },
       },
     },
     select: {
