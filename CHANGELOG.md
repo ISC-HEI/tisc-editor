@@ -4,6 +4,7 @@ All notable changes to this project, organized by day.
 
 ## 2026-10-15
 - Added redirection to the project created
+- Added access request management in share modal
 
 ## 2026-10-14
 - Added redirection to the project directly when shared.
