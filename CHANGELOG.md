@@ -6,6 +6,16 @@ All notable changes to this project, organized by day.
 - Added redirection to the project created
 - Added access request management in share modal
 - Fixed security authentification restriction
+- Fixed members and emails exposed to non-members (`getProjectMembers`, `getUsersEmailFromId`)
+- Fixed storage quota not enforced on project creation and duplication
+- Fixed XSS in the file explorer image preview and active users list
+- Fixed path traversal in GitHub template import
+- Fixed disabled accounts keeping access through existing sessions and sockets
+- Fixed project thumbnails accessible without being a member
+- Fixed socket roles not refreshed, rooms not left, payloads not validated and cross-site handshakes
+- Fixed viewers being able to edit tags, and enforced tag limits
+- Added rate limiting and payload size limit on compilation
+- Added 5MB per-file limit on save
 
 ## 2026-10-14
 - Added redirection to the project directly when shared.
