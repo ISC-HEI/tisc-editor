@@ -24,6 +24,8 @@ Compiles a Typst project and returns the rendered output.
 
 **Authentication:** Required. Returns `401` if there is no active session. Paths escaping the temporary directory (e.g. `../`) are rejected with `400`.
 
+**Rate limiting:** a user can only run **one compilation at a time** and at most **60 per minute**; otherwise the route returns `429`. Requests whose `Content-Length` exceeds **15 MB** are rejected with `413`. Compilation is synchronous and blocks the Node.js event loop, so these limits protect other users.
+
 **Request body**
 
 | Field | Type | Description |
@@ -86,6 +88,7 @@ Persists a project's file tree, enforcing the user's storage quota.
 **Response**
 
 - `200` — `{ "success": true }`
+- `413` — A file exceeds **5 MB**.
 - `403` — `Forbidden` if the caller is not an `owner` or `editor` of the project, or quota exceeded. Body is a plain text message with current usage and limit, e.g. `Quota exceeded (10.42MB / 10.00MB)`.
 - `500` — Unexpected server error.
 
@@ -97,10 +100,12 @@ The quota check only applies when the new file tree is **larger** than the proje
 
 Returns the stored thumbnail image for a project.
 
+**Authentication:** Required (`401` otherwise). The caller must be a member of the project; otherwise the route returns `404`, so the existence of the project is not revealed.
+
 **Response**
 
-- `200` — Image bytes, with `Content-Type` set to the stored `mimeType`, cached for 60 seconds (`Cache-Control: public, max-age=60, must-revalidate`) and an `ETag` based on the last update time.
-- `404` — No thumbnail exists for this project.
+- `200` — Image bytes, with `Content-Type` set to the stored `mimeType`, cached for 60 seconds (`Cache-Control: private, max-age=60, must-revalidate`) and an `ETag` based on the last update time.
+- `404` — No thumbnail exists for this project, or the caller is not a member.
 
 ---
 

@@ -47,6 +47,8 @@ Runs when a JWT is created or updated. On initial sign-in (when `account` and `u
 - `token.id` — the internal user ID
 - `token.groups` — the Keycloak groups from the user's `profile`
 
+On every subsequent call, it also checks `User.disabled` in the database and returns `null` (invalidating the session) if the account was disabled or deleted. This is how disabling an account takes effect immediately despite the JWT strategy.
+
 ### `session`
 
 Runs whenever the session is read. It copies `id` and `groups` from the token onto `session.user`, making them available on the client and in server components via `auth()`.

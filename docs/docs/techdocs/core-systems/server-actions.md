@@ -245,13 +245,15 @@ Computes the caller's current storage usage against their quota, used by the das
 
 ### `addTagToProject(projectId, tag)`
 
-Attaches a tag to a project, creating the `Tag` record first if it doesn't already exist (`upsert`).
+Attaches a tag to a project, creating the `Tag` record first if it doesn't already exist (`upsert`). The tag is trimmed and lowercased.
 
-**Auth:** required. The caller must have a `ProjectAssignment` on the project (any role), otherwise `Access denied`.
+**Auth:** required. The caller must be an `owner` or `editor` of the project, otherwise `Access denied` (no assignment) or `Viewers cannot edit tags`.
+
+**Validation:** same limits as `createProject` — each tag must be **50 characters or fewer** and a project can have at most **10** tags.
 
 ### `getProjectTags(projectId)`
 
-Returns both the tags currently on a project and the full list of tags available platform-wide, so the "Edit Tags" UI can offer autocomplete.
+Returns both the tags currently on a project and the tags used in the caller's own projects (tags of other users are not exposed), so the "Edit Tags" UI can offer autocomplete.
 
 **Auth:** required. The caller must have a `ProjectAssignment` on the project, otherwise `Access denied`.
 
@@ -267,7 +269,7 @@ Returns every distinct tag used across all projects the caller has access to, so
 
 Detaches a tag from a project. If the tag ends up attached to **zero** projects afterwards, the `Tag` record itself is deleted, keeping the global tag list clean.
 
-**Auth:** required. Same access check as `addTagToProject`.
+**Auth:** required. Same role check as `addTagToProject` (owner or editor).
 
 ---
 
@@ -297,13 +299,13 @@ The new assignment's role is `editor` if `canEdit` is `true`, otherwise `viewer`
 
 Returns every member of a project, but **excludes the caller** from the result. Used to populate pickers such as the "transfer ownership to…" selector.
 
-**Auth:** required.
+**Auth:** required. The caller must have a `ProjectAssignment` on the project, otherwise `Access denied`.
 
 ### `getUsersEmailFromId(usersId)`
 
 Resolves a list of user IDs to their `{ id, email }`. Used on the client to display emails for users already known by ID (e.g. the collaboration presence list).
 
-**Auth:** none — this action does not call `auth()`.
+**Auth:** required. Only users who share at least one project with the caller are returned; other IDs are silently ignored.
 
 ### `transferProjectOwnership(projectId, newOwnerEmail)`
 

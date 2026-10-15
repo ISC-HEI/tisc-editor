@@ -23,12 +23,13 @@ A project always has **exactly one** `owner` at a time — `transferProjectOwner
 | Transfer ownership | ✅ (as current owner) | ❌ | ❌ | Server (`transferProjectOwnership`) |
 | Leave the project | ✅ *(only if not the sole member — see below)* | ✅ | ✅ | Server (`leaveProject`) |
 | Duplicate the project | ✅  | ✅ | ✅ | Server (`duplicateProject`) |
-| Add / remove tags | ✅ | ✅ | ✅ | Server, but **not role-restricted** — any assignment qualifies |
+| Add / remove tags | ✅ | ✅ | ❌ | Server (`addTagToProject`, `removeTagFromProject`) |
 | Load / view the project | ✅ | ✅ | ✅ | Server (`loadProject`) |
 | Save file tree / edit content | ✅ | ✅ | ❌ | Server (`/api/projects/save`) |
 | Compile the project (preview) | ✅ | ✅ | ✅ | Server (`/api/projects/compile`, authentication required) |
 | Update the project thumbnail | ✅ | ✅ | ❌ | Server (`/api/projects/compile`) |
-| Real-time edits (Socket.io) | ✅ | ✅ | ❌ | Server (`socketServer.ts`, role checked on every write event) |
+| View the project thumbnail | ✅ | ✅ | ✅ | Server (`GET /api/projects/[id]/thumbnail`) |
+| Real-time edits (Socket.io) | ✅ | ✅ | ❌ | Server (`socketServer.ts`, role re-checked at most every 10 s) |
 | Handle access requests | ✅ | ❌ | ❌ | Server (`resolveAccessRequest`) |
 
 ## How the owner-only actions are enforced
@@ -49,7 +50,8 @@ The distinction between `editor` and `viewer` is enforced on the server, not onl
 
 - [`POST /api/projects/save`](./api-endpoints#post-apiprojectssave) rejects callers without an assignment or with the `viewer` role (`403`).
 - [`POST /api/projects/compile`](./api-endpoints#post-apiprojectscompile) requires an authenticated session (`401` otherwise). Compilation itself is stateless, so viewers can render the preview, but the project thumbnail is only updated when the caller is an `owner` or `editor` of `projectId`.
-- The Socket.io [`join-document`](./collaboration#connecting-and-joining-a-document) handshake stores the caller's `role` in the socket session. Write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are ignored for viewers; `cursor-change` is still relayed.
+- The Socket.io [`join-document`](./collaboration#connecting-and-joining-a-document) handshake stores the caller's `role` in the socket session. Write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are ignored for viewers; `cursor-change` is still relayed. The role is refreshed from the database at most every 10 seconds, so revoked or downgraded members lose access without reconnecting.
+- Tag edits (`addTagToProject`, `removeTagFromProject`) are rejected for viewers with `Viewers cannot edit tags`.
 
 The **editor UI** additionally hides editing controls: `Toolbar.jsx` derives a `canEdit` flag from [`getProjectAssignmentRole`](./server-actions#getprojectassignmentroleprojectid) and disables Save, Open, and text formatting when the role is `viewer`.
 
@@ -61,4 +63,5 @@ The **editor UI** additionally hides editing controls: `Toolbar.jsx` derives a `
 | `/api/projects/save` | ✅ — owner or editor only |
 | `/api/projects/compile` | ✅ — authentication required; thumbnail update for owner/editor only |
 | Socket.io (`socketServer.ts`) | ✅ — write events rejected for `viewer` |
+| `/api/projects/[id]/thumbnail` | ✅ — project members only |
 | Editor UI (`Toolbar.jsx`, etc.) | ✅ — hides/disables editing controls for `viewer` |

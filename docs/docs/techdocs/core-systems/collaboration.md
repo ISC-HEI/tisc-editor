@@ -15,7 +15,8 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     Client->>Server: connect (session cookie)
-    Server->>Server: getToken → socket.data.userId
+    Server->>Server: check Origin, getToken → socket.data.userId
+    Server->>DB: reject disabled users
     Client->>Server: join-document { docId }
     Server->>DB: findUnique ProjectAssignment
     alt Authorized
@@ -28,7 +29,16 @@ sequenceDiagram
     end
 ```
 
-Once joined, the socket is stored server-side with an in-memory session (`{ userId, docId, authorized, email, role }`). Every subsequent event from that socket is checked against `session.authorized && session.docId === docId` before being relayed; write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are additionally ignored when `role` is `viewer` — the server does not re-query the database on every edit, it trusts the authorization established at join time for the lifetime of the connection.
+Once joined, the socket is stored server-side with an in-memory session (`{ userId, docId, authorized, email, role }`). Every subsequent event from that socket is checked against `session.authorized && session.docId === docId` before being relayed; write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are additionally ignored when `role` is `viewer`.
+
+The role is re-read from the database at most every **10 seconds** (`ROLE_TTL_MS`) when an event arrives, so a member who is removed or downgraded loses access within a few seconds without having to reconnect. A removed member receives an `error` event and is taken out of the room.
+
+Additional safeguards:
+
+- **Origin check:** the handshake is rejected if its `Origin` header does not match the request host (`Host` / `X-Forwarded-Host`) or `AUTH_URL`. CORS does not apply to WebSocket upgrades, so this check prevents cross-site WebSocket hijacking.
+- **Disabled accounts** are refused at connection time.
+- **Switching documents:** joining another document first leaves the previous room and removes the socket from its active users list.
+- **Payload validation:** events with malformed fields (e.g. non-string paths, `changes` not being an array, `type` other than `file`/`folder`) are silently dropped.
 
 ## Events reference
 
