@@ -182,12 +182,13 @@ export const useTypstCollaboration = (docId, userId) => {
                                 style="background-color: ${colors.base}; 
                                         color: ${colors.darker}; 
                                         border-color: ${colors.dark};">
-                                ${email.charAt(0)}
                             </div>
                             <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                         </div>
-                        <span class="truncate font-medium">${email}</span>
+                        <span class="truncate font-medium"></span>
                     `;
+          div.querySelector('.rounded-full').textContent = email.charAt(0);
+          div.querySelector('span').textContent = email;
           refs.userListContainer.appendChild(div);
         });
       }
