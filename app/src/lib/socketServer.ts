@@ -1,4 +1,5 @@
 import { Server as SocketIOServer } from 'socket.io';
+import { getToken } from 'next-auth/jwt';
 import { prisma } from './prisma';
 
 import { Server as HTTPServer } from 'http';
@@ -25,6 +26,29 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
     },
   });
 
+  /**
+   * Authenticates the socket from the NextAuth session cookie sent with the
+   * handshake. The user ID is never taken from the client payload.
+   */
+  io.use(async (socket, next) => {
+    try {
+      const headers = { cookie: socket.handshake.headers.cookie ?? '' };
+      const secret = process.env.AUTH_SECRET;
+      const token =
+        (await getToken({ req: { headers }, secret, secureCookie: true })) ??
+        (await getToken({ req: { headers }, secret, secureCookie: false }));
+
+      const userId = typeof token?.id === 'string' ? token.id : null;
+      if (!userId) return next(new Error('Unauthorized'));
+
+      socket.data.userId = userId;
+      next();
+    } catch (err) {
+      console.error('Socket Auth Error:', err);
+      next(new Error('Unauthorized'));
+    }
+  });
+
   io.on('connection', (socket) => {
     let session: {
       userId: string | null;
@@ -42,7 +66,8 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
      * Handles the 'join-document' event.
      * Verifies project ownership or shared access via Prisma before allowing the join.
      */
-    socket.on('join-document', async ({ docId, userId }: { docId: string; userId: string }) => {
+    socket.on('join-document', async ({ docId }: { docId: string }) => {
+      const userId: string = socket.data.userId;
       if (!docId || !userId) return;
 
       try {

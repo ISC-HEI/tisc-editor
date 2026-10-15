@@ -4,7 +4,9 @@ Real-time collaboration is implemented with **Socket.io**, on top of the WebSock
 
 ## Connecting and joining a document
 
-A socket connection alone does not grant access to a project. After connecting, the client must explicitly join a document by emitting `join-document` with a `docId` (the project ID) and `userId`. The server then checks whether that user has a `ProjectAssignment` for that project before allowing the join — if not, it responds with an `error` event instead.
+The socket handshake is authenticated with the NextAuth session cookie: a middleware (`io.use`) decodes the JWT with `getToken` and stores the user ID in `socket.data.userId`. Connections without a valid session are rejected (`Unauthorized`). The user ID is never taken from the client payload.
+
+A socket connection alone does not grant access to a project. After connecting, the client must explicitly join a document by emitting `join-document` with a `docId` (the project ID). The server then checks whether that user has a `ProjectAssignment` for that project before allowing the join — if not, it responds with an `error` event instead.
 
 ```mermaid
 sequenceDiagram
@@ -12,8 +14,9 @@ sequenceDiagram
     participant Server as Socket.io Server
     participant DB as PostgreSQL
 
-    Client->>Server: connect
-    Client->>Server: join-document { docId, userId }
+    Client->>Server: connect (session cookie)
+    Server->>Server: getToken → socket.data.userId
+    Client->>Server: join-document { docId }
     Server->>DB: findUnique ProjectAssignment
     alt Authorized
         DB-->>Server: assignment found
@@ -25,7 +28,7 @@ sequenceDiagram
     end
 ```
 
-Once joined, the socket is stored server-side with an in-memory session (`{ userId, docId, authorized, email }`). Every subsequent event from that socket is checked against `session.authorized && session.docId === docId` before being relayed — the server does not re-query the database on every edit, it trusts the authorization established at join time for the lifetime of the connection.
+Once joined, the socket is stored server-side with an in-memory session (`{ userId, docId, authorized, email, role }`). Every subsequent event from that socket is checked against `session.authorized && session.docId === docId` before being relayed; write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are additionally ignored when `role` is `viewer` — the server does not re-query the database on every edit, it trusts the authorization established at join time for the lifetime of the connection.
 
 ## Events reference
 
@@ -33,7 +36,7 @@ Once joined, the socket is stored server-side with an in-memory session (`{ user
 
 | Event | Payload | Description |
 | --- | --- | --- |
-| `join-document` | `{ docId, userId }` | Authorizes and joins a project's collaboration room |
+| `join-document` | `{ docId }` | Authorizes and joins a project's collaboration room |
 | `edit-file` | `{ docId, filename, changes }` | Broadcasts a Monaco content change |
 | `cursor-change` | `{ docId, filename, selection }` | Broadcasts the local cursor position / selection |
 | `create-node` | `{ docId, path, type }` | Broadcasts file/folder creation |
