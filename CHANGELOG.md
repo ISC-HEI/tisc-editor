@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-15
+- Added redirection to the project created
+
 ## 2026-10-14
 - Added redirection to the project directly when shared.
 - Added email sending when acces revoked from a project
