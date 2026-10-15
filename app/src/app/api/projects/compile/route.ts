@@ -7,10 +7,27 @@ import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 import { FileTreeNode } from '@/types/filetree';
 import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import sharp from 'sharp';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+/**
+ * Resolves a path inside a root directory, throwing if the result escapes it
+ * (e.g. names containing `../` or absolute paths).
+ * @param {string} rootDir - The directory the path must stay within.
+ * @param {...string} segments - Path segments to resolve against rootDir.
+ * @returns {string} The resolved absolute path.
+ */
+function safeResolve(rootDir: string, ...segments: string[]) {
+  const root = path.resolve(rootDir);
+  const resolved = path.resolve(root, ...segments);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error('Invalid file path');
+  }
+  return resolved;
+}
 
 /**
  * Decodes file content, converting Base64 encoded strings into
@@ -126,17 +143,18 @@ function writeImages(
   children: Record<string, FileTreeNode> = {},
   baseDir: string,
   accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 },
+  rootDir: string = baseDir,
 ) {
   for (const fileName in children) {
     const node = children[fileName];
-    const currentPath = path.join(baseDir, node.name || fileName);
+    const currentPath = safeResolve(rootDir, baseDir, node.name || fileName);
 
     if (node.type === 'folder') {
       if (!fs.existsSync(currentPath)) {
         fs.mkdirSync(currentPath, { recursive: true });
         accumulator.dirs.add(currentPath);
       }
-      writeImages(node.children, currentPath, accumulator);
+      writeImages(node.children, currentPath, accumulator, rootDir);
     } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
@@ -236,6 +254,12 @@ function parseSyncMarkers(rawResults: unknown) {
  * @returns {Promise<NextResponse>} The compiled PDF blob or a JSON response (SVG/Logs).
  */
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return new NextResponse('No session', { status: 401 });
+  }
+  const userId = session.user.id;
+
   const sessionId = crypto.randomBytes(8).toString('hex');
   const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
 
@@ -245,6 +269,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { fileTree, mainFile, format = 'svg', sync = false, projectId } = body;
+
+    if (typeof mainFile !== 'string' || !fileTree) {
+      throw new Error('Invalid payload');
+    }
 
     const mainFileCleanPath = mainFile.replace(/^root\//, '');
 
@@ -266,7 +294,7 @@ export async function POST(req: Request) {
       totalSize: 0,
     });
 
-    const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
+    const absoluteMainPath = safeResolve(workingDir, mainFileCleanPath);
 
     const localCompiler = NodeCompiler.create({
       workspace: workingDir,
@@ -300,9 +328,16 @@ export async function POST(req: Request) {
           }
         }
 
-        if (projectId) {
+        if (typeof projectId === 'string' && projectId) {
           after(async () => {
             try {
+              // Only owners and editors may update the project's thumbnail.
+              const assignment = await prisma.projectAssignment.findUnique({
+                where: { userId_projectId: { userId, projectId } },
+                select: { role: true },
+              });
+              if (!assignment || assignment.role === 'viewer') return;
+
               const existing = await prisma.projectThumbnail.findUnique({
                 where: { projectId },
                 select: { updatedAt: true },

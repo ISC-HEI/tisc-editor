@@ -31,4 +31,4 @@ Runs in a `finally` block, whatever the outcome:
 
 ## Security note
 
-File paths are built with `path.join(baseDir, node.name || fileName)`, and the main file with `path.resolve(workingDir, mainFileCleanPath)`. Neither is checked to stay inside `workingDir`, so names containing `../` could escape the session directory. Add a check that the resolved path starts with `workingDir`.
+Every file, folder and main-file path is resolved through `safeResolve(workingDir, ...)`, which throws `Invalid file path` if the resolved path is not inside `workingDir` (e.g. names containing `../` or absolute paths). The request then fails with a `400`. The endpoint also requires an authenticated session.

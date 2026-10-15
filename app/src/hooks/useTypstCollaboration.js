@@ -94,7 +94,7 @@ export const useTypstCollaboration = (docId, userId) => {
     refs.socket = socket;
 
     socket.on('connect', () => {
-      socket.emit('join-document', { docId, userId });
+      socket.emit('join-document', { docId });
     });
 
     /**

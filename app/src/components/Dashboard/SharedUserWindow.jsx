@@ -35,7 +35,7 @@ export default function SharedUserWindow({
   const [role, setRole] = useState('view'); // 'view' | 'edit'
   const [roleOpen, setRoleOpen] = useState(false);
   const roleRef = useRef(null);
-  const [requests, setRequests] = useState(pendingRequests);
+  const [requests, setRequests] = useState(() => pendingRequests);
 
   const roles = [
     { value: 'view', label: 'See', icon: Eye },
@@ -96,10 +96,6 @@ export default function SharedUserWindow({
       }
     });
   };
-
-  useEffect(() => {
-    setRequests(pendingRequests);
-  }, [pendingRequests]);
 
   const handleResolve = (requestId, decision) => {
     setError('');
