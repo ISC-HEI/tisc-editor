@@ -120,6 +120,10 @@ const buildTreeFromGitHub = async (
  * typst/packages repository.
  */
 export async function getLatestVersion(packageBaseName: string): Promise<string> {
+  if (!/^[A-Za-z0-9_][A-Za-z0-9_-]*$/.test(packageBaseName)) {
+    throw new Error('Invalid package name.');
+  }
+
   const url = `https://api.github.com/repos/typst/packages/contents/packages/preview/${encodeURIComponent(
     packageBaseName,
   )}`;
@@ -168,6 +172,14 @@ export const importPackageAsTree = async (
   templateFile: string,
 ): Promise<{ fileTree: ProjectFileTree }> => {
   if (!packageName || !templateFile) {
+    throw new Error('Invalid package name or template file.');
+  }
+
+  const SEGMENT_RE = /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/;
+  const isSafePath = (value: string) =>
+    value.split('/').every((segment) => SEGMENT_RE.test(segment) && !segment.includes('..'));
+
+  if (!isSafePath(packageName) || !isSafePath(templateFile)) {
     throw new Error('Invalid package name or template file.');
   }
 
