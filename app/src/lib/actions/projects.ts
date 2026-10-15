@@ -156,8 +156,6 @@ export async function createProject(formData: FormData) {
       return project;
     });
 
-    revalidatePath('/dashboard');
-
     return project;
   } catch (error) {
     await cleanupProjectObjects(projectId);
