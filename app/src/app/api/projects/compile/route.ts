@@ -12,6 +12,28 @@ import sharp from 'sharp';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_BODY_SIZE = 15 * 1024 * 1024;
+
+// Compilation is synchronous and blocks the event loop: limit how often and
+// how many compilations a single user can trigger.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_REQUESTS = 60;
+const recentCompiles = new Map<string, number[]>();
+const inFlight = new Set<string>();
+
+function isRateLimited(userId: string) {
+  const now = Date.now();
+  const timestamps = (recentCompiles.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+
+  if (timestamps.length >= RATE_MAX_REQUESTS) {
+    recentCompiles.set(userId, timestamps);
+    return true;
+  }
+
+  timestamps.push(now);
+  recentCompiles.set(userId, timestamps);
+  return false;
+}
 
 /**
  * Resolves a path inside a root directory, throwing if the result escapes it
@@ -147,7 +169,8 @@ function writeImages(
 ) {
   for (const fileName in children) {
     const node = children[fileName];
-    const currentPath = safeResolve(rootDir, baseDir, node.name || fileName);
+    const name = node.name || fileName;
+    const currentPath = safeResolve(rootDir, baseDir, name);
 
     if (node.type === 'folder') {
       if (!fs.existsSync(currentPath)) {
@@ -160,7 +183,7 @@ function writeImages(
       try {
         let buffer: Buffer;
 
-        if (fileName.endsWith('.typ')) {
+        if (name.endsWith('.typ')) {
           const textContent = decodeContent(node.data);
 
           buffer = Buffer.from(textContent, 'utf-8');
@@ -172,7 +195,7 @@ function writeImages(
         const fileSize = buffer.length;
         if (fileSize > MAX_FILE_SIZE) {
           throw new Error(
-            `File ${fileName} is too heavy (${(fileSize / 1024 / 1024).toFixed(2)}MB). Max 5MB.`,
+            `File ${name} is too heavy (${(fileSize / 1024 / 1024).toFixed(2)}MB). Max 5MB.`,
           );
         }
 
@@ -260,6 +283,27 @@ export async function POST(req: Request) {
   }
   const userId = session.user.id;
 
+  if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY_SIZE) {
+    return new NextResponse('Payload too large', { status: 413 });
+  }
+
+  if (inFlight.has(userId)) {
+    return new NextResponse('A compilation is already running', { status: 429 });
+  }
+
+  if (isRateLimited(userId)) {
+    return new NextResponse('Too many compilations, please slow down', { status: 429 });
+  }
+
+  inFlight.add(userId);
+  try {
+    return await compile(req, userId);
+  } finally {
+    inFlight.delete(userId);
+  }
+}
+
+async function compile(req: Request, userId: string) {
   const sessionId = crypto.randomBytes(8).toString('hex');
   const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
 
