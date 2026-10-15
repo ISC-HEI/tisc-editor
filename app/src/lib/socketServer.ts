@@ -31,7 +31,12 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
       docId: string | null;
       authorized: boolean;
       email: string | null;
-    } = { userId: null, docId: null, authorized: false, email: null };
+      role: string | null;
+    } = { userId: null, docId: null, authorized: false, email: null, role: null };
+
+    /** Viewers may join and see edits, but not emit write events. */
+    const canWrite = (docId: string) =>
+      session.authorized && session.docId === docId && session.role !== 'viewer';
 
     /**
      * Handles the 'join-document' event.
@@ -60,7 +65,7 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
           const email = assignment.user?.email || 'Unknown User';
 
           socket.join(docId);
-          session = { userId, docId, authorized: true, email };
+          session = { userId, docId, authorized: true, email, role: assignment.role };
 
           if (!activeUsers[docId]) activeUsers[docId] = {};
           activeUsers[docId][socket.id] = email;
@@ -84,7 +89,7 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
      * Only relays data if the session is authorized for the specific docId.
      */
     socket.on('edit-file', ({ docId, filename, changes }) => {
-      if (session.authorized && session.docId === docId) {
+      if (canWrite(docId)) {
         socket.to(docId).emit('remote-edit', {
           filename,
           changes,
@@ -94,19 +99,19 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
     });
 
     socket.on('create-node', ({ docId, path, type }) => {
-      if (session.authorized && session.docId === docId) {
+      if (canWrite(docId)) {
         socket.to(docId).emit('node-created', { path, type });
       }
     });
 
     socket.on('rename-node', ({ docId, oldPath, newPath }) => {
-      if (session.authorized && session.docId === docId) {
+      if (canWrite(docId)) {
         socket.to(docId).emit('node-renamed', { oldPath, newPath });
       }
     });
 
     socket.on('delete-node', ({ docId, path }) => {
-      if (session.authorized && session.docId === docId) {
+      if (canWrite(docId)) {
         socket.to(docId).emit('node-deleted', { path });
       }
     });
@@ -123,7 +128,7 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
     });
 
     socket.on('set-main-file', ({ docId, path }) => {
-      if (session.authorized && session.docId === docId) {
+      if (canWrite(docId)) {
         socket.to(docId).emit('remote-set-main', { path });
       }
     });

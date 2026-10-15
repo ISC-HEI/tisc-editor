@@ -25,9 +25,10 @@ A project always has **exactly one** `owner` at a time — `transferProjectOwner
 | Duplicate the project | ✅  | ✅ | ✅ | Server (`duplicateProject`) |
 | Add / remove tags | ✅ | ✅ | ✅ | Server, but **not role-restricted** — any assignment qualifies |
 | Load / view the project | ✅ | ✅ | ✅ | Server (`loadProject`) |
-| Save file tree / edit content | ✅ | ✅ | 🟡 *technically allowed* | UI-only (see below) |
-| Compile the project | ✅ | ✅ | 🟡 *technically allowed* | Not checked at all (see below) |
-| Real-time edits (Socket.io) | ✅ | ✅ | 🟡 *technically allowed* | Only checks that an assignment exists, not its role (see below) |
+| Save file tree / edit content | ✅ | ✅ | ❌ | Server (`/api/projects/save`) |
+| Compile the project (preview) | ✅ | ✅ | ✅ | Server (`/api/projects/compile`, authentication required) |
+| Update the project thumbnail | ✅ | ✅ | ❌ | Server (`/api/projects/compile`) |
+| Real-time edits (Socket.io) | ✅ | ✅ | ❌ | Server (`socketServer.ts`, role checked on every write event) |
 | Handle access requests | ✅ | ❌ | ❌ | Server (`resolveAccessRequest`) |
 
 ## How the owner-only actions are enforced
@@ -42,25 +43,22 @@ Owner-only Server Actions all follow the same pattern: look up the caller's `Pro
 - **Owner, other members present:** the action throws, asking the owner to transfer ownership first.
 - **Editor or viewer:** their assignment is simply removed.
 
-## Viewer write access is not enforced server-side
+## Viewer write access is enforced server-side
 
-:::warning
+The distinction between `editor` and `viewer` is enforced on the server, not only in the UI:
 
-The distinction between `editor` and `viewer` for **editing** is currently a **client-side convention**, not a server-side guarantee:
+- [`POST /api/projects/save`](./api-endpoints#post-apiprojectssave) rejects callers without an assignment or with the `viewer` role (`403`).
+- [`POST /api/projects/compile`](./api-endpoints#post-apiprojectscompile) requires an authenticated session (`401` otherwise). Compilation itself is stateless, so viewers can render the preview, but the project thumbnail is only updated when the caller is an `owner` or `editor` of `projectId`.
+- The Socket.io [`join-document`](./collaboration#connecting-and-joining-a-document) handshake stores the caller's `role` in the socket session. Write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are ignored for viewers; `cursor-change` is still relayed.
 
-- [`POST /api/projects/compile`](./api-endpoints#post-apiprojectscompile) performs no access check whatsoever, for any role.
-- The Socket.io [`join-document`](./collaboration#connecting-and-joining-a-document) handshake fetches the caller's `role` from `ProjectAssignment`, but only uses it to resolve the display email — every subsequent real-time event (`edit-file`, `create-node`, etc.) is relayed as soon as `session.authorized` is `true`, regardless of role.
-
-In practice, the **editor UI** is what prevents a viewer from editing: `Toolbar.jsx` derives a `canEdit` flag from [`getProjectAssignmentRole`](./server-actions#getprojectassignmentroleprojectid) and disables Save, Open, and text formatting when the role is `viewer`. A viewer who called these Server Actions or emitted these socket events directly (bypassing the UI) would currently succeed. This is a known gap to close — see [Troubleshooting](../troubleshooting) for related notes, or the project's issue tracker.
-
-:::
+The **editor UI** additionally hides editing controls: `Toolbar.jsx` derives a `canEdit` flag from [`getProjectAssignmentRole`](./server-actions#getprojectassignmentroleprojectid) and disables Save, Open, and text formatting when the role is `viewer`.
 
 ## Where roles are checked, at a glance
 
 | Layer | Role-aware? |
 | --- | --- |
 | Server Actions (`actions.ts`) | ✅ for ownership actions (delete, share, archive, remove user, transfer) |
-| `/api/projects/save` | ❌ — authentication only, no assignment or role check |
-| `/api/projects/compile` | ❌ — no authentication or role check |
-| Socket.io (`socketServer.ts`) | ❌ — checks that an assignment exists, ignores its role |
+| `/api/projects/save` | ✅ — owner or editor only |
+| `/api/projects/compile` | ✅ — authentication required; thumbnail update for owner/editor only |
+| Socket.io (`socketServer.ts`) | ✅ — write events rejected for `viewer` |
 | Editor UI (`Toolbar.jsx`, etc.) | ✅ — hides/disables editing controls for `viewer` |
