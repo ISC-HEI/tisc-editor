@@ -5,6 +5,7 @@ import { Folder, Users, ChevronRight } from 'lucide-react';
 export function ProjectCard({ project }) {
   const isAuthor = project.isAuthor;
   const isSharedWithMe = !isAuthor;
+  const pendingCount = project.pendingRequests?.length ?? 0;
 
   return (
     <div className="group relative bg-white border border-slate-200 rounded-2xl p-4 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex items-center justify-between">
@@ -130,12 +131,20 @@ export function ProjectCard({ project }) {
         </div>
       </Link>
 
-      <div className="ml-4 pl-4 border-l border-slate-100 shrink-0">
+      <div className="relative ml-4 pl-4 border-l border-slate-100 shrink-0">
+        {pendingCount > 0 && (
+          <span
+            data-test="pending-requests-dot"
+            title={`${pendingCount} access request(s) pending`}
+            className="pointer-events-none absolute -top-1 -right-1 z-10 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"
+          />
+        )}
         <ProjectActions
           projectId={project.id}
           title={project.title}
           isAuthor={isAuthor}
           usersSharing={project.usersSharing}
+          pendingRequests={project.pendingRequests ?? []}
           isActive={project.isActive}
         />
       </div>

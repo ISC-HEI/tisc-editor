@@ -155,6 +155,7 @@ export async function createProject(formData: FormData) {
 
       return project;
     });
+    revalidatePath('/dashboard');
 
     return project;
   } catch (error) {
@@ -259,6 +260,15 @@ export async function getUserProjects() {
           thumbnail: {
             select: { projectId: true },
           },
+          accessRequests: {
+            where: { status: 'pending' },
+            orderBy: { requestedAt: 'asc' },
+            select: {
+              id: true,
+              requestedAt: true,
+              user: { select: { name: true, email: true } },
+            },
+          },
         },
       },
     },
@@ -274,7 +284,7 @@ export async function getUserProjects() {
   type UserLinkEntry = AssignmentWithProject['project']['userLinks'][number];
 
   return assignments.map((a: AssignmentWithProject) => {
-    const { thumbnail, ...project } = a.project;
+    const { thumbnail, accessRequests, ...project } = a.project;
 
     const ownerLink = a.project.userLinks.find((link: UserLinkEntry) => link.role === 'owner');
 
@@ -289,6 +299,16 @@ export async function getUserProjects() {
       usersSharing: a.project.userLinks
         .filter((link: UserLinkEntry) => link.userId !== userId)
         .map((link: UserLinkEntry) => link.userId),
+
+      pendingRequests:
+        a.role === 'owner'
+          ? accessRequests.map((r) => ({
+              id: r.id,
+              name: r.user.name,
+              email: r.user.email,
+              requestedAt: r.requestedAt.toISOString(),
+            }))
+          : [],
     };
   });
 }

@@ -168,4 +168,5 @@ export async function resolveAccessRequest(
   }
 
   revalidatePath(`/access-requests/${requestId}`);
+  revalidatePath('/dashboard');
 }

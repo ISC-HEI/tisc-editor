@@ -15,8 +15,18 @@ import {
   Check,
 } from 'lucide-react';
 import { removeSharedUser, shareProject, transferProjectOwnership } from '@/lib/actions/sharing';
+import { resolveAccessRequest } from '@/lib/actions/access-requests';
 
-export default function SharedUserWindow({ projectId, title, users, onClose, onRemoveSuccess }) {
+const EMPTY_REQUESTS = [];
+
+export default function SharedUserWindow({
+  projectId,
+  title,
+  users,
+  pendingRequests = EMPTY_REQUESTS,
+  onClose,
+  onRemoveSuccess,
+}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -25,6 +35,7 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
   const [role, setRole] = useState('view'); // 'view' | 'edit'
   const [roleOpen, setRoleOpen] = useState(false);
   const roleRef = useRef(null);
+  const [requests, setRequests] = useState(pendingRequests);
 
   const roles = [
     { value: 'view', label: 'See', icon: Eye },
@@ -80,6 +91,25 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
           setSuccess('Propriété transférée avec succès.');
           router.refresh();
         }
+      } catch (err) {
+        setError(err.message);
+      }
+    });
+  };
+
+  useEffect(() => {
+    setRequests(pendingRequests);
+  }, [pendingRequests]);
+
+  const handleResolve = (requestId, decision) => {
+    setError('');
+    setSuccess('');
+    startTransition(async () => {
+      try {
+        await resolveAccessRequest(requestId, decision);
+        setRequests((prev) => prev.filter((r) => r.id !== requestId));
+        setSuccess(decision === 'deny' ? 'Acces denied.' : 'Access granted.');
+        router.refresh();
       } catch (err) {
         setError(err.message);
       }
@@ -194,6 +224,64 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
           {success && (
             <div className="mt-3 text-xs font-medium text-emerald-700 bg-emerald-50 p-2 rounded-lg border border-emerald-100">
               {success}
+            </div>
+          )}
+
+          {requests.length > 0 && (
+            <div className="mt-6" data-test="access-requests-container">
+              <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                Access requests ({requests.length})
+              </h3>
+
+              <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                {requests.map((r) => (
+                  <li key={r.id} className="p-3 rounded-xl border border-red-100 bg-red-50/40">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs uppercase">
+                        {(r.name ?? r.email).charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-sm font-medium text-slate-700 truncate">
+                          {r.name ?? r.email}
+                        </span>
+                        {r.name && (
+                          <span className="block text-[11px] text-slate-400 truncate">
+                            {r.email}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'viewer')}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-full hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        <Eye size={13} /> Viewer
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'editor')}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        <Pencil size={13} /> Editor
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'deny')}
+                        className="ml-auto flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-full disabled:opacity-50"
+                      >
+                        <X size={13} /> Deny
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
