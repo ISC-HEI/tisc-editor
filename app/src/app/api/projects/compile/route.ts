@@ -13,6 +13,22 @@ const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
+ * Resolves a path inside a root directory, throwing if the result escapes it
+ * (e.g. names containing `../` or absolute paths).
+ * @param {string} rootDir - The directory the path must stay within.
+ * @param {...string} segments - Path segments to resolve against rootDir.
+ * @returns {string} The resolved absolute path.
+ */
+function safeResolve(rootDir: string, ...segments: string[]) {
+  const root = path.resolve(rootDir);
+  const resolved = path.resolve(root, ...segments);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error('Invalid file path');
+  }
+  return resolved;
+}
+
+/**
  * Decodes file content, converting Base64 encoded strings into
  * UTF-8 text if a data URI prefix is detected.
  * @param {string} data - The raw file data (potentially base64 encoded).
@@ -126,17 +142,18 @@ function writeImages(
   children: Record<string, FileTreeNode> = {},
   baseDir: string,
   accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 },
+  rootDir: string = baseDir,
 ) {
   for (const fileName in children) {
     const node = children[fileName];
-    const currentPath = path.join(baseDir, node.name || fileName);
+    const currentPath = safeResolve(rootDir, baseDir, node.name || fileName);
 
     if (node.type === 'folder') {
       if (!fs.existsSync(currentPath)) {
         fs.mkdirSync(currentPath, { recursive: true });
         accumulator.dirs.add(currentPath);
       }
-      writeImages(node.children, currentPath, accumulator);
+      writeImages(node.children, currentPath, accumulator, rootDir);
     } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
@@ -246,6 +263,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { fileTree, mainFile, format = 'svg', sync = false, projectId } = body;
 
+    if (typeof mainFile !== 'string' || !fileTree) {
+      throw new Error('Invalid payload');
+    }
+
     const mainFileCleanPath = mainFile.replace(/^root\//, '');
 
     if (sync && format !== 'pdf') {
@@ -266,7 +287,7 @@ export async function POST(req: Request) {
       totalSize: 0,
     });
 
-    const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
+    const absoluteMainPath = safeResolve(workingDir, mainFileCleanPath);
 
     const localCompiler = NodeCompiler.create({
       workspace: workingDir,
