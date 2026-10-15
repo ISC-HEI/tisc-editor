@@ -5,8 +5,11 @@ import { Plus, X, LayoutTemplate, Loader2, AlertCircle } from 'lucide-react';
 import { TEMPLATES } from '@/lib/templates';
 import { createProject } from '@/lib/actions/projects';
 import { getTagsByUser } from '@/lib/actions/tags';
+import { useRouter } from 'next/navigation';
 
 export default function CreateProjectModal() {
+  const router = useRouter();
+
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
   const [isCreating, setIsCreating] = useState(false);
@@ -141,13 +144,15 @@ export default function CreateProjectModal() {
                 });
 
                 try {
-                  await createProject(formData);
+                  const project = await createProject(formData);
 
                   setIsOpen(false);
                   setTags([]);
                   setTagInput('');
                   setSelectedTemplate('blank');
                   setShowAllTemplates(false);
+
+                  router.push(`/?projectId=${encodeURIComponent(project.id)}`);
                 } catch (err) {
                   setError(err instanceof Error ? err.message : 'An error occurred.');
                 } finally {
