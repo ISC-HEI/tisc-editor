@@ -56,6 +56,7 @@ Requests are sent by email, so the owner may not see the notification right away
 
 When someone asks for access to your project, you receive an email titled **Access request for your project**. It tells you who is asking and which project they want to access.
 
+
 ### 2. Click "Review request"
 
 The button opens a page in the application. You must be **signed in with the owner account** of the project. If you are not signed in, you are asked to sign in first and then taken back to the request.
@@ -65,6 +66,8 @@ The button opens a page in the application. You must be **signed in with the own
 Only the owner of the project can open this page. If you see a "not found" page, you are probably signed in with another account.
 
 :::
+
+> Note: You can also see the request access in the share modal of your project
 
 ### 3. Choose an answer
 
