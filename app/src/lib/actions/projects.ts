@@ -496,6 +496,19 @@ export async function duplicateProject(formData: FormData) {
     throw new Error('Project not found');
   }
 
+  const dataSize = source.files.reduce((sum, file) => sum + file.size, 0);
+  const quota = await checkUserQuota(userId, dataSize);
+
+  if (!quota.allowed) {
+    throw new Error(
+      `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(
+        quota.limit /
+        1024 /
+        1024
+      ).toFixed(2)}MB). Cannot duplicate project.`,
+    );
+  }
+
   const newProjectId = randomUUID();
 
   const copies = source.files.map((file) => {
