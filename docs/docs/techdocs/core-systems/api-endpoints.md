@@ -22,6 +22,8 @@ export const { GET, POST } = handlers;
 
 Compiles a Typst project and returns the rendered output.
 
+**Authentication:** Required. Returns `401` if there is no active session. Paths escaping the temporary directory (e.g. `../`) are rejected with `400`.
+
 **Request body**
 
 | Field | Type | Description |
@@ -30,7 +32,7 @@ Compiles a Typst project and returns the rendered output.
 | `mainFile` | `string` | Path of the main `.typ` file to compile, relative to the tree root (required) |
 | `format` | `'svg' \| 'pdf'` | Output format. Defaults to `svg` |
 | `sync` | `boolean` | If `true` (and `format` is `svg`), injects invisible position markers to support edit-sync (see below) |
-| `projectId` | `string` | Optional. If provided, triggers an async thumbnail regeneration after a successful compile |
+| `projectId` | `string` | Optional. If provided and the caller is an `owner` or `editor` of the project, triggers an async thumbnail regeneration after a successful compile |
 
 **Response**
 
@@ -84,7 +86,7 @@ Persists a project's file tree, enforcing the user's storage quota.
 **Response**
 
 - `200` — `{ "success": true }`
-- `403` — Quota exceeded. Body is a plain text message with current usage and limit, e.g. `Quota exceeded (10.42MB / 10.00MB)`.
+- `403` — `Forbidden` if the caller is not an `owner` or `editor` of the project, or quota exceeded. Body is a plain text message with current usage and limit, e.g. `Quota exceeded (10.42MB / 10.00MB)`.
 - `500` — Unexpected server error.
 
 **How it works**

@@ -7,6 +7,7 @@ import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 import { FileTreeNode } from '@/types/filetree';
 import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import sharp from 'sharp';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
@@ -253,6 +254,12 @@ function parseSyncMarkers(rawResults: unknown) {
  * @returns {Promise<NextResponse>} The compiled PDF blob or a JSON response (SVG/Logs).
  */
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return new NextResponse('No session', { status: 401 });
+  }
+  const userId = session.user.id;
+
   const sessionId = crypto.randomBytes(8).toString('hex');
   const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
 
@@ -321,9 +328,16 @@ export async function POST(req: Request) {
           }
         }
 
-        if (projectId) {
+        if (typeof projectId === 'string' && projectId) {
           after(async () => {
             try {
+              // Only owners and editors may update the project's thumbnail.
+              const assignment = await prisma.projectAssignment.findUnique({
+                where: { userId_projectId: { userId, projectId } },
+                select: { role: true },
+              });
+              if (!assignment || assignment.role === 'viewer') return;
+
               const existing = await prisma.projectThumbnail.findUnique({
                 where: { projectId },
                 select: { updatedAt: true },
