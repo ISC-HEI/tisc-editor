@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireUserId, requireAssignment } from './utils';
+import { EDIT_ROLES } from '../comment-anchors';
 
 const MAX_TAGS_PER_PROJECT = 10;
 const MAX_TAG_LENGTH = 50;
@@ -13,7 +14,7 @@ const MAX_TAG_LENGTH = 50;
 async function requireTagEditor(userId: string, projectId: string) {
   const assignment = await requireAssignment(userId, projectId);
 
-  if (assignment.role === 'viewer') {
+  if (!EDIT_ROLES.includes(assignment.role)) {
     throw new Error('Viewers cannot edit tags');
   }
 }

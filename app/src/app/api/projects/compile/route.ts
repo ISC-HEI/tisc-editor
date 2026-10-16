@@ -8,6 +8,7 @@ import { FileTreeNode } from '@/types/filetree';
 import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { EDIT_ROLES } from '@/lib/comment-anchors';
 import sharp from 'sharp';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
@@ -380,7 +381,7 @@ async function compile(req: Request, userId: string) {
                 where: { userId_projectId: { userId, projectId } },
                 select: { role: true },
               });
-              if (!assignment || assignment.role === 'viewer') return;
+              if (!assignment || !EDIT_ROLES.includes(assignment.role)) return;
 
               const existing = await prisma.projectThumbnail.findUnique({
                 where: { projectId },

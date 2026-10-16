@@ -85,16 +85,16 @@ export async function requestProjectAccess(
 }
 
 /**
- * Approves (as viewer or editor) or denies an access request.
+ * Approves (as viewer, commenter or editor) or denies an access request.
  * Only the project owner can resolve it.
  */
 export async function resolveAccessRequest(
   requestId: string,
-  decision: 'viewer' | 'editor' | 'deny',
+  decision: 'viewer' | 'commenter' | 'editor' | 'deny',
 ): Promise<void> {
   const userId = await requireUserId();
 
-  if (!UUID_RE.test(requestId) || !['viewer', 'editor', 'deny'].includes(decision)) {
+  if (!UUID_RE.test(requestId) || !['viewer', 'commenter', 'editor', 'deny'].includes(decision)) {
     throw new Error('Invalid request');
   }
 

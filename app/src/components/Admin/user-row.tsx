@@ -23,6 +23,7 @@ type ProjectItem = Awaited<ReturnType<typeof getUserProjects>>[number];
 const ROLE_STYLES: Record<string, string> = {
   owner: 'bg-blue-50 text-blue-700',
   editor: 'bg-violet-50 text-violet-700',
+  commenter: 'bg-amber-50 text-amber-700',
   viewer: 'bg-slate-100 text-slate-600',
 };
 

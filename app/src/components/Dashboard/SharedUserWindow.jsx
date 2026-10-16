@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Eye,
   Pencil,
+  MessageSquare,
   ChevronDown,
   Check,
 } from 'lucide-react';
@@ -18,6 +19,8 @@ import { removeSharedUser, shareProject, transferProjectOwnership } from '@/lib/
 import { resolveAccessRequest } from '@/lib/actions/access-requests';
 
 const EMPTY_REQUESTS = [];
+
+const ROLE_LABELS = { owner: 'Owner', editor: 'Editor', commenter: 'Commenter', viewer: 'Viewer' };
 
 export default function SharedUserWindow({
   projectId,
@@ -32,14 +35,15 @@ export default function SharedUserWindow({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [role, setRole] = useState('view'); // 'view' | 'edit'
+  const [role, setRole] = useState('viewer'); // 'viewer' | 'commenter' | 'editor'
   const [roleOpen, setRoleOpen] = useState(false);
   const roleRef = useRef(null);
   const [requests, setRequests] = useState(() => pendingRequests);
 
   const roles = [
-    { value: 'view', label: 'See', icon: Eye },
-    { value: 'edit', label: 'Edit', icon: Pencil },
+    { value: 'viewer', label: 'See', icon: Eye },
+    { value: 'commenter', label: 'Comment', icon: MessageSquare },
+    { value: 'editor', label: 'Edit', icon: Pencil },
   ];
   const currentRole = roles.find((r) => r.value === role);
 
@@ -58,7 +62,7 @@ export default function SharedUserWindow({
     setError('');
 
     startTransition(async () => {
-      const result = await shareProject(projectId, email, role === 'edit');
+      const result = await shareProject(projectId, email, role);
       if (result?.error) {
         setError(result.error);
       } else {
@@ -261,6 +265,14 @@ export default function SharedUserWindow({
                       <button
                         type="button"
                         disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'commenter')}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-full hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        <MessageSquare size={13} /> Commenter
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
                         onClick={() => handleResolve(r.id, 'editor')}
                         className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 disabled:opacity-50"
                       >
@@ -306,7 +318,7 @@ export default function SharedUserWindow({
                           {u.email}
                         </span>
                         <span className="text-[11px] text-slate-400 uppercase tracking-widest">
-                          {u.role === 'owner' ? 'Owner' : u.role === 'editor' ? 'Editor' : 'Viewer'}
+                          {ROLE_LABELS[u.role] ?? 'Viewer'}
                         </span>
                       </div>
                     </div>
