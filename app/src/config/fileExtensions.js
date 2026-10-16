@@ -456,33 +456,38 @@ const FILE_EXTENSIONS = {
   // Images / binary files
   jpg: {
     language: null,
+    type: 'image',
     color: '#f43f5e',
     icon: Image,
-    allowed: false,
+    allowed: true,
   },
   jpeg: {
     language: null,
+    type: 'image',
     color: '#f43f5e',
     icon: Image,
-    allowed: false,
+    allowed: true,
   },
   png: {
     language: null,
+    type: 'image',
     color: '#f43f5e',
     icon: Image,
-    allowed: false,
+    allowed: true,
   },
   gif: {
     language: null,
+    type: 'image',
     color: '#f43f5e',
     icon: Image,
-    allowed: false,
+    allowed: true,
   },
   webp: {
     language: null,
+    type: 'image',
     color: '#f43f5e',
     icon: Image,
-    allowed: false,
+    allowed: true,
   },
 
   // Fonts
@@ -522,6 +527,7 @@ const FILE_EXTENSIONS = {
 
 const DEFAULT_EXTENSION_CONFIG = {
   language: 'plaintext',
+  type: 'code',
   color: '#94a3b8',
   icon: FileCode,
   allowed: null,

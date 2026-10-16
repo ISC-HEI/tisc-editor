@@ -11,24 +11,39 @@ import {
   ArrowRight,
   Eye,
   Pencil,
+  MessageSquare,
   ChevronDown,
   Check,
 } from 'lucide-react';
 import { removeSharedUser, shareProject, transferProjectOwnership } from '@/lib/actions/sharing';
+import { resolveAccessRequest } from '@/lib/actions/access-requests';
 
-export default function SharedUserWindow({ projectId, title, users, onClose, onRemoveSuccess }) {
+const EMPTY_REQUESTS = [];
+
+const ROLE_LABELS = { owner: 'Owner', editor: 'Editor', commenter: 'Commenter', viewer: 'Viewer' };
+
+export default function SharedUserWindow({
+  projectId,
+  title,
+  users,
+  pendingRequests = EMPTY_REQUESTS,
+  onClose,
+  onRemoveSuccess,
+}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [role, setRole] = useState('view'); // 'view' | 'edit'
+  const [role, setRole] = useState('viewer'); // 'viewer' | 'commenter' | 'editor'
   const [roleOpen, setRoleOpen] = useState(false);
   const roleRef = useRef(null);
+  const [requests, setRequests] = useState(() => pendingRequests);
 
   const roles = [
-    { value: 'view', label: 'See', icon: Eye },
-    { value: 'edit', label: 'Edit', icon: Pencil },
+    { value: 'viewer', label: 'See', icon: Eye },
+    { value: 'commenter', label: 'Comment', icon: MessageSquare },
+    { value: 'editor', label: 'Edit', icon: Pencil },
   ];
   const currentRole = roles.find((r) => r.value === role);
 
@@ -47,7 +62,7 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
     setError('');
 
     startTransition(async () => {
-      const result = await shareProject(projectId, email, role === 'edit');
+      const result = await shareProject(projectId, email, role);
       if (result?.error) {
         setError(result.error);
       } else {
@@ -80,6 +95,21 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
           setSuccess('Propriété transférée avec succès.');
           router.refresh();
         }
+      } catch (err) {
+        setError(err.message);
+      }
+    });
+  };
+
+  const handleResolve = (requestId, decision) => {
+    setError('');
+    setSuccess('');
+    startTransition(async () => {
+      try {
+        await resolveAccessRequest(requestId, decision);
+        setRequests((prev) => prev.filter((r) => r.id !== requestId));
+        setSuccess(decision === 'deny' ? 'Acces denied.' : 'Access granted.');
+        router.refresh();
       } catch (err) {
         setError(err.message);
       }
@@ -197,6 +227,72 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
             </div>
           )}
 
+          {requests.length > 0 && (
+            <div className="mt-6" data-test="access-requests-container">
+              <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                Access requests ({requests.length})
+              </h3>
+
+              <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                {requests.map((r) => (
+                  <li key={r.id} className="p-3 rounded-xl border border-red-100 bg-red-50/40">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs uppercase">
+                        {(r.name ?? r.email).charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-sm font-medium text-slate-700 truncate">
+                          {r.name ?? r.email}
+                        </span>
+                        {r.name && (
+                          <span className="block text-[11px] text-slate-400 truncate">
+                            {r.email}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'viewer')}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-full hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        <Eye size={13} /> Viewer
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'commenter')}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-full hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        <MessageSquare size={13} /> Commenter
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'editor')}
+                        className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        <Pencil size={13} /> Editor
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleResolve(r.id, 'deny')}
+                        className="ml-auto flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-full disabled:opacity-50"
+                      >
+                        <X size={13} /> Deny
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="mt-8" data-test="shared-user-container">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Users size={14} /> Shared with ({users.length})
@@ -222,7 +318,7 @@ export default function SharedUserWindow({ projectId, title, users, onClose, onR
                           {u.email}
                         </span>
                         <span className="text-[11px] text-slate-400 uppercase tracking-widest">
-                          {u.role === 'owner' ? 'Owner' : u.role === 'editor' ? 'Editor' : 'Viewer'}
+                          {ROLE_LABELS[u.role] ?? 'Viewer'}
                         </span>
                       </div>
                     </div>

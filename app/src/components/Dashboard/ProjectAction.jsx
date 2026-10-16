@@ -191,7 +191,14 @@ function TransferOwnershipModal({ projectId, members, onClose, onSuccess }) {
   );
 }
 
-export function ProjectActions({ projectId, title, usersSharing, isAuthor, isActive = true }) {
+export function ProjectActions({
+  projectId,
+  title,
+  usersSharing,
+  isAuthor,
+  isActive = true,
+  pendingRequests,
+}) {
   const router = useRouter();
   const menuRef = useRef(null);
 
@@ -323,6 +330,7 @@ export function ProjectActions({ projectId, title, usersSharing, isAuthor, isAct
           projectId={projectId}
           title={title}
           users={emails}
+          pendingRequests={pendingRequests}
           onClose={() => setIsSharing(false)}
           onRemoveSuccess={handleRemoveUserSuccess}
         />

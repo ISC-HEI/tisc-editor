@@ -62,4 +62,9 @@ The temporary directory path is replaced with `root` in the message so the serve
 
 Typical causes: invalid JSON, file too large, session quota exceeded.
 
+### Limits (`413` / `429`)
+
+- `413` — request body larger than 15 MB.
+- `429` — a compilation is already running for this user, or more than 60 compilations in the last minute.
+
 > Clients must handle both cases: compilation errors come back as `200` with `success: false`, request errors as `400`.

@@ -18,6 +18,11 @@ export let canEdit = true;
 
 let syncMarkers = [];
 
+/** Sync markers of the last successful compilation ({ line, page, x, y }). */
+export function getSyncMarkers() {
+  return syncMarkers;
+}
+
 let handleExportPdf = null;
 let handleExportSvg = null;
 let handleExportZip = null;
@@ -247,9 +252,11 @@ function findNearestSyncMarker(cursorLine) {
  * viewport (with a small margin), rather than centered. This works
  * regardless of zoom level or page layout since it lets the browser's own
  * SVG coordinate math do the conversion instead of us reimplementing it.
+ * @param {{ page: number, x: number, y: number }} marker - Target position (1-based page, pt).
+ * @param {ScrollBehavior} [behavior='auto'] - Scroll behavior ('auto' or 'smooth').
  * @returns {boolean} True if the scroll was applied.
  */
-function scrollToSyncMarker(marker) {
+export function scrollToSyncMarker(marker, behavior = 'auto') {
   const TOP_MARGIN = 32;
 
   const container = refs.previewContainer;
@@ -271,8 +278,60 @@ function scrollToSyncMarker(marker) {
   const containerRect = container.getBoundingClientRect();
   const offset = screenPoint.y - containerRect.top - TOP_MARGIN + container.scrollTop;
   const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-  container.scrollTop = Math.min(Math.max(offset, 0), maxScroll);
+  container.scrollTo({ top: Math.min(Math.max(offset, 0), maxScroll), behavior });
   return true;
+}
+
+const TYPST_LOCATION_RE =
+  /handleTypstLocation\(\s*this\s*,\s*(\d+)\s*,\s*([-\d.eE]+)\s*,\s*([-\d.eE]+)\s*\)/;
+
+/**
+ * typst-ts renders internal links (outline entries, @refs, link(<label>))
+ * as `<a onclick="handleTypstLocation(this, page, x, y)">`, expecting a
+ * global helper from its JS renderer that we don't ship. We strip that
+ * inline handler and keep the target (1-based page, pt) in data attributes,
+ * so a delegated click listener can reuse the sync-marker scroll logic.
+ */
+function wireInternalLinks(svg) {
+  if (!svg) return;
+
+  svg.querySelectorAll('a[onclick*="handleTypstLocation"]').forEach((link) => {
+    const match = link.getAttribute('onclick').match(TYPST_LOCATION_RE);
+    link.removeAttribute('onclick');
+    if (!match) return;
+    link.dataset.typstPage = match[1];
+    link.dataset.typstX = match[2];
+    link.dataset.typstY = match[3];
+  });
+
+  svg.querySelectorAll('a[target="_blank"]').forEach((link) => {
+    link.setAttribute('rel', 'noopener noreferrer');
+  });
+}
+
+function handlePreviewLinkClick(event) {
+  const link = event.target.closest?.('a[data-typst-page]');
+  if (!link) return;
+
+  event.preventDefault();
+  scrollToSyncMarker(
+    {
+      page: Number(link.dataset.typstPage),
+      x: Number(link.dataset.typstX),
+      y: Number(link.dataset.typstY),
+    },
+    'smooth',
+  );
+}
+
+let linkListenerTarget = null;
+
+function ensurePreviewLinkListener() {
+  const page = refs.page;
+  if (!page || linkListenerTarget === page) return;
+  linkListenerTarget?.removeEventListener('click', handlePreviewLinkClick);
+  page.addEventListener('click', handlePreviewLinkClick);
+  linkListenerTarget = page;
 }
 
 /**
@@ -357,7 +416,11 @@ const SKELETON_HTML = `
 function setPageContent(html, scrollState) {
   refs.page.innerHTML = html;
 
-  applyPageGaps(refs.page.querySelector('svg')); // NEW
+  const svg = refs.page.querySelector('svg');
+  applyPageGaps(svg);
+  wireInternalLinks(svg);
+  ensurePreviewLinkListener();
+  window.dispatchEvent(new CustomEvent('tisc:preview-rendered'));
 
   const container = refs.previewContainer;
   if (!container) return;
@@ -516,8 +579,8 @@ function setupResizable() {
   });
 }
 
-export async function openFile(path) {
-  if (!path || !refs.editor) return;
+export async function openFile(path, options = {}) {
+  if (!path) return;
 
   const parts = path.replace('root/', '').split('/');
   let node = fileTree;
@@ -530,8 +593,49 @@ export async function openFile(path) {
   const ext = node.name.split('.').pop().toLowerCase();
   const config = getExtensionConfig(ext);
 
-  if (config.allowed == false) {
-    // We use == false, because it can be null
+  const isImage = options.type === 'image' || config.type === 'image';
+
+  if (isImage) {
+    let imageSrc = node.data ?? node.content ?? '';
+
+    if (imageSrc instanceof Blob) {
+      imageSrc = URL.createObjectURL(imageSrc);
+    } else if (
+      typeof imageSrc === 'string' &&
+      !imageSrc.startsWith('data:') &&
+      !imageSrc.startsWith('blob:') &&
+      !/^https?:\/\//i.test(imageSrc)
+    ) {
+      const mimeTypes = {
+        png: 'image/png',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        svg: 'image/svg+xml',
+        bmp: 'image/bmp',
+        avif: 'image/avif',
+      };
+
+      imageSrc = `data:${mimeTypes[ext] || 'image/png'};base64,${imageSrc}`;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('open-image', {
+        detail: {
+          path,
+          name: node.name,
+          src: imageSrc,
+          type: 'image',
+        },
+      }),
+    );
+
+    functions.closeFileExplorer();
+    return;
+  }
+
+  if (config.allowed === false) {
     makeToast(`Interrupted: .${ext} is a binary file.`, 'error');
     return;
   }
@@ -539,13 +643,14 @@ export async function openFile(path) {
   if (config.allowed == null) {
     const confirmForce = await functions.openCustomConfirm(
       'Unknown file type',
-      `Unknown extension .${ext}. \n\nOpening this as text might corrupt the file if it's not a plain text format. Do you want to proceed?`,
+      `Unknown extension .${ext}. Opening this as text might corrupt the file. Do you want to proceed?`,
     );
 
     if (!confirmForce) return;
   }
 
-  const model = refs.editor.getModel();
+  const model = refs.editor?.getModel();
+
   if (model) {
     refs.monaco.editor.setModelLanguage(model, config.language);
   }
@@ -558,19 +663,6 @@ export async function openFile(path) {
   }
 
   let content = node.content ?? node.data ?? '';
-
-  if (content.startsWith('data:')) {
-    try {
-      const base64 = content.split(',')[1];
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      content = new TextDecoder().decode(bytes);
-      node.content = content;
-    } catch (e) {
-      console.error('Erreur décodage fichier secondaire:', e);
-    }
-  }
 
   refs.editor.setValue(content);
   functions.closeFileExplorer();

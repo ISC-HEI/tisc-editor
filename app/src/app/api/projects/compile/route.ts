@@ -7,10 +7,50 @@ import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 import { FileTreeNode } from '@/types/filetree';
 import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
+import { EDIT_ROLES } from '@/lib/comment-anchors';
 import sharp from 'sharp';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_BODY_SIZE = 15 * 1024 * 1024;
+
+// Compilation is synchronous and blocks the event loop: limit how often and
+// how many compilations a single user can trigger.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_REQUESTS = 60;
+const recentCompiles = new Map<string, number[]>();
+const inFlight = new Set<string>();
+
+function isRateLimited(userId: string) {
+  const now = Date.now();
+  const timestamps = (recentCompiles.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+
+  if (timestamps.length >= RATE_MAX_REQUESTS) {
+    recentCompiles.set(userId, timestamps);
+    return true;
+  }
+
+  timestamps.push(now);
+  recentCompiles.set(userId, timestamps);
+  return false;
+}
+
+/**
+ * Resolves a path inside a root directory, throwing if the result escapes it
+ * (e.g. names containing `../` or absolute paths).
+ * @param {string} rootDir - The directory the path must stay within.
+ * @param {...string} segments - Path segments to resolve against rootDir.
+ * @returns {string} The resolved absolute path.
+ */
+function safeResolve(rootDir: string, ...segments: string[]) {
+  const root = path.resolve(rootDir);
+  const resolved = path.resolve(root, ...segments);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error('Invalid file path');
+  }
+  return resolved;
+}
 
 /**
  * Decodes file content, converting Base64 encoded strings into
@@ -126,23 +166,25 @@ function writeImages(
   children: Record<string, FileTreeNode> = {},
   baseDir: string,
   accumulator = { files: new Set<string>(), dirs: new Set<string>(), totalSize: 0 },
+  rootDir: string = baseDir,
 ) {
   for (const fileName in children) {
     const node = children[fileName];
-    const currentPath = path.join(baseDir, node.name || fileName);
+    const name = node.name || fileName;
+    const currentPath = safeResolve(rootDir, baseDir, name);
 
     if (node.type === 'folder') {
       if (!fs.existsSync(currentPath)) {
         fs.mkdirSync(currentPath, { recursive: true });
         accumulator.dirs.add(currentPath);
       }
-      writeImages(node.children, currentPath, accumulator);
+      writeImages(node.children, currentPath, accumulator, rootDir);
     } else if (node.type === 'file') {
       if (!node.data) continue;
       try {
         let buffer: Buffer;
 
-        if (fileName.endsWith('.typ')) {
+        if (name.endsWith('.typ')) {
           const textContent = decodeContent(node.data);
 
           buffer = Buffer.from(textContent, 'utf-8');
@@ -154,7 +196,7 @@ function writeImages(
         const fileSize = buffer.length;
         if (fileSize > MAX_FILE_SIZE) {
           throw new Error(
-            `File ${fileName} is too heavy (${(fileSize / 1024 / 1024).toFixed(2)}MB). Max 5MB.`,
+            `File ${name} is too heavy (${(fileSize / 1024 / 1024).toFixed(2)}MB). Max 5MB.`,
           );
         }
 
@@ -236,6 +278,33 @@ function parseSyncMarkers(rawResults: unknown) {
  * @returns {Promise<NextResponse>} The compiled PDF blob or a JSON response (SVG/Logs).
  */
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return new NextResponse('No session', { status: 401 });
+  }
+  const userId = session.user.id;
+
+  if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY_SIZE) {
+    return new NextResponse('Payload too large', { status: 413 });
+  }
+
+  if (inFlight.has(userId)) {
+    return new NextResponse('A compilation is already running', { status: 429 });
+  }
+
+  if (isRateLimited(userId)) {
+    return new NextResponse('Too many compilations, please slow down', { status: 429 });
+  }
+
+  inFlight.add(userId);
+  try {
+    return await compile(req, userId);
+  } finally {
+    inFlight.delete(userId);
+  }
+}
+
+async function compile(req: Request, userId: string) {
   const sessionId = crypto.randomBytes(8).toString('hex');
   const workingDir = path.resolve(os.tmpdir(), `typst-${sessionId}`);
 
@@ -245,6 +314,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { fileTree, mainFile, format = 'svg', sync = false, projectId } = body;
+
+    if (typeof mainFile !== 'string' || !fileTree) {
+      throw new Error('Invalid payload');
+    }
 
     const mainFileCleanPath = mainFile.replace(/^root\//, '');
 
@@ -266,7 +339,7 @@ export async function POST(req: Request) {
       totalSize: 0,
     });
 
-    const absoluteMainPath = path.resolve(workingDir, mainFileCleanPath);
+    const absoluteMainPath = safeResolve(workingDir, mainFileCleanPath);
 
     const localCompiler = NodeCompiler.create({
       workspace: workingDir,
@@ -300,9 +373,16 @@ export async function POST(req: Request) {
           }
         }
 
-        if (projectId) {
+        if (typeof projectId === 'string' && projectId) {
           after(async () => {
             try {
+              // Only owners and editors may update the project's thumbnail.
+              const assignment = await prisma.projectAssignment.findUnique({
+                where: { userId_projectId: { userId, projectId } },
+                select: { role: true },
+              });
+              if (!assignment || !EDIT_ROLES.includes(assignment.role)) return;
+
               const existing = await prisma.projectThumbnail.findUnique({
                 where: { projectId },
                 select: { updatedAt: true },

@@ -31,7 +31,7 @@ Individual sections below only call out what differs from this pattern.
 
 :::info[Emails]
 
-Some actions send an email with `sendMail` after the database change has succeeded (`shareProject`, `transferProjectOwnership`, `requestProjectAccess`, `resolveAccessRequest`). A sending failure never makes the action fail: `sendMail` catches its own errors and the actions do not check its result. See [Emails](./emails#error-handling).
+Some actions send an email with `sendMail` after the database change has succeeded (`shareProject`, `transferProjectOwnership`, `requestProjectAccess`, `resolveAccessRequest`, `replyToComment`). A sending failure never makes the action fail: `sendMail` catches its own errors and the actions do not check its result. See [Emails](./emails#error-handling).
 
 :::
 
@@ -211,7 +211,7 @@ Creates an independent copy of a project. The caller becomes the `owner` of the 
 
 | Data | Why |
 | --- | --- |
-| Members (`ProjectAssignment`) | The copy is private to the caller; share it explicitly with [`shareProject`](#shareprojectprojectid-shareduseremail-canedit--false) |
+| Members (`ProjectAssignment`) | The copy is private to the caller; share it explicitly with [`shareProject`](#shareprojectprojectid-shareduseremail-role--viewer) |
 | Access requests | They belong to the source project |
 | Thumbnail (`ProjectThumbnail`) | Regenerated the next time the copy is saved |
 
@@ -245,13 +245,15 @@ Computes the caller's current storage usage against their quota, used by the das
 
 ### `addTagToProject(projectId, tag)`
 
-Attaches a tag to a project, creating the `Tag` record first if it doesn't already exist (`upsert`).
+Attaches a tag to a project, creating the `Tag` record first if it doesn't already exist (`upsert`). The tag is trimmed and lowercased.
 
-**Auth:** required. The caller must have a `ProjectAssignment` on the project (any role), otherwise `Access denied`.
+**Auth:** required. The caller must be an `owner` or `editor` of the project, otherwise `Access denied` (no assignment) or `Viewers cannot edit tags`.
+
+**Validation:** same limits as `createProject` — each tag must be **50 characters or fewer** and a project can have at most **10** tags.
 
 ### `getProjectTags(projectId)`
 
-Returns both the tags currently on a project and the full list of tags available platform-wide, so the "Edit Tags" UI can offer autocomplete.
+Returns both the tags currently on a project and the tags used in the caller's own projects (tags of other users are not exposed), so the "Edit Tags" UI can offer autocomplete.
 
 **Auth:** required. The caller must have a `ProjectAssignment` on the project, otherwise `Access denied`.
 
@@ -267,7 +269,7 @@ Returns every distinct tag used across all projects the caller has access to, so
 
 Detaches a tag from a project. If the tag ends up attached to **zero** projects afterwards, the `Tag` record itself is deleted, keeping the global tag list clean.
 
-**Auth:** required. Same access check as `addTagToProject`.
+**Auth:** required. Same role check as `addTagToProject` (owner or editor).
 
 ---
 
@@ -275,7 +277,7 @@ Detaches a tag from a project. If the tag ends up attached to **zero** projects 
 
 *Defined in `sharing.ts`.* See [Sharing a project](../../tutorial/projects/sharing) for the user-facing flow these actions implement.
 
-### `shareProject(projectId, sharedUserEmail, canEdit = false)`
+### `shareProject(projectId, sharedUserEmail, role = 'viewer')`
 
 Grants another user access to a project by creating a `ProjectAssignment` for them.
 
@@ -285,11 +287,12 @@ Grants another user access to a project by creating a `ProjectAssignment` for th
 
 | Condition | Error |
 | --- | --- |
+| `role` is not `viewer`, `commenter` or `editor` | `Invalid role` |
 | No user with `sharedUserEmail` exists | `User not found` |
 | The target is the caller themselves | `You already have access to this project` |
 | The target already has a `ProjectAssignment` | `The user already has access to this project` |
 
-The new assignment's role is `editor` if `canEdit` is `true`, otherwise `viewer`.
+The new assignment gets the given `role` (`viewer`, `commenter` or `editor`).
 
 **Email:** once the assignment is created, the shared user receives an email (label `SHARING`) naming the project and the person who shared it, with a button to the dashboard. See [Emails](./emails#emails-sent-by-the-app).
 
@@ -297,13 +300,13 @@ The new assignment's role is `editor` if `canEdit` is `true`, otherwise `viewer`
 
 Returns every member of a project, but **excludes the caller** from the result. Used to populate pickers such as the "transfer ownership to…" selector.
 
-**Auth:** required.
+**Auth:** required. The caller must have a `ProjectAssignment` on the project, otherwise `Access denied`.
 
 ### `getUsersEmailFromId(usersId)`
 
 Resolves a list of user IDs to their `{ id, email }`. Used on the client to display emails for users already known by ID (e.g. the collaboration presence list).
 
-**Auth:** none — this action does not call `auth()`.
+**Auth:** required. Only users who share at least one project with the caller are returned; other IDs are silently ignored.
 
 ### `transferProjectOwnership(projectId, newOwnerEmail)`
 
@@ -377,7 +380,7 @@ Approves or denies an access request. When approved, the requester is assigned t
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `requestId` | `string` | UUID of the `AccessRequest` |
-| `decision` | `'viewer' \| 'editor' \| 'deny'` | Role to grant, or `'deny'` to refuse the request |
+| `decision` | `'viewer' \| 'commenter' \| 'editor' \| 'deny'` | Role to grant, or `'deny'` to refuse the request |
 
 **Returns** `Promise<void>`. The review page is revalidated so it displays the new status.
 
@@ -385,7 +388,7 @@ Approves or denies an access request. When approved, the requester is assigned t
 
 | Error | Cause |
 | --- | --- |
-| `Invalid request` | `requestId` is not a UUID, or `decision` is not one of the three allowed values |
+| `Invalid request` | `requestId` is not a UUID, or `decision` is not one of the four allowed values |
 | `Request not found` | No request with this id |
 | `Only the owner can handle access requests` | The caller is not the owner of the request's project |
 | `This request has already been handled` | The request is no longer `pending` |
@@ -395,7 +398,7 @@ Approves or denies an access request. When approved, the requester is assigned t
 | Decision | Effect |
 | --- | --- |
 | `'deny'` | `status = 'denied'` and `resolvedAt` is set. No email is sent |
-| `'viewer'` / `'editor'` | In a single `prisma.$transaction`: upserts the `ProjectAssignment` with this role (an existing assignment is left unchanged) and sets `status = 'approved'`. Then the requester is emailed |
+| `'viewer'` / `'commenter'` / `'editor'` | In a single `prisma.$transaction`: upserts the `ProjectAssignment` with this role (an existing assignment is left unchanged) and sets `status = 'approved'`. Then the requester is emailed |
 
 **Email:** on approval, the requester receives an email (label `ACCESS GRANTED`) with a button to open the project. See [Emails](./emails#emails-sent-by-the-app).
 
@@ -404,6 +407,23 @@ Approves or denies an access request. When approved, the requester is assigned t
 Server Actions are public endpoints and can be called directly, bypassing the review page. For this reason `resolveAccessRequest` validates its arguments and checks ownership itself instead of relying on the page.
 
 :::
+
+## Comments
+
+*Defined in `comments.ts`.* See [Comments](./comments) for the anchoring model and the client side.
+
+Every action validates its ids (UUID) and re-checks the caller's `ProjectAssignment`. `COMMENT_ROLES` is `owner`, `editor`, `commenter`; `EDIT_ROLES` is `owner`, `editor` (both in `src/lib/comment-anchors.ts`).
+
+| Action | Who | Notes |
+| --- | --- | --- |
+| `listComments(projectId)` | Any member | Thread roots with `author`, `resolvedBy` and `replies` (oldest first) |
+| `createComment(projectId, body, anchor)` | `COMMENT_ROLES` | Body trimmed, 1–2000 chars. Max 1000 threads per project. Returns `{ success, id }` |
+| `replyToComment(commentId, body)` | `COMMENT_ROLES` | Thread must be open. Emails the thread author (see below) |
+| `setCommentResolved(commentId, resolved)` | Owner or thread author | Sets/clears `resolvedAt` and `resolvedById` |
+| `deleteComment(commentId)` | Owner or comment author | Deleting a thread cascades to its replies |
+| `shiftCommentAnchors(projectId, filePath, changes)` | `EDIT_ROLES` | Shifts anchored lines after edits. Max 500 changes per call. Rows are locked (`SELECT … FOR UPDATE`) inside a transaction |
+
+**Email:** `replyToComment` notifies the thread author (label `COMMENT`, code `new reply`) unless they are the replier or are no longer a member. The email is sent with `after()`, so it never delays the response.
 
 ---
 

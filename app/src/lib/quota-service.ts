@@ -1,51 +1,25 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck
 import { prisma } from '@/lib/prisma';
-import { FileTreeNode } from '@/types/filetree';
-import type { Prisma } from '@prisma/client';
 
-export function calcFileTreeSize(node: Prisma.JsonValue | null | undefined): number {
-  if (!node || typeof node !== 'object' || Array.isArray(node)) return 0;
-
-  const typedNode = node as FileTreeNode;
-  let size = 0;
-
-  if (typedNode.type === 'file' && typedNode.data) {
-    const data = typedNode.data;
-    if (data.startsWith('data:')) {
-      const base64 = data.split(',')[1] ?? '';
-      const padding = (base64.match(/=+$/) || [''])[0].length;
-      size += Math.round((base64.length * 3) / 4) - padding;
-    } else {
-      size += new TextEncoder().encode(data).length;
-    }
-  }
-
-  if (typedNode.children) {
-    for (const child of Object.values(typedNode.children)) {
-      size += calcFileTreeSize(child as unknown as Prisma.JsonValue);
-    }
-  }
-
-  return size;
-}
-
+/**
+ * Sums the size of every file stored in the projects owned by a user.
+ */
 async function getOwnedStorageUsage(userId: string, excludeProjectId?: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { projectLinks: { include: { project: true } } },
+    select: { storageQuota: true },
   });
 
   if (!user) throw new Error('User not found');
 
-  const ownedLinks = user.projectLinks.filter((link) => link.role === 'owner');
+  const { _sum } = await prisma.projectFile.aggregate({
+    _sum: { size: true },
+    where: {
+      ...(excludeProjectId ? { projectId: { not: excludeProjectId } } : {}),
+      project: { userLinks: { some: { userId, role: 'owner' } } },
+    },
+  });
 
-  const usage = ownedLinks.reduce((acc: number, link) => {
-    if (excludeProjectId && link.project.id === excludeProjectId) return acc;
-    return acc + calcFileTreeSize(link.project.fileTree);
-  }, 0);
-
-  return { usage, limit: user.storageQuota, ownedLinks };
+  return { usage: _sum.size ?? 0, limit: user.storageQuota };
 }
 
 export async function checkUserQuota(

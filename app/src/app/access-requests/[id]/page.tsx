@@ -88,6 +88,15 @@ export default async function AccessRequestPage({ params }: { params: Promise<{ 
               </button>
             </form>
 
+            <form action={resolveAccessRequest.bind(null, id, 'commenter')}>
+              <button
+                type="submit"
+                className="inline-flex items-center rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700"
+              >
+                Grant commenter access
+              </button>
+            </form>
+
             <form action={resolveAccessRequest.bind(null, id, 'editor')}>
               <button
                 type="submit"

@@ -19,10 +19,11 @@ Every email uses the same HTML layout, which mirrors the style of the app's erro
 
 | Email | Triggered by | Recipient | Label | Code box | Button |
 | --- | --- | --- | --- | --- | --- |
-| Project shared | [`shareProject`](./server-actions#shareprojectprojectid-shareduseremail-canedit--false) | The user the project is shared with | `SHARING` | `editor access granted` or `viewer access granted` | **Open the project** → `/dashboard` |
+| Project shared | [`shareProject`](./server-actions#shareprojectprojectid-shareduseremail-role--viewer) | The user the project is shared with | `SHARING` | `<role> access granted` (`viewer`, `commenter` or `editor`) | **Open the project** → `/dashboard` |
 | Ownership transferred | [`transferProjectOwnership`](./server-actions#transferprojectownershipprojectid-newowneremail) | The new owner | `OWNERSHIP` | `ownership transferred` | **Open the project** → `/dashboard` |
 | Access request | [`requestProjectAccess`](./server-actions#requestprojectaccessprevstate-formdata) | The project owner | `ACCESS REQUEST` | `pending approval` | **Review request** → `/access-requests/<id>` |
-| Access granted | [`resolveAccessRequest`](./server-actions#resolveaccessrequestrequestid-decision) (`viewer` or `editor`) | The user who requested access | `ACCESS GRANTED` | `viewer access granted` or `editor access granted` | **Open the project** → editor page |
+| Comment reply | [`replyToComment`](./server-actions#comments) | The thread author (if not the replier and still a member) | `COMMENT` | `new reply` | **Open the project** → `/dashboard?projectId=<id>` |
+| Access granted | [`resolveAccessRequest`](./server-actions#resolveaccessrequestrequestid-decision) (`viewer`, `commenter` or `editor`) | The user who requested access | `ACCESS GRANTED` | `<role> access granted` | **Open the project** → editor page |
 
 No email is sent when an access request is denied. See [Access Requests](./access-requests#emails).
 

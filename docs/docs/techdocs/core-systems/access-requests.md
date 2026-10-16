@@ -1,6 +1,6 @@
 # Access Requests
 
-When a user opens a project they are not assigned to (for example from a link shared outside the app), they land on an **access request page** instead of being redirected. From there they can ask the project owner for access. The owner receives an email with a button leading to a **review page**, where they grant `viewer` or `editor` access, or deny the request.
+When a user opens a project they are not assigned to (for example from a link shared outside the app), they land on an **access request page** instead of being redirected. From there they can ask the project owner for access. The owner receives an email with a button leading to a **review page**, where they grant `viewer`, `commenter` or `editor` access, or deny the request.
 
 For the end-user point of view, see [Requesting access to a project](../../tutorial/projects/request-access.md).
 
@@ -33,7 +33,7 @@ sequenceDiagram
     App->>O: Email "Review request"
     O->>App: Open /access-requests/{id}
     App->>DB: check caller is owner
-    O->>App: resolveAccessRequest (viewer / editor / deny)
+    O->>App: resolveAccessRequest (viewer / commenter / editor / deny)
     alt Approved
         App->>DB: upsert ProjectAssignment + status = approved
         App->>U: Email "Access granted"
@@ -72,7 +72,7 @@ A `pending` request older than 24 h can be renewed, which sends a new email to t
 
 ### `resolveAccessRequest(requestId, decision)`
 
-Approves or denies a request. `decision` is `'viewer'`, `'editor'` or `'deny'`.
+Approves or denies a request. `decision` is `'viewer'`, `'commenter'`, `'editor'` or `'deny'`.
 
 | Step | Detail |
 | --- | --- |
@@ -81,7 +81,7 @@ Approves or denies a request. `decision` is `'viewer'`, `'editor'` or `'deny'`.
 | Authorization | `requireOwnerAssignment(userId, request.projectId, 'Only the owner can handle access requests')` |
 | State check | Throws `This request has already been handled` unless the status is `pending` |
 | `deny` | Sets `status = 'denied'` and `resolvedAt`. No email is sent |
-| `viewer` / `editor` | In a **transaction**: `upsert` of the `ProjectAssignment` with the chosen role, and `status = 'approved'`. Then sends the confirmation email |
+| `viewer` / `commenter` / `editor` | In a **transaction**: `upsert` of the `ProjectAssignment` with the chosen role, and `status = 'approved'`. Then sends the confirmation email |
 
 The `upsert` of the assignment uses an empty `update`: if the user was shared the project by another route in the meantime, their existing role is **not** overwritten.
 
