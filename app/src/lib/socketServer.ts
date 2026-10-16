@@ -1,6 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from './prisma';
+import { COMMENT_ROLES, EDIT_ROLES } from './comment-anchors';
 
 import { Server as HTTPServer } from 'http';
 import { Server as HTTPSServer } from 'https';
@@ -119,8 +120,12 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
     const canRead = async (docId: unknown) =>
       typeof docId === 'string' && session.docId === docId && (await refreshRole());
 
-    /** Viewers may join and see edits, but not emit write events. */
-    const canWrite = async (docId: unknown) => (await canRead(docId)) && session.role !== 'viewer';
+    /** Viewers and commenters may join and see edits, but not emit write events. */
+    const canWrite = async (docId: unknown) =>
+      (await canRead(docId)) && EDIT_ROLES.includes(session.role ?? '');
+
+    const canComment = async (docId: unknown) =>
+      (await canRead(docId)) && COMMENT_ROLES.includes(session.role ?? '');
 
     const isString = (...values: unknown[]) => values.every((v) => typeof v === 'string');
 
@@ -225,6 +230,18 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
     socket.on('set-main-file', async ({ docId, path } = {}) => {
       if (isString(path) && (await canWrite(docId))) {
         socket.to(docId).emit('remote-set-main', { path });
+      }
+    });
+
+    /**
+     * Comments are persisted through Server Actions; this only tells the
+     * other members to reload them. Resolving or deleting is also allowed to
+     * an author whose role was downgraded, hence canRead for non-creations.
+     */
+    socket.on('comments-changed', async ({ docId, created } = {}) => {
+      const allowed = created ? await canComment(docId) : await canRead(docId);
+      if (allowed) {
+        socket.to(docId).emit('comments-changed');
       }
     });
 

@@ -102,6 +102,7 @@ export default async function Page({
       userId={session.user.id}
       tags={projectData.tags}
       canEdit={canEdit}
+      role={role}
     />
   );
 }
