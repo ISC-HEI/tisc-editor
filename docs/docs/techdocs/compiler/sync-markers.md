@@ -31,6 +31,16 @@ The raw result is converted to `{ line, page, x, y }` where `x` and `y` are numb
 
 A failing `query` is **non-fatal**: a warning is logged and `syncMarkers` stays empty, while the SVG is still returned.
 
+## Internal links
+
+typst-ts renders internal links (outline entries, `@ref`, `link(<label>)`) as:
+
+```html
+<a xlink:href="#" onclick="handleTypstLocation(this, <page>, <x>, <y>); return false">
+```
+
+The target uses the same coordinate system as sync markers (1-based page, pt). Because `handleTypstLocation` is not shipped with the SVG, `wireInternalLinks` (in `useEditor.js`) strips the inline `onclick`, stores the target in `data-typst-page/x/y`, and a delegated click listener on `#page` calls `scrollToSyncMarker` with smooth scrolling. External links (`target="_blank"`) open natively.
+
 ## Known limitations
 
 - Bracket counting is naive: strings and comments (`//`, `/* */`) are not handled.

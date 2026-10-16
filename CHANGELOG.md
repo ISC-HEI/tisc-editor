@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-16
+- Fixed internal document links (outline, references, `link(<label>)`) not working in the preview
+
 ## 2026-10-15
 - Added redirection to the project created
 - Added access request management in share modal
