@@ -247,9 +247,11 @@ function findNearestSyncMarker(cursorLine) {
  * viewport (with a small margin), rather than centered. This works
  * regardless of zoom level or page layout since it lets the browser's own
  * SVG coordinate math do the conversion instead of us reimplementing it.
+ * @param {{ page: number, x: number, y: number }} marker - Target position (1-based page, pt).
+ * @param {ScrollBehavior} [behavior='auto'] - Scroll behavior ('auto' or 'smooth').
  * @returns {boolean} True if the scroll was applied.
  */
-function scrollToSyncMarker(marker) {
+function scrollToSyncMarker(marker, behavior = 'auto') {
   const TOP_MARGIN = 32;
 
   const container = refs.previewContainer;
@@ -271,8 +273,60 @@ function scrollToSyncMarker(marker) {
   const containerRect = container.getBoundingClientRect();
   const offset = screenPoint.y - containerRect.top - TOP_MARGIN + container.scrollTop;
   const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-  container.scrollTop = Math.min(Math.max(offset, 0), maxScroll);
+  container.scrollTo({ top: Math.min(Math.max(offset, 0), maxScroll), behavior });
   return true;
+}
+
+const TYPST_LOCATION_RE =
+  /handleTypstLocation\(\s*this\s*,\s*(\d+)\s*,\s*([-\d.eE]+)\s*,\s*([-\d.eE]+)\s*\)/;
+
+/**
+ * typst-ts renders internal links (outline entries, @refs, link(<label>))
+ * as `<a onclick="handleTypstLocation(this, page, x, y)">`, expecting a
+ * global helper from its JS renderer that we don't ship. We strip that
+ * inline handler and keep the target (1-based page, pt) in data attributes,
+ * so a delegated click listener can reuse the sync-marker scroll logic.
+ */
+function wireInternalLinks(svg) {
+  if (!svg) return;
+
+  svg.querySelectorAll('a[onclick*="handleTypstLocation"]').forEach((link) => {
+    const match = link.getAttribute('onclick').match(TYPST_LOCATION_RE);
+    link.removeAttribute('onclick');
+    if (!match) return;
+    link.dataset.typstPage = match[1];
+    link.dataset.typstX = match[2];
+    link.dataset.typstY = match[3];
+  });
+
+  svg.querySelectorAll('a[target="_blank"]').forEach((link) => {
+    link.setAttribute('rel', 'noopener noreferrer');
+  });
+}
+
+function handlePreviewLinkClick(event) {
+  const link = event.target.closest?.('a[data-typst-page]');
+  if (!link) return;
+
+  event.preventDefault();
+  scrollToSyncMarker(
+    {
+      page: Number(link.dataset.typstPage),
+      x: Number(link.dataset.typstX),
+      y: Number(link.dataset.typstY),
+    },
+    'smooth',
+  );
+}
+
+let linkListenerTarget = null;
+
+function ensurePreviewLinkListener() {
+  const page = refs.page;
+  if (!page || linkListenerTarget === page) return;
+  linkListenerTarget?.removeEventListener('click', handlePreviewLinkClick);
+  page.addEventListener('click', handlePreviewLinkClick);
+  linkListenerTarget = page;
 }
 
 /**
@@ -357,7 +411,10 @@ const SKELETON_HTML = `
 function setPageContent(html, scrollState) {
   refs.page.innerHTML = html;
 
-  applyPageGaps(refs.page.querySelector('svg')); // NEW
+  const svg = refs.page.querySelector('svg');
+  applyPageGaps(svg);
+  wireInternalLinks(svg);
+  ensurePreviewLinkListener();
 
   const container = refs.previewContainer;
   if (!container) return;
