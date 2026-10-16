@@ -4,19 +4,26 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireUserId, requireAssignment, requireOwnerAssignment } from './utils';
 import { sendMail } from '../email';
+import { SHARE_ROLES } from '../comment-anchors';
 
 /**
- * Shares a project with another user by email, granting either editor or
+ * Shares a project with another user by email, granting editor, commenter or
  * viewer access. Only the project owner can share.
  */
 export async function shareProject(
   projectId: string,
   sharedUserEmail: string,
-  canEdit: boolean = false,
+  role: string = 'viewer',
 ) {
   const userId = await requireUserId();
 
   await requireOwnerAssignment(userId, projectId, 'Only owner can share');
+
+  if (!SHARE_ROLES.includes(role)) {
+    return {
+      error: 'Invalid role',
+    };
+  }
 
   const sharedUser = await prisma.user.findUnique({
     where: {
@@ -56,7 +63,7 @@ export async function shareProject(
     data: {
       userId: sharedUser.id,
       projectId,
-      role: canEdit ? 'editor' : 'viewer',
+      role,
     },
   });
 
@@ -71,7 +78,7 @@ export async function shareProject(
     `${owner?.name ?? owner?.email} shared the project "${project?.title ?? 'Untitled'}" with you.`,
     {
       label: 'SHARING',
-      code: canEdit ? 'editor access granted' : 'viewer access granted',
+      code: `${role} access granted`,
       cta: {
         label: 'Open the project',
         url: `${process.env.AUTH_URL}/dashboard?projectId=${projectId}`,

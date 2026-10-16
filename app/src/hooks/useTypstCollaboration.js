@@ -12,6 +12,7 @@ import {
 import { debounce, makeToast, stringToColor } from './useUtils';
 import { renderFileExplorer } from './useFileManager';
 import { canEdit } from './useEditor';
+import { loadComments, trackCommentEdit } from './useComments';
 
 /**
  * React hook that manages real-time collaboration using Socket.IO.
@@ -53,6 +54,8 @@ export const useTypstCollaboration = (docId, userId) => {
   const updateContent = useCallback(
     (changeData) => {
       if (isRemoteChange.current || isLoadingFile || !canEdit) return;
+
+      trackCommentEdit(changeData.filename, changeData.changes, true);
 
       if (socketRef.current?.connected) {
         socketRef.current.emit('edit-file', {
@@ -102,6 +105,8 @@ export const useTypstCollaboration = (docId, userId) => {
      * Injects changes into the Monaco model without breaking the undo stack.
      */
     socket.on('remote-edit', ({ filename, changes }) => {
+      trackCommentEdit(filename, changes, false);
+
       updateFileInTree(globalFileTree, filename, (oldContent) => {
         return applyMonacoChangesToString(oldContent || '', changes);
       });
@@ -330,6 +335,8 @@ export const useTypstCollaboration = (docId, userId) => {
         fetchCompile();
       }, 200);
     });
+
+    socket.on('comments-changed', () => loadComments());
 
     socket.on('error', (msg) => console.error('Collaboration Error:', msg));
 

@@ -4,6 +4,9 @@ All notable changes to this project, organized by day.
 
 ## 2026-10-16
 - Fixed internal document links (outline, references, `link(<label>)`) not working in the preview
+- Added review comments on the preview (right-click to comment, threads, resolve/reopen, delete, side panel, real-time updates, email on reply)
+- Added `commenter` role (read-only access that can comment), available when sharing and in access requests
+- Fixed write checks (save, socket, tags, thumbnail) to only allow owners and editors instead of rejecting only viewers
 
 ## 2026-10-15
 - Added redirection to the project created

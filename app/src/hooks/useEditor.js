@@ -18,6 +18,11 @@ export let canEdit = true;
 
 let syncMarkers = [];
 
+/** Sync markers of the last successful compilation ({ line, page, x, y }). */
+export function getSyncMarkers() {
+  return syncMarkers;
+}
+
 let handleExportPdf = null;
 let handleExportSvg = null;
 let handleExportZip = null;
@@ -251,7 +256,7 @@ function findNearestSyncMarker(cursorLine) {
  * @param {ScrollBehavior} [behavior='auto'] - Scroll behavior ('auto' or 'smooth').
  * @returns {boolean} True if the scroll was applied.
  */
-function scrollToSyncMarker(marker, behavior = 'auto') {
+export function scrollToSyncMarker(marker, behavior = 'auto') {
   const TOP_MARGIN = 32;
 
   const container = refs.previewContainer;
@@ -415,6 +420,7 @@ function setPageContent(html, scrollState) {
   applyPageGaps(svg);
   wireInternalLinks(svg);
   ensurePreviewLinkListener();
+  window.dispatchEvent(new CustomEvent('tisc:preview-rendered'));
 
   const container = refs.previewContainer;
   if (!container) return;

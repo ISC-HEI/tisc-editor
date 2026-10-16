@@ -23,6 +23,8 @@ model User {
   sessions      Session[]
   projectLinks  ProjectAssignment[]
   accessRequests AccessRequest[]
+  comments       Comment[] @relation("CommentAuthor")
+  resolvedComments Comment[] @relation("CommentResolver")
 
   @@map("users")
 }
@@ -38,6 +40,7 @@ model Project {
   userLinks ProjectAssignment[]
   tags      ProjectTag[]
   accessRequests AccessRequest[]
+  comments  Comment[]
 
   @@map("projects")
 }
@@ -95,6 +98,37 @@ model AccessRequest {
   @@map("access_requests")
 }
 
+// A thread root (parentId = null) carries the preview anchor; replies only carry a body.
+// Anchor: the sync marker of `line` (0-based, in `filePath`) + offset. When pageOffset is 0,
+// `dy` is relative to the marker's y; otherwise it is the absolute y on page (marker.page + pageOffset).
+// A null `line` means no marker was available: `pageOffset` is then the absolute page.
+model Comment {
+  id           String    @id @default(uuid()) @db.Uuid
+  projectId    String    @map("project_id") @db.Uuid
+  authorId     String    @map("author_id") @db.Uuid
+  parentId     String?   @map("parent_id") @db.Uuid
+  body         String    @db.VarChar(2000)
+  filePath     String?   @map("file_path")
+  line         Int?
+  pageOffset   Int       @default(0) @map("page_offset")
+  x            Float     @default(0)
+  dy           Float     @default(0)
+  resolved     Boolean   @default(false)
+  resolvedAt   DateTime? @map("resolved_at")
+  resolvedById String?   @map("resolved_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author     User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  resolvedBy User?     @relation("CommentResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentReplies")
+
+  @@index([projectId])
+  @@index([parentId])
+  @@map("comments")
+}
+
 // ----------------
 // Auth.js Tables
 // ----------------
@@ -146,7 +180,7 @@ model VerificationToken {
 model ProjectAssignment {
   userId    String  @map("user_id") @db.Uuid
   projectId String  @map("project_id") @db.Uuid
-  role      String  @default("owner") // "owner", "editor" or "viewer"
+  role      String  @default("owner") // "owner", "editor", "commenter" or "viewer"
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

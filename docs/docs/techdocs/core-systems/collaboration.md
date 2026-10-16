@@ -29,7 +29,7 @@ sequenceDiagram
     end
 ```
 
-Once joined, the socket is stored server-side with an in-memory session (`{ userId, docId, authorized, email, role }`). Every subsequent event from that socket is checked against `session.authorized && session.docId === docId` before being relayed; write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are additionally ignored when `role` is `viewer`.
+Once joined, the socket is stored server-side with an in-memory session (`{ userId, docId, authorized, email, role }`). Every subsequent event from that socket is checked against `session.authorized && session.docId === docId` before being relayed; write events (`edit-file`, `create-node`, `rename-node`, `delete-node`, `set-main-file`) are additionally ignored unless `role` is `owner` or `editor`.
 
 The role is re-read from the database at most every **10 seconds** (`ROLE_TTL_MS`) when an event arrives, so a member who is removed or downgraded loses access within a few seconds without having to reconnect. A removed member receives an `error` event and is taken out of the room.
 
@@ -53,6 +53,7 @@ Additional safeguards:
 | `rename-node` | `{ docId, oldPath, newPath }` | Broadcasts a rename |
 | `delete-node` | `{ docId, path }` | Broadcasts a deletion |
 | `set-main-file` | `{ docId, path }` | Broadcasts a change of the main compiled file |
+| `comments-changed` | `{ docId, created }` | Tells other members to reload the [comments](./comments). `created: true` (new thread or reply) requires a commenting role |
 
 ### Server → Client
 
@@ -63,6 +64,7 @@ Additional safeguards:
 | `remote-cursor` | `{ filename, selection, userId, email }` | Another collaborator's cursor/selection |
 | `node-created` / `node-renamed` / `node-deleted` | path-related fields | A file system change made by another collaborator |
 | `remote-set-main` | `{ path }` | The main file was changed by another collaborator |
+| `comments-changed` | — | Comments were changed by another member: reload them with `listComments` |
 | `error` | `string` | Authorization or connection error |
 
 All server → client events except `active-users-list` are relayed with `socket.to(docId).emit(...)`, meaning the sender of the original action never receives their own event back.

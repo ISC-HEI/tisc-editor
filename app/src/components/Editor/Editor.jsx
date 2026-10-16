@@ -13,6 +13,7 @@ import PaneLog from '../../components/Editor/PaneLog';
 import { initPreviewFunctions, initPreviewInfos, initPreviewRefs, refs } from '@/hooks/refs';
 import { isLoadingFile, setCanEdit, useEditorWatcher } from '@/hooks/useEditor';
 import { useTypstCollaboration } from '@/hooks/useTypstCollaboration';
+import { initComments } from '@/hooks/useComments';
 import { findMainFile } from '@/hooks/useApi';
 import { ZipDestinationModal } from './ZipDestinationModal';
 
@@ -20,7 +21,15 @@ const MonacoEditor = dynamic(() => import('./MonacoEditor').then((mod) => mod.Mo
   ssr: false,
 });
 
-export default function Editor({ projectId, title, fileTree, userId, tags, canEdit = true }) {
+export default function Editor({
+  projectId,
+  title,
+  fileTree,
+  userId,
+  tags,
+  canEdit = true,
+  role = 'viewer',
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', callback: null });
   const [inputValue, setInputValue] = useState('');
@@ -55,6 +64,8 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
   useEffect(() => {
     setCanEdit(canEdit);
   }, [canEdit]);
+
+  useEffect(() => initComments({ projectId, userId, role }), [projectId, userId, role]);
 
   const handleFontSizeChange = (size) => {
     setEditorFontSize(size);
@@ -299,7 +310,13 @@ export default function Editor({ projectId, title, fileTree, userId, tags, canEd
 
       <EditorHeader title={title} tags={tags} />
 
-      {!canEdit && (
+      {!canEdit && role === 'commenter' && (
+        <div className="bg-blue-50 border-b border-blue-200 text-blue-700 text-xs font-medium text-center py-1.5">
+          Comment mode: you can view the project and right-click on the preview to add comments.
+        </div>
+      )}
+
+      {!canEdit && role !== 'commenter' && (
         <div className="bg-amber-50 border-b border-amber-200 text-amber-700 text-xs font-medium text-center py-1.5">
           Read-only mode: you have view access only. To edit, please request edit access from the
           project owner.

@@ -50,6 +50,22 @@ erDiagram
         datetime requestedAt
         datetime resolvedAt
     }
+    Comment {
+        uuid id PK
+        uuid projectId FK
+        uuid authorId FK
+        uuid parentId FK
+        string body
+        string filePath
+        int line
+        int pageOffset
+        float x
+        float dy
+        boolean resolved
+        datetime resolvedAt
+        uuid resolvedById FK
+        datetime createdAt
+    }
     Account {
         uuid id PK
         uuid userId FK
@@ -80,6 +96,9 @@ erDiagram
     Project ||--o| ProjectThumbnail : has
     Project ||--o{ ProjectTag : has
     Tag ||--o{ ProjectTag : has
+    Project ||--o{ Comment : has
+    User ||--o{ Comment : writes
+    Comment ||--o{ Comment : replies
 ```
 
 ## Core models
@@ -160,6 +179,24 @@ An approved request does not grant access by itself: access is given by the `Pro
 
 The table is named `access_requests` in the database (`@@map`), with snake_case columns (`user_id`, `project_id`, `requested_at`, `resolved_at`).
 
+### Comment
+
+Stores review comments left on the preview. See [Comments](../core-systems/comments.md) for the full flow.
+
+A **thread** is a root comment (`parentId = null`); its **replies** point to it through `parentId`. Only roots carry the anchor and the resolved state.
+
+| Column | Type | Description |
+| --- | --- | --- |
+| `body` | `varchar(2000)` | Comment text |
+| `filePath` | `string?` | Main file the anchor refers to (without the `root/` prefix) |
+| `line` | `int?` | 0-based source line of the [sync marker](../compiler/sync-markers) the comment is attached to. `null` when no marker was available |
+| `pageOffset` | `int` | Pages between the marker and the comment. When `line` is `null`, the absolute page |
+| `x` | `float` | Horizontal position on the page, in pt |
+| `dy` | `float` | Vertical offset from the marker in pt when `pageOffset = 0`, otherwise the absolute y on the page |
+| `resolved`, `resolvedAt`, `resolvedById` | | Resolution state. `resolvedById` is set to `null` if that user is deleted |
+
+Comments are deleted with their project, their author (`onDelete: Cascade`) or their thread. The table is named `comments`, with snake_case columns.
+
 ## Auth.js tables
 
 These models follow the standard [Auth.js / NextAuth Prisma adapter schema](https://authjs.dev/getting-started/adapters/prisma) and are used to persist authentication data.
@@ -174,7 +211,7 @@ These tables are managed by NextAuth and are not meant to be queried directly ou
 
 ### ProjectAssignment
 
-Links a `User` to a `Project`, with a `role` of either `"owner"`, `"editor"` or `"viewer"`. This is the table used to determine who has access to a project and what they can do with it (see [Sharing a project](../../tutorial/projects/sharing)).
+Links a `User` to a `Project`, with a `role` of `"owner"`, `"editor"`, `"commenter"` or `"viewer"` (see [Roles & Permissions](../core-systems/role-permissions)). This is the table used to determine who has access to a project and what they can do with it (see [Sharing a project](../../tutorial/projects/sharing)).
 
 The composite primary key `[userId, projectId]` ensures a user can only have a single role on a given project.
 

@@ -17,7 +17,7 @@ You must use the `hevs` email.
 
 :::
 
-3. Choose if you want the person to edit the project. By default the person can only view the project.
+3. Choose what the person can do: **See** (read only, the default), **Comment** (read and [add comments](../editor/comments)) or **Edit**.
 
 4. The person will see the project in their dashboard and receive an email, and you will see a tag next to it indicating that the project is shared.
 
