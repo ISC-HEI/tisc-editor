@@ -690,6 +690,8 @@ export async function openFile(path, options = {}) {
     refs.monaco.editor.setModelLanguage(model, config.language);
   }
 
+  refs.spellcheck?.setEnabled(config.spellcheck);
+
   isLoadingFile = true;
   currentFilePath = path;
 

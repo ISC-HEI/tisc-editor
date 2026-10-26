@@ -4,6 +4,7 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
   const worker = new Worker(new URL('./spellcheck.worker.js', import.meta.url), { type: 'module' });
 
   let timer = null;
+  let enabled = true;
   let latestRequestId = 0; // ignore stale 'result' messages
   let nextSuggestId = 0;
   const pendingSuggestions = new Map(); // requestId -> { resolve, reject }
@@ -20,7 +21,7 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
   // asynchronously with a 'result' message, handled below.
   function check() {
     const model = editor.getModel();
-    if (!model) return;
+    if (!model || !enabled) return;
 
     const requestId = ++latestRequestId;
     worker.postMessage({ type: 'check', text: model.getValue(), requestId });
@@ -28,6 +29,7 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
 
   const schedule = () => {
     clearTimeout(timer);
+    if (!enabled) return;
     timer = setTimeout(check, 300); // debounce
   };
 
@@ -36,7 +38,7 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
 
     switch (msg.type) {
       case 'result': {
-        if (msg.requestId !== latestRequestId) return; // a newer check superseded this one
+        if (msg.requestId !== latestRequestId || !enabled) return; // a newer check superseded this one
         const model = editor.getModel();
         if (!model) return;
 
@@ -156,6 +158,12 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
   return {
     setLanguage(lang) {
       worker.postMessage({ type: 'setLanguage', lang });
+    },
+    setEnabled(value) {
+      enabled = !!value;
+      clearTimeout(timer);
+      clearMarkers();
+      if (enabled) schedule();
     },
     dispose() {
       clearTimeout(timer);
