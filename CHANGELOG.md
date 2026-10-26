@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-26
+- Added delimiter between comments and export section
+
 ## 2026-10-16
 - Fixed internal document links (outline, references, `link(<label>)`) not working in the preview
 - Added review comments on the preview (right-click to comment, threads, resolve/reopen, delete, side panel, real-time updates, email on reply)

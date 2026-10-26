@@ -154,6 +154,7 @@ export const PreviewPane = () => {
             <MessageSquare size={14} />
             {openCount > 0 && <span>{openCount}</span>}
           </button>
+          <div className="w-px h-6 bg-slate-200 mx-1" />
           <button
             ref={btnExportZip}
             className="flex items-center gap-2 text-[12px] font-semibold py-1.5 px-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
