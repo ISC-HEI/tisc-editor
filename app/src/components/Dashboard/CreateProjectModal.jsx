@@ -144,7 +144,12 @@ export default function CreateProjectModal() {
                 });
 
                 try {
-                  const project = await createProject(formData);
+                  const result = await createProject(formData);
+
+                  if (result.error) {
+                    setError(result.error);
+                    return;
+                  }
 
                   setIsOpen(false);
                   setTags([]);
@@ -152,7 +157,7 @@ export default function CreateProjectModal() {
                   setSelectedTemplate('blank');
                   setShowAllTemplates(false);
 
-                  router.push(`/?projectId=${encodeURIComponent(project.id)}`);
+                  router.push(`/?projectId=${encodeURIComponent(result.id)}`);
                 } catch (err) {
                   setError(err instanceof Error ? err.message : 'An error occurred.');
                 } finally {

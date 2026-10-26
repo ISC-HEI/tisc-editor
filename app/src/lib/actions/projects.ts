@@ -37,16 +37,18 @@ export async function createProject(formData: FormData) {
 
   const uniqueTags = [...new Set(tags)];
 
+  // Expected failures are returned rather than thrown: Next.js strips the message
+  // of errors thrown from server actions in production builds.
   if (!title || !packageBase) {
-    throw new Error('Missing project information');
+    return { error: 'Missing project information' };
   }
 
   if (uniqueTags.length > 10) {
-    throw new Error('Maximum 10 tags allowed');
+    return { error: 'Maximum 10 tags allowed' };
   }
 
   if (uniqueTags.some((tag) => tag.length > 50)) {
-    throw new Error('Tags must be 50 characters or fewer');
+    return { error: 'Tags must be 50 characters or fewer' };
   }
 
   const projectData = {
@@ -69,7 +71,7 @@ export async function createProject(formData: FormData) {
     if (imported) {
       projectData.fileTree = imported.fileTree;
     } else {
-      throw new Error('Template import failed.');
+      return { error: 'Template import failed.' };
     }
   } else {
     projectData.fileTree.children['main.typ'] = {
@@ -88,13 +90,13 @@ export async function createProject(formData: FormData) {
   const quota = await checkUserQuota(userId, dataSize);
 
   if (!quota.allowed) {
-    throw new Error(
-      `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(
+    return {
+      error: `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(
         quota.limit! /
         1024 /
         1024
       ).toFixed(2)}MB). Cannot create project.`,
-    );
+    };
   }
 
   try {
@@ -157,7 +159,7 @@ export async function createProject(formData: FormData) {
     });
     revalidatePath('/dashboard');
 
-    return project;
+    return { id: project.id };
   } catch (error) {
     await cleanupProjectObjects(projectId);
     throw error;
