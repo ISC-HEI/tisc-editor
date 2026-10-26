@@ -1,5 +1,4 @@
 import {
-  ArrowDownToLine,
   Bold,
   Italic,
   Underline,
@@ -123,7 +122,6 @@ export function Toolbar({
   panelHost,
 }) {
   // Refs handed to the preview/editor logic (initPreviewRefs)
-  const [btnSaveEl, setBtnSaveEl] = useState(null);
   const [btnBEl, setBtnBEl] = useState(null);
   const [btnIEl, setBtnIEl] = useState(null);
   const [btnUEl, setBtnUEl] = useState(null);
@@ -184,14 +182,13 @@ export function Toolbar({
   // Expose the DOM buttons to the preview logic once they are mounted
   useEffect(() => {
     initPreviewRefs({
-      btnSave: btnSaveEl,
       btnBold: btnBEl,
       btnItalic: btnIEl,
       btnUnderline: btnUEl,
       btnLang: btnLangEl,
       btnShowImages: btnShowImagesEl,
     });
-  }, [btnSaveEl, btnBEl, btnIEl, btnUEl, btnLangEl, btnShowImagesEl]);
+  }, [btnBEl, btnIEl, btnUEl, btnLangEl, btnShowImagesEl]);
 
   // Expose panel actions to the rest of the app (setState is stable, no stale closures)
   useEffect(() => {
@@ -246,20 +243,6 @@ export function Toolbar({
             )}
           </div>
         )}
-
-        <Divider expanded={isExpanded} />
-
-        <div className="flex w-full flex-col gap-1">
-          <ToolbarButton
-            ref={setBtnSaveEl}
-            icon={ArrowDownToLine}
-            iconSize={20}
-            label="Save"
-            expanded={isExpanded}
-            disabled={!canEdit}
-            disabledTitle={readonlyTitle}
-          />
-        </div>
 
         <Divider expanded={isExpanded} />
 

@@ -64,7 +64,6 @@ function initEditor() {
     !refs.btnItalic ||
     !refs.btnUnderline ||
     !refs.page ||
-    !refs.btnSave ||
     !refs.btnExportPdf ||
     !refs.btnExportSvg ||
     !refs.btnExportZip ||
@@ -89,8 +88,6 @@ function initEditor() {
     if (!canEdit) return;
     applyFormatting('underline');
   });
-
-  refs.btnSave.addEventListener('click', downloadDocument);
 
   if (!handleExportPdf) {
     handleExportPdf = () => {
@@ -157,7 +154,6 @@ export function useEditorWatcher() {
       if (refs.btnBold) refs.btnBold.onclick = null;
       if (refs.btnItalic) refs.btnItalic.onclick = null;
       if (refs.btnUnderline) refs.btnUnderline.onclick = null;
-      if (refs.btnSave) refs.btnSave.onclick = null;
       if (refs.btnExportPdf && handleExportPdf) {
         refs.btnExportPdf.removeEventListener('click', handleExportPdf);
       }
@@ -526,19 +522,6 @@ export async function fetchCompile() {
   } finally {
     hideLoader();
   }
-}
-
-export function downloadDocument() {
-  const content = refs.editor.getValue();
-  if (!content) return;
-
-  const blob = new Blob([content], { type: 'text/plain' });
-  const filename = `${new Date().toISOString().replace(/[-:.]/g, '')}_typstDocument.typ`;
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(link.href);
 }
 
 async function autoSave() {

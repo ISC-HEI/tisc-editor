@@ -8,6 +8,7 @@ All notable changes to this project, organized by day.
 - Fixed error show in project creation box
 - Fixed uploaded/imported text files (e.g. `.sh`, `.tmTheme`) showing raw base64 data URL instead of their content in the editor
 - Added per-extension spellcheck setting (enabled for `.typ`, `.md`, `.txt`, `.tex`, disabled for code and other files)
+- Removed the Save button from the editor toolbar (projects are saved automatically)
 
 ## 2026-10-16
 - Fixed internal document links (outline, references, `link(<label>)`) not working in the preview

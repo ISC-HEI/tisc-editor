@@ -12,7 +12,6 @@ export let refs = {
   btnZoomOut: null,
   zoomLevelDisplay: null,
 
-  btnSave: null,
   btnBold: null,
   btnItalic: null,
   btnUnderline: null,
