@@ -399,7 +399,8 @@ const FILE_EXTENSIONS = {
     allowed: true,
   },
   svg: {
-    language: 'xml',
+    language: null,
+    type: 'image',
     color: '#f43f5e',
     icon: Image,
     allowed: true,

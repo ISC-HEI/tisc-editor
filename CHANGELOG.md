@@ -4,6 +4,7 @@ All notable changes to this project, organized by day.
 
 ## 2026-10-26
 - Added delimiter between comments and export section
+- Added possibility to open SVG as image
 
 ## 2026-10-16
 - Fixed internal document links (outline, references, `link(<label>)`) not working in the preview

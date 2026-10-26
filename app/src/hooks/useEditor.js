@@ -598,6 +598,14 @@ export async function openFile(path, options = {}) {
   if (isImage) {
     let imageSrc = node.data ?? node.content ?? '';
 
+    if (ext === 'svg' && typeof imageSrc === 'string') {
+      if (imageSrc.trimStart().startsWith('<')) {
+        imageSrc = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(imageSrc)}`;
+      } else if (imageSrc.startsWith('data:') && !imageSrc.startsWith('data:image/svg+xml')) {
+        imageSrc = imageSrc.replace(/^data:[^;,]*/, 'data:image/svg+xml');
+      }
+    }
+
     if (imageSrc instanceof Blob) {
       imageSrc = URL.createObjectURL(imageSrc);
     } else if (
