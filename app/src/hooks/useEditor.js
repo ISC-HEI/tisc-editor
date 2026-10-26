@@ -579,6 +579,33 @@ function setupResizable() {
   });
 }
 
+function decodeDataUrlToText(str) {
+  if (typeof str !== 'string' || !str.startsWith('data:')) return str;
+  const commaIndex = str.indexOf(',');
+  if (commaIndex === -1) return str;
+  const header = str.slice(0, commaIndex);
+  const payload = str.slice(commaIndex + 1);
+  try {
+    if (!header.endsWith(';base64')) return decodeURIComponent(payload);
+    const binary = atob(payload);
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch (e) {
+    console.error('Failed to decode file content:', e);
+    return str;
+  }
+}
+
+function encodeTextToBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
 export async function openFile(path, options = {}) {
   if (!path) return;
 
@@ -671,6 +698,8 @@ export async function openFile(path, options = {}) {
   }
 
   let content = node.content ?? node.data ?? '';
+  if (typeof content !== 'string') content = '';
+  content = decodeDataUrlToText(content);
 
   refs.editor.setValue(content);
   functions.closeFileExplorer();
@@ -704,9 +733,7 @@ export function syncFileTreeWithEditor() {
     if (node.name.endsWith('.typ') || node.name.endsWith('.txt')) {
       node.data = content;
     } else {
-      const bytes = new TextEncoder().encode(content);
-      const binary = String.fromCharCode(...bytes);
-      node.data = 'data:text/plain;base64,' + btoa(binary);
+      node.data = 'data:text/plain;base64,' + encodeTextToBase64(content);
     }
   }
 }
