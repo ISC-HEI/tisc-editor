@@ -3,6 +3,21 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireUserId, requireAssignment } from './utils';
+import { EDIT_ROLES } from '../comment-anchors';
+
+const MAX_TAGS_PER_PROJECT = 10;
+const MAX_TAG_LENGTH = 50;
+
+/**
+ * Throws unless the user is an owner or editor of the project.
+ */
+async function requireTagEditor(userId: string, projectId: string) {
+  const assignment = await requireAssignment(userId, projectId);
+
+  if (!EDIT_ROLES.includes(assignment.role)) {
+    throw new Error('Viewers cannot edit tags');
+  }
+}
 
 /**
  * Adds a tag to a project (creating the tag if it doesn't exist yet).
@@ -15,9 +30,18 @@ export const addTagToProject = async (projectId: string, tag: string) => {
     throw new Error('Missing project id or tag');
   }
 
-  const tagName = tag.trim();
+  const tagName = tag.trim().toLowerCase();
 
-  await requireAssignment(userId, projectId);
+  if (tagName.length > MAX_TAG_LENGTH) {
+    throw new Error(`Tags must be ${MAX_TAG_LENGTH} characters or fewer`);
+  }
+
+  await requireTagEditor(userId, projectId);
+
+  const tagCount = await prisma.projectTag.count({ where: { projectId } });
+  if (tagCount >= MAX_TAGS_PER_PROJECT) {
+    throw new Error(`Maximum ${MAX_TAGS_PER_PROJECT} tags allowed`);
+  }
 
   const tagRecord = await prisma.tag.upsert({
     where: {
@@ -79,7 +103,11 @@ export const getProjectTags = async (projectId: string) => {
     },
   });
 
+  // Only suggest tags already used in the user's own projects.
   const availableTags = await prisma.tag.findMany({
+    where: {
+      projects: { some: { project: { userLinks: { some: { userId } } } } },
+    },
     orderBy: {
       name: 'asc',
     },
@@ -138,7 +166,7 @@ export const removeTagFromProject = async (projectId: string, tag: string) => {
 
   const tagName = tag.trim();
 
-  await requireAssignment(userId, projectId);
+  await requireTagEditor(userId, projectId);
 
   const tagRecord = await prisma.tag.findUnique({
     where: {

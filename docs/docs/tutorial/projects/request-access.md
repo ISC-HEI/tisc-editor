@@ -31,6 +31,7 @@ The owner chooses the level of access:
 | Access | What you can do |
 | --- | --- |
 | **Viewer** | Open and read the project. You cannot edit it. |
+| **Commenter** | Open and read the project, and [add comments](../editor/comments). You cannot edit it. |
 | **Editor** | Open the project and edit its content. |
 
 Only the owner can manage sharing or delete the project.
@@ -56,6 +57,7 @@ Requests are sent by email, so the owner may not see the notification right away
 
 When someone asks for access to your project, you receive an email titled **Access request for your project**. It tells you who is asking and which project they want to access.
 
+
 ### 2. Click "Review request"
 
 The button opens a page in the application. You must be **signed in with the owner account** of the project. If you are not signed in, you are asked to sign in first and then taken back to the request.
@@ -66,6 +68,8 @@ Only the owner of the project can open this page. If you see a "not found" page,
 
 :::
 
+> Note: You can also see the request access in the share modal of your project
+
 ### 3. Choose an answer
 
 The page shows the person's name and email address, along with three choices:
@@ -73,6 +77,7 @@ The page shows the person's name and email address, along with three choices:
 | Button | Result |
 | --- | --- |
 | **Grant viewer access** | The person can open and read the project, but cannot edit it. |
+| **Grant commenter access** | The person can read the project and add comments, but cannot edit it. |
 | **Grant editor access** | The person can open and edit the project. |
 | **Deny** | The person is not granted access and receives an email explaining that the request was declined. |
 

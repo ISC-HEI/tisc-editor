@@ -6,6 +6,9 @@ import { NextResponse } from 'next/server';
 import { flattenTree } from '@/lib/filetree';
 import { deleteObjects } from '@/lib/storage';
 import { prepareFiles, uploadFiles } from '@/lib/project-storage';
+import { EDIT_ROLES } from '@/lib/comment-anchors';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -34,7 +37,7 @@ export async function POST(req: Request) {
       where: { userId_projectId: { userId, projectId: id } },
     });
 
-    if (!assignment || assignment.role === 'viewer') {
+    if (!assignment || !EDIT_ROLES.includes(assignment.role)) {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -57,6 +60,11 @@ export async function POST(req: Request) {
     const existingByPath = new Map(existing.map((file) => [file.path, file]));
 
     const files = prepareFiles(id, flat, new Map(existing.map((file) => [file.path, file.id])));
+
+    const tooLarge = files.find((file) => file.size > MAX_FILE_SIZE);
+    if (tooLarge) {
+      return new NextResponse(`File ${tooLarge.path} exceeds the 5MB limit`, { status: 413 });
+    }
 
     const dataSize = files.reduce((sum, file) => sum + file.size, 0);
     const previousSize = existing.reduce((sum, file) => sum + file.size, 0);

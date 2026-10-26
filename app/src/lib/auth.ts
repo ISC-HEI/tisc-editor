@@ -73,6 +73,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       }
 
+      // Invalidate existing sessions as soon as an admin disables the account.
+      const dbUser = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: { disabled: true },
+      });
+      if (!dbUser || dbUser.disabled) return null;
+
       if (Date.now() < token.expiresAt * 1000 - 10_000) return token;
 
       return refreshAccessToken(token);

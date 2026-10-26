@@ -44,7 +44,7 @@ To add a new official template, add an entry to `TEMPLATES` pointing to an exist
 When a project is created from a template (`createProject` server action), the following happens:
 
 1. **Resolve the latest version** — `getLatestVersion(packageBase)` lists the version folders under `packages/preview/<packageBase>` in the `typst/packages` GitHub repo and returns the highest semver one.
-2. **Build the package path** — the final package identifier combines the base name, the resolved version, and the optional subpath: `<packageBase>/<version>[/<packageSubPath>]`.
+2. **Build the package path** — the final package identifier combines the base name, the resolved version, and the optional subpath: `<packageBase>/<version>[/<packageSubPath>]`. `packageBase`, `packageSubPath` and `templateFile` are validated beforehand: only letters, digits, `_`, `-` and `.` are allowed in each path segment, and `..` is rejected, so the request cannot escape `typst/packages` (and the server's `GITHUB_TOKEN` cannot be used to read other repositories).
 3. **Download the file tree** — `importPackageAsTree` recursively walks the package's GitHub contents (`buildTreeFromGitHub`) and downloads every file as base64 (`getFileContentAsBase64`), reconstructing the same folder/file structure used by the editor's file tree.
 4. **Set the main file** — the template's entry file (`templateFile`) is fetched separately from `raw.githubusercontent.com` and inserted into the tree as `main.typ`, marked as the main file (`isMain: true`).
 

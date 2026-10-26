@@ -61,8 +61,9 @@ To allow quotas above 2 GiB, change `storageQuota` to `BigInt` in `schema.prisma
 When an admin disables a user:
 
 1. `User.disabled` is set to `true`.
-2. All of the user's rows in the `sessions` table are deleted, so they are logged out on their next request.
-3. Any new sign-in attempt is refused by the Auth.js `signIn` callback.
+2. Existing sessions are revoked: sessions use JWTs, so the Auth.js `jwt` callback checks `User.disabled` on every request and invalidates the token when the account is disabled.
+3. New Socket.io connections are refused for disabled accounts.
+4. Any new sign-in attempt is refused by the Auth.js `signIn` callback.
 
 Re-enabling an account only flips the flag back. The user can sign in again right away.
 

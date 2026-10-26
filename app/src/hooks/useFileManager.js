@@ -167,7 +167,13 @@ function applyActiveFile(path) {
  */
 async function openFileAndTrack(path) {
   applyActiveFile(path);
-  await openFile(path);
+
+  const extension = path.split('.').pop().toLowerCase();
+  const config = getExtensionConfig(extension);
+
+  await openFile(path, {
+    type: config.type === 'image' ? 'image' : 'code',
+  });
 }
 
 /**
@@ -893,10 +899,15 @@ function renderTreeRecursive(folder, container, path, depth) {
             pointerEvents: 'none',
           });
 
-          preview.innerHTML = `
-                        <img src="${item.data}" 
-                            style="max-width: 200px; max-height: 200px; display: block; border-radius: 4px;" 
-                        />`;
+          const img = document.createElement('img');
+          img.src = item.data;
+          Object.assign(img.style, {
+            maxWidth: '200px',
+            maxHeight: '200px',
+            display: 'block',
+            borderRadius: '4px',
+          });
+          preview.appendChild(img);
           document.body.appendChild(preview);
         });
 

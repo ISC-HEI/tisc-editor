@@ -155,7 +155,6 @@ export async function createProject(formData: FormData) {
 
       return project;
     });
-
     revalidatePath('/dashboard');
 
     return project;
@@ -261,6 +260,15 @@ export async function getUserProjects() {
           thumbnail: {
             select: { projectId: true },
           },
+          accessRequests: {
+            where: { status: 'pending' },
+            orderBy: { requestedAt: 'asc' },
+            select: {
+              id: true,
+              requestedAt: true,
+              user: { select: { name: true, email: true } },
+            },
+          },
         },
       },
     },
@@ -276,7 +284,7 @@ export async function getUserProjects() {
   type UserLinkEntry = AssignmentWithProject['project']['userLinks'][number];
 
   return assignments.map((a: AssignmentWithProject) => {
-    const { thumbnail, ...project } = a.project;
+    const { thumbnail, accessRequests, ...project } = a.project;
 
     const ownerLink = a.project.userLinks.find((link: UserLinkEntry) => link.role === 'owner');
 
@@ -291,6 +299,16 @@ export async function getUserProjects() {
       usersSharing: a.project.userLinks
         .filter((link: UserLinkEntry) => link.userId !== userId)
         .map((link: UserLinkEntry) => link.userId),
+
+      pendingRequests:
+        a.role === 'owner'
+          ? accessRequests.map((r) => ({
+              id: r.id,
+              name: r.user.name,
+              email: r.user.email,
+              requestedAt: r.requestedAt.toISOString(),
+            }))
+          : [],
     };
   });
 }
@@ -476,6 +494,19 @@ export async function duplicateProject(formData: FormData) {
   });
   if (!source) {
     throw new Error('Project not found');
+  }
+
+  const dataSize = source.files.reduce((sum, file) => sum + file.size, 0);
+  const quota = await checkUserQuota(userId, dataSize);
+
+  if (!quota.allowed) {
+    throw new Error(
+      `Quota exceeded (${(quota.usage / 1024 / 1024).toFixed(2)}MB / ${(
+        quota.limit /
+        1024 /
+        1024
+      ).toFixed(2)}MB). Cannot duplicate project.`,
+    );
   }
 
   const newProjectId = randomUUID();
