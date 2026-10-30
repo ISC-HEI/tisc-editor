@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { getUserProjects, setUserDisabled, updateUserQuota } from '@/lib/actions/admin';
+import { DeleteUserDialog } from './delete-user-dialog';
 
 const MB = 1024 ** 2;
 
@@ -12,9 +13,13 @@ type Props = {
     email: string;
     disabled: boolean;
     storageQuota: number;
+    storageUsed: number;
     createdAt: string;
+    lastLoginAt: string | null;
     projectCount: number;
+    ownedProjectCount: number;
   };
+  transferCandidates: { id: string; label: string }[];
   isSelf: boolean;
 };
 
@@ -27,7 +32,7 @@ const ROLE_STYLES: Record<string, string> = {
   viewer: 'bg-slate-100 text-slate-600',
 };
 
-export function UserRow({ user, isSelf }: Props) {
+export function UserRow({ user, transferCandidates, isSelf }: Props) {
   const [quotaMb, setQuotaMb] = useState(String(user.storageQuota / MB));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -37,6 +42,8 @@ export function UserRow({ user, isSelf }: Props) {
   const [projects, setProjects] = useState<ProjectItem[] | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [loadingProjects, startLoading] = useTransition();
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const run = (fn: () => Promise<unknown>) =>
     startTransition(async () => {
@@ -71,6 +78,14 @@ export function UserRow({ user, isSelf }: Props) {
   const initial = (user.name ?? user.email)[0]?.toUpperCase();
   const displayName = user.name ?? user.email;
   const projectLabel = `${user.projectCount} ${user.projectCount === 1 ? 'project' : 'projects'}`;
+  const usagePercent =
+    user.storageQuota > 0
+      ? (user.storageUsed / user.storageQuota) * 100
+      : user.storageUsed > 0
+        ? 100
+        : 0;
+  const usageColor =
+    usagePercent >= 90 ? 'bg-red-500' : usagePercent >= 70 ? 'bg-amber-500' : 'bg-blue-500';
 
   return (
     <tr
@@ -98,6 +113,11 @@ export function UserRow({ user, isSelf }: Props) {
 
       {/* Created */}
       <td className="px-4 py-4 text-slate-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+
+      {/* Last login */}
+      <td className="px-4 py-4 text-slate-500">
+        {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never'}
+      </td>
 
       {/* Projects */}
       <td className="px-4 py-4">
@@ -160,13 +180,18 @@ export function UserRow({ user, isSelf }: Props) {
                           </span>
                         )}
                       </div>
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                          ROLE_STYLES[p.role] ?? ROLE_STYLES.viewer
-                        }`}
-                      >
-                        {p.role}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-xs text-slate-500">
+                          {(p.size / MB).toFixed(2)} MB
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            ROLE_STYLES[p.role] ?? ROLE_STYLES.viewer
+                          }`}
+                        >
+                          {p.role}
+                        </span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -201,6 +226,18 @@ export function UserRow({ user, isSelf }: Props) {
             Save
           </button>
         </div>
+        <div className="mt-2 w-44">
+          <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full ${usageColor}`}
+              style={{ width: `${Math.min(usagePercent, 100)}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {(user.storageUsed / MB).toFixed(2)} / {(user.storageQuota / MB).toFixed(2)} MB (
+            {usagePercent.toFixed(0)}%)
+          </p>
+        </div>
         {error && (
           <p role="alert" className="mt-1 text-xs text-red-600">
             {error}
@@ -224,18 +261,41 @@ export function UserRow({ user, isSelf }: Props) {
 
       {/* Action */}
       <td className="px-8 py-4 text-right">
-        <button
-          disabled={pending || isSelf}
-          onClick={() => run(() => setUserDisabled(user.id, !user.disabled))}
-          title={isSelf ? "You can't disable your own account" : undefined}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
-            user.disabled
-              ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-              : 'border-red-200 text-red-600 hover:bg-red-50'
-          }`}
-        >
-          {pending ? '…' : user.disabled ? 'Enable' : 'Disable'}
-        </button>
+        <div className="flex justify-end gap-2">
+          <button
+            disabled={pending || isSelf}
+            onClick={() => run(() => setUserDisabled(user.id, !user.disabled))}
+            title={isSelf ? "You can't disable your own account" : undefined}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+              user.disabled
+                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                : 'border-red-200 text-red-600 hover:bg-red-50'
+            }`}
+          >
+            {pending ? '…' : user.disabled ? 'Enable' : 'Disable'}
+          </button>
+          <button
+            disabled={pending || isSelf}
+            onClick={() => setDeleteOpen(true)}
+            title={isSelf ? "You can't delete your own account" : undefined}
+            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Delete
+          </button>
+        </div>
+        {deleteOpen && (
+          <DeleteUserDialog
+            user={{
+              id: user.id,
+              email: user.email,
+              displayName,
+              ownedProjectCount: user.ownedProjectCount,
+              storageUsed: user.storageUsed,
+            }}
+            transferCandidates={transferCandidates}
+            onClose={() => setDeleteOpen(false)}
+          />
+        )}
       </td>
     </tr>
   );

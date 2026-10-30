@@ -60,6 +60,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   session: { strategy: 'jwt' },
+  events: {
+    async signIn({ user }) {
+      if (!user.id) return;
+      await prisma.user
+        .update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
+        .catch((error) => console.error('Failed to update last login:', error));
+    },
+  },
   callbacks: {
     async jwt({ token, account, user }) {
       if (account && user?.id) {
