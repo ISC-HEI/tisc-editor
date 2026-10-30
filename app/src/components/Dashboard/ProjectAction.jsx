@@ -16,6 +16,7 @@ import {
   Tag,
   Archive,
   Copy,
+  Download,
 } from 'lucide-react';
 import {
   getProjectMembers,
@@ -27,8 +28,11 @@ import {
   duplicateProject,
   getProjectAssignmentRole,
   leaveProject,
+  loadProject,
   setProjectActiveStatus,
 } from '@/lib/actions/projects';
+import { exportZip } from '@/hooks/useFileManager';
+import { normalizeFileTree } from '@/lib/filetree';
 
 const projectFormData = (projectId) => {
   const formData = new FormData();
@@ -209,6 +213,7 @@ export function ProjectActions({
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [emails, setEmails] = useState([]);
   const [members, setMembers] = useState([]);
@@ -307,6 +312,21 @@ export function ProjectActions({
     }
   };
 
+  const handleDownloadClick = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const project = await loadProject(projectId);
+      if (!project) throw new Error('Project not found');
+      await exportZip(normalizeFileTree(project.fileTree), title);
+    } catch (err) {
+      console.error("Downloading error " + err)
+    } finally {
+      setIsDownloading(false);
+      setIsOpen(false);
+    }
+  }
+
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
     try {
@@ -380,6 +400,16 @@ export function ProjectActions({
             >
               {isDuplicating ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
               Duplicate
+            </button>
+
+          <button
+              type="button"
+              onClick={handleDownloadClick}
+              disabled={isDownloading}
+              className={menuItem}
+            >
+              {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              Download
             </button>
 
             {isOwner ? (
