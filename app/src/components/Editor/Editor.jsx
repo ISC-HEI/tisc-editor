@@ -21,6 +21,18 @@ const MonacoEditor = dynamic(() => import('./MonacoEditor').then((mod) => mod.Mo
   ssr: false,
 });
 
+const EDITOR_SETTINGS_STORAGE_KEY = 'editor-settings';
+const DEFAULT_EDITOR_SETTINGS = { wordWrap: true, spellcheck: true, autocomplete: true };
+
+function loadEditorSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(EDITOR_SETTINGS_STORAGE_KEY) || '{}');
+    return { ...DEFAULT_EDITOR_SETTINGS, ...saved };
+  } catch {
+    return DEFAULT_EDITOR_SETTINGS;
+  }
+}
+
 export default function Editor({
   projectId,
   title,
@@ -44,7 +56,8 @@ export default function Editor({
 
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const [editorFontSize, setEditorFontSize] = useState(14);
-  const [wordWrap, setWordWrap] = useState(false);
+  const [editorSettings, setEditorSettings] = useState(loadEditorSettings);
+  const { wordWrap, spellcheck, autocomplete } = editorSettings;
   const [panelHost, setPanelHost] = useState(null);
   const separatorRef = useRef(null);
 
@@ -96,8 +109,14 @@ export default function Editor({
     updateContent(model.getValue());
   };
 
-  const handleWordWrapChange = (enabled) => {
-    setWordWrap(enabled);
+  const handleSettingChange = (key, value) => {
+    setEditorSettings((prev) => {
+      const next = { ...prev, [key]: value };
+      try {
+        localStorage.setItem(EDITOR_SETTINGS_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   const [activePath, setActivePath] = useState(() => {
@@ -333,7 +352,11 @@ export default function Editor({
             fontSize={editorFontSize}
             onFontSizeChange={handleFontSizeChange}
             wordWrap={wordWrap}
-            onWordWrapChange={handleWordWrapChange}
+            onWordWrapChange={(enabled) => handleSettingChange('wordWrap', enabled)}
+            spellcheck={spellcheck}
+            onSpellcheckChange={(enabled) => handleSettingChange('spellcheck', enabled)}
+            autocomplete={autocomplete}
+            onAutocompleteChange={(enabled) => handleSettingChange('autocomplete', enabled)}
             canEdit={canEdit}
             panelHost={panelHost}
           />
@@ -347,6 +370,8 @@ export default function Editor({
               content={getInitialContent()}
               fontSize={editorFontSize}
               wordWrap={wordWrap}
+              spellcheck={spellcheck}
+              autocomplete={autocomplete}
               readOnly={!canEdit}
               onChange={(newContent) => {
                 if (!isLoadingFile && canEdit) {

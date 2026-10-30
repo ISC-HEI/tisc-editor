@@ -1,10 +1,18 @@
 const OWNER = 'spellcheck';
 
-export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageDetected } = {}) {
+export function initSpellcheck(
+  monaco,
+  editor,
+  initialLang = 'fr',
+  { onLanguageDetected, userEnabled: initialUserEnabled = true } = {},
+) {
   const worker = new Worker(new URL('./spellcheck.worker.js', import.meta.url), { type: 'module' });
 
   let timer = null;
-  let enabled = true;
+  // Spellcheck runs only if both the current file type allows it and the user has not disabled it
+  let fileEnabled = true;
+  let userEnabled = !!initialUserEnabled;
+  let enabled = fileEnabled && userEnabled;
   let latestRequestId = 0; // ignore stale 'result' messages
   let nextSuggestId = 0;
   const pendingSuggestions = new Map(); // requestId -> { resolve, reject }
@@ -146,6 +154,13 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
     },
   });
 
+  function applyEnabled() {
+    enabled = fileEnabled && userEnabled;
+    clearTimeout(timer);
+    clearMarkers();
+    if (enabled) schedule();
+  }
+
   const contentListener = editor.onDidChangeModelContent(schedule);
 
   worker.postMessage({
@@ -159,11 +174,15 @@ export function initSpellcheck(monaco, editor, initialLang = 'fr', { onLanguageD
     setLanguage(lang) {
       worker.postMessage({ type: 'setLanguage', lang });
     },
+    /** Enables or disables spellcheck for the current file type. */
     setEnabled(value) {
-      enabled = !!value;
-      clearTimeout(timer);
-      clearMarkers();
-      if (enabled) schedule();
+      fileEnabled = !!value;
+      applyEnabled();
+    },
+    /** Enables or disables spellcheck from the user's editor settings. */
+    setUserEnabled(value) {
+      userEnabled = !!value;
+      applyEnabled();
     },
     dispose() {
       clearTimeout(timer);
