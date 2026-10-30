@@ -59,7 +59,7 @@ services:
       - "3000"
     volumes:
       - ./app:/app
-      - /app/node_modules
+      - app-node-modules:/app/node_modules
       - ./.git:/app/.git:ro
     networks:
       - tisc-network
@@ -84,8 +84,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0' # Limit to 1 CPU core
-          memory: 1.5G # If request > 1.5Go, the container will be killed
+          cpus: '8.0' # Turbopack compiles in parallel: more cores = faster page compilation
+          memory: 4G # If request > 4Go, the container will be killed
         reservations:
           memory: 512M
 
@@ -99,7 +99,7 @@ services:
       - "3001"
     volumes:
       - ./docs:/docs
-      - /docs/node_modules
+      - docs-node-modules:/docs/node_modules
       - ./CHANGELOG.md:/CHANGELOG.md:ro
     networks:
       - tisc-network
@@ -118,8 +118,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '2.0'
+          memory: 1.5G
 
   nginx:
     image: nginx:1.27-alpine
@@ -128,7 +128,7 @@ services:
       app:
         condition: service_healthy
       docs:
-        condition: service_healthy
+        condition: service_started # don't block the app while Docusaurus boots (/docs returns 502 until ready)
     restart: always
     ports:
       - "3000:80"
@@ -140,6 +140,8 @@ services:
 volumes:
   garage-meta:
   garage-data:
+  app-node-modules:
+  docs-node-modules:
 
 networks:
   tisc-network:
