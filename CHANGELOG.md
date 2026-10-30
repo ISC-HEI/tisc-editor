@@ -4,6 +4,9 @@ All notable changes to this project, organized by day.
 
 ## 2026-10-30
 - Added possibility to download the project from the dashboard (`zip`)
+- Enabled line wrapping by default in the editor
+- Added spellcheck and auto-completion switches in the editor settings
+- Editor settings (line wrapping, spellcheck, auto-completion) are now remembered in the browser
 
 ## 2026-10-26
 - Added delimiter between comments and export section
