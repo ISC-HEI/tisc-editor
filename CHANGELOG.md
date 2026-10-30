@@ -7,6 +7,9 @@ All notable changes to this project, organized by day.
 - Enabled line wrapping by default in the editor
 - Added spellcheck and auto-completion switches in the editor settings
 - Editor settings (line wrapping, spellcheck, auto-completion) are now remembered in the browser
+- Added all Typst Universe templates in project creation: search bar (max 10 results with preview, description and version), ISC-HEI templates as favorites, info icon linking to the Typst Universe page
+- Template folder, main file and thumbnail are now read from the package `typst.toml` (`[template]` section) instead of being hard-coded
+- Template files are now listed with a single GitHub API call
 
 ## 2026-10-26
 - Added delimiter between comments and export section

@@ -109,6 +109,22 @@ Returns the stored thumbnail image for a project.
 
 ---
 
+## Templates
+
+### `GET /api/templates/[name]/thumbnail`
+
+Returns the thumbnail of the latest version of a [Typst Universe template](./templates), as declared in the `[template]` section of its `typst.toml`. The image is downloaded from the `typst/packages` GitHub repository, resized to 480px wide and converted to WebP. The last 200 thumbnails are kept in memory.
+
+**Authentication:** Required (`401` otherwise).
+
+**Response**
+
+- `200` — WebP image, cached for one hour (`Cache-Control: private, max-age=3600`). The client adds `?v=<version>` to the URL so a new version is not hidden by the cache.
+- `404` — Unknown package, package without a template, or template without a thumbnail.
+- `502` — The thumbnail could not be downloaded or processed.
+
+---
+
 ## Real-time
 
 ### `GET /api/ws`

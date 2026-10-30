@@ -1,82 +1,81 @@
 # Templates Management
 
-Project templates (the ones shown in the [template gallery](../../tutorial/projects/create#templates)) are declared in `lib/templates.tsx` and fetched from GitHub at project creation time.
+Every template published on [Typst Universe](https://typst.app/universe/search/?kind=templates) can be used to create a project (see the [template picker](../../tutorial/projects/create#templates)). Nothing is hard-coded: templates are read from the Typst Universe index and downloaded from GitHub at project creation time. The code lives in `lib/typst-universe.ts`.
 
-## Declaring a template
+## Typst Universe index
 
-Templates are defined as a plain array, `TEMPLATES`, in `lib/templates.tsx`:
+Typst Universe publishes the metadata of every package version at [`https://packages.typst.org/preview/index.json`](https://packages.typst.org/preview/index.json). Each entry is the content of the package's `typst.toml`, including its `[template]` section:
 
-```tsx
-export const TEMPLATES = [
-  {
-    id: 'isc-hei-report',
-    packageBase: 'isc-hei-report',
-    packageSubPath: 'src',
-    name: 'ISC-HEI Report',
-    description: 'Official template for project report',
-    templateFile: 'report.typ',
-    icon: <ClipboardList className="text-amber-500" size={32} />,
-  },
-  // ...
-];
+```toml
+[template]
+path = "src"                          # folder copied into the project
+entrypoint = "report.typ"             # main file, relative to path
+thumbnail = "report_thumb.png"        # preview image, relative to the package root
 ```
 
-| Field | Description |
+The index (~2.5MB) is downloaded on the server, reduced to the **latest version of each package that has a `[template]` section**, and kept **in memory for one hour** (it is too large for the Next.js data cache). If a refresh fails, the previous index keeps being served.
+
+## Favorites and search
+
+Both are server actions in `lib/actions/templates.ts` and require an authenticated user:
+
+| Action | Description |
 | --- | --- |
-| `id` | Unique identifier for the template (used as the form value in the UI) |
-| `packageBase` | Name of the corresponding package in the [`typst/packages`](https://github.com/typst/packages) repository, under `packages/preview/` |
-| `packageSubPath` | Optional subfolder inside the package to import from (e.g. `src`) |
-| `name` | Display name in the template gallery |
-| `description` | Short description shown under the name |
-| `templateFile` | Path (relative to `packageSubPath`, if set) of the `.typ` file used as the project's main file |
-| `icon` | A `lucide-react` icon component shown in the gallery |
+| `getFavoriteTemplates()` | Templates whose name starts with `isc-hei-` (`FAVORITE_PREFIX`), sorted by name. Shown by default. |
+| `searchTemplates(query)` | Searches the name, keywords and description. Every word of the query must match; matches on the name rank first, then the most recently updated. Returns at most **10** results (`MAX_SEARCH_RESULTS`). |
 
-The special `blank` entry (`packageBase: 'blank'`) is handled separately: it does not go through GitHub at all and simply creates a project with an empty `main.typ`.
+Only display data is sent to the client: name, version, description, authors, whether there is a thumbnail, and the Typst Universe page URL (`https://typst.app/universe/package/<name>`, opened by the info icon).
 
-:::info[Adding a new template]
+Thumbnails are served by [`GET /api/templates/[name]/thumbnail`](./api-endpoints#get-apitemplatesnamethumbnail), which downloads the image declared in `typst.toml`, resizes it and converts it to WebP.
 
-To add a new official template, add an entry to `TEMPLATES` pointing to an existing package under [`typst/packages/preview`](https://github.com/typst/packages/tree/main/packages/preview). The package must already be published there — this file does not publish or host templates, it only references them.
+:::info[Adding a favorite]
+
+Any package published on Typst Universe with a name starting with `isc-hei-` and a `[template]` section shows up in the favorites automatically.
 
 :::
 
-## How templates are fetched
+## How a template is imported
 
-When a project is created from a template (`createProject` server action), the following happens:
+The client only sends the package **name** (`template` form field, or `blank`). In `createProject`:
 
-1. **Resolve the latest version** — `getLatestVersion(packageBase)` lists the version folders under `packages/preview/<packageBase>` in the `typst/packages` GitHub repo and returns the highest semver one.
-2. **Build the package path** — the final package identifier combines the base name, the resolved version, and the optional subpath: `<packageBase>/<version>[/<packageSubPath>]`. `packageBase`, `packageSubPath` and `templateFile` are validated beforehand: only letters, digits, `_`, `-` and `.` are allowed in each path segment, and `..` is rejected, so the request cannot escape `typst/packages` (and the server's `GITHUB_TOKEN` cannot be used to read other repositories).
-3. **Download the file tree** — `importPackageAsTree` recursively walks the package's GitHub contents (`buildTreeFromGitHub`) and downloads every file as base64 (`getFileContentAsBase64`), reconstructing the same folder/file structure used by the editor's file tree.
-4. **Set the main file** — the template's entry file (`templateFile`) is fetched separately from `raw.githubusercontent.com` and inserted into the tree as `main.typ`, marked as the main file (`isMain: true`).
+1. **Resolve the template** — `findTemplate(name)` looks the package up in the index. The version, folder, entrypoint and thumbnail always come from the index, never from the client. An unknown package is rejected.
+2. **List the files** — `importTemplateAsTree` makes a **single** GitHub API call to the Git trees API (`/repos/typst/packages/git/trees/main:packages/preview/<name>/<version>/<path>?recursive=1`).
+3. **Download the files** — each file is downloaded from `raw.githubusercontent.com` (8 at a time), which does not count against the GitHub API rate limit.
+4. **Set the main file** — the entrypoint is marked as the main file (`isMain: true`). If it sits at the root of the template folder, it is renamed to `main.typ` (unless another `main.typ` already exists); otherwise it stays where it is, so relative imports keep working.
+
+The `blank` template does not go through Typst Universe at all and simply creates a project with an empty `main.typ`.
 
 ```mermaid
 sequenceDiagram
     participant Action as createProject
-    participant GH as GitHub API
+    participant TU as packages.typst.org
+    participant GH as GitHub
 
-    Action->>GH: List versions of packageBase
-    GH-->>Action: Version folders
-    Action->>Action: Pick latest semver
-    Action->>GH: List contents of package (recursive)
-    GH-->>Action: Files & folders
-    Action->>GH: Fetch each file (base64)
+    Action->>TU: index.json (cached 1h)
+    TU-->>Action: Packages metadata
+    Action->>Action: Find latest version + [template]
+    Action->>GH: Git tree of the template folder (1 API call)
+    GH-->>Action: File list
+    Action->>GH: Download each file (raw.githubusercontent.com)
     GH-->>Action: File contents
-    Action->>GH: Fetch templateFile (raw)
-    GH-->>Action: main.typ content
     Action->>Action: Assemble fileTree, save project
 ```
 
-## Filtering
+Templates usually import their own package (e.g. `#import "@preview/isc-hei-report:0.8.1": *`); the compiler downloads it from Typst Universe when compiling.
 
-While walking the package's files, `buildTreeFromGitHub` skips:
+## Filtering and limits
+
+While building the tree, the following files are skipped:
 
 - Hidden files/folders (names starting with `.`)
 - `.md` files
 - `LICENSE`
-- The template's own entry file (`templateFile`), since it is fetched and inserted separately as `main.typ`
+
+Paths coming from the index and from GitHub are validated (no absolute paths, no `..`). A template is rejected if it has more than **300 files** or weighs more than **30MB**.
 
 ## Rate limiting
 
-Every step above calls the GitHub REST API. Without a configured `GITHUB_TOKEN`, this is limited to 60 requests/hour per IP, which is easily exceeded — see [Configuration](../configuration#github) for setting up a token.
+Only listing the template's files uses the GitHub REST API (one request per project creation). Without a configured `GITHUB_TOKEN`, it is limited to 60 requests/hour per IP — see [Configuration](../configuration#github) for setting up a token.
 
 ## Quota enforcement
 
