@@ -320,12 +320,12 @@ export function ProjectActions({
       if (!project) throw new Error('Project not found');
       await exportZip(normalizeFileTree(project.fileTree), title);
     } catch (err) {
-      console.error("Downloading error " + err)
+      console.error('Downloading error ' + err);
     } finally {
       setIsDownloading(false);
       setIsOpen(false);
     }
-  }
+  };
 
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
@@ -402,13 +402,17 @@ export function ProjectActions({
               Duplicate
             </button>
 
-          <button
+            <button
               type="button"
               onClick={handleDownloadClick}
               disabled={isDownloading}
               className={menuItem}
             >
-              {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {isDownloading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
               Download
             </button>
 
