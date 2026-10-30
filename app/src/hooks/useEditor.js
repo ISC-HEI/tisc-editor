@@ -410,7 +410,8 @@ const SKELETON_HTML = `
  * a non-main file, etc.), so a recompile never silently snaps to the top.
  */
 function setPageContent(html, scrollState) {
-  refs.page.innerHTML = html;
+  // typst.ts embeds a global `svg { fill: none; }` rule that would leak onto every SVG icon of the page.
+  refs.page.innerHTML = html.replace(/(^|[}\s])svg(\s*\{)/, '$1svg.typst-doc$2');
 
   const svg = refs.page.querySelector('svg');
   applyPageGaps(svg);
