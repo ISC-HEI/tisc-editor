@@ -1,8 +1,51 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
+import type { Prisma } from '@prisma/client';
 import { FileNode } from '@/types/filetree';
 
 type FolderNode = Extract<FileNode, { type: 'folder' }>;
+
+function asString(value: Prisma.JsonValue | undefined, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+/**
+ * Converts a raw JSON file tree into a well-formed FileNode tree.
+ */
+export function normalizeFileTree(value: Prisma.JsonValue): FileNode {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { type: 'folder', name: 'root', children: {} };
+  }
+
+  const obj = value as Prisma.JsonObject;
+
+  if (obj.type === 'file') {
+    return {
+      type: 'file',
+      name: asString(obj.name),
+      fullPath: asString(obj.fullPath, asString(obj.name)),
+      data: asString(obj.data),
+      content: typeof obj.content === 'string' ? obj.content : undefined,
+      isMain: obj.isMain === true,
+    };
+  }
+
+  const normalizedChildren: Record<string, FileNode> = {};
+  const children = obj.children;
+  if (children && typeof children === 'object' && !Array.isArray(children)) {
+    for (const [key, child] of Object.entries(children as Prisma.JsonObject)) {
+      if (child !== undefined) {
+        normalizedChildren[key] = normalizeFileTree(child);
+      }
+    }
+  }
+
+  return {
+    type: 'folder',
+    name: asString(obj.name, 'root'),
+    children: normalizedChildren,
+  };
+}
 
 export type FlatFile = {
   path: string;
