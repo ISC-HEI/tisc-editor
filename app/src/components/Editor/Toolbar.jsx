@@ -111,6 +111,35 @@ function Divider({ expanded }) {
   return <div className={`h-px shrink-0 bg-slate-200 ${expanded ? 'w-full' : 'w-10'}`} />;
 }
 
+/** On/off row used in the editor settings panel. */
+function SettingToggle({ label, description, checked, onChange }) {
+  return (
+    <button
+      onClick={() => onChange?.(!checked)}
+      className="flex w-full items-center justify-between gap-3 rounded-xl p-3 text-left transition-colors hover:bg-slate-50"
+    >
+      <span className="flex flex-col">
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+        {description && <span className="text-xs text-slate-400">{description}</span>}
+      </span>
+
+      <span
+        role="switch"
+        aria-checked={checked}
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${
+          checked ? 'bg-blue-600' : 'bg-slate-300'
+        }`}
+      >
+        <span
+          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+            checked ? 'translate-x-[18px]' : 'translate-x-[3px]'
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
 const readonlyTitle = 'Readonly mode';
 
 export function Toolbar({
@@ -118,6 +147,10 @@ export function Toolbar({
   onFontSizeChange,
   wordWrap,
   onWordWrapChange,
+  spellcheck,
+  onSpellcheckChange,
+  autocomplete,
+  onAutocompleteChange,
   canEdit = true,
   panelHost,
 }) {
@@ -399,29 +432,24 @@ export function Toolbar({
             </div>
 
             <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Line Wrapping
+              Editing
             </p>
 
-            <button
-              onClick={() => onWordWrapChange?.(!wordWrap)}
-              className="flex w-full items-center justify-between rounded-xl p-3 transition-colors hover:bg-slate-50"
-            >
-              <span className="text-sm font-medium text-slate-700">Line Wrapping</span>
+            <SettingToggle label="Line Wrapping" checked={wordWrap} onChange={onWordWrapChange} />
 
-              <span
-                role="switch"
-                aria-checked={wordWrap}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                  wordWrap ? 'bg-blue-600' : 'bg-slate-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                    wordWrap ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                  }`}
-                />
-              </span>
-            </button>
+            <SettingToggle
+              label="Spellcheck"
+              description="Underline spelling mistakes and suggest corrections"
+              checked={spellcheck}
+              onChange={onSpellcheckChange}
+            />
+
+            <SettingToggle
+              label="Auto-completion"
+              description="Show suggestions while typing"
+              checked={autocomplete}
+              onChange={onAutocompleteChange}
+            />
           </SidePanel>,
           panelHost,
         )}

@@ -6,10 +6,20 @@ import { refs } from '@/hooks/refs';
 import { currentFilePath } from '@/hooks/useEditor';
 import { initSpellcheck } from '@/hooks/spellcheck';
 
+// Monaco options behind the "Auto-completion" setting (VS Code-like suggestions)
+const autocompleteOptions = (enabled) => ({
+  quickSuggestions: enabled,
+  suggestOnTriggerCharacters: enabled,
+  wordBasedSuggestions: enabled ? 'matchingDocuments' : 'off',
+  parameterHints: { enabled },
+});
+
 export const MonacoEditor = ({
   content,
   fontSize,
   wordWrap,
+  spellcheck = true,
+  autocomplete = true,
   onChange,
   onCursorChange,
   onInstanceReady,
@@ -46,12 +56,13 @@ export const MonacoEditor = ({
       padding: { top: 16 },
       lineNumbersMinChars: 3,
       readOnly,
+      ...autocompleteOptions(autocomplete),
     });
 
     monacoInstance.current = editor;
     refs.monaco = monaco;
     refs.editor = editor;
-    refs.spellcheck = initSpellcheck(monaco, editor, 'en');
+    refs.spellcheck = initSpellcheck(monaco, editor, 'en', { userEnabled: spellcheck });
 
     // Gestion des changements de contenu
     editor.onDidChangeModelContent((event) => {
@@ -97,6 +108,16 @@ export const MonacoEditor = ({
       monacoInstance.current.updateOptions({ wordWrap: wordWrap ? 'on' : 'off' });
     }
   }, [wordWrap]);
+
+  useEffect(() => {
+    refs.spellcheck?.setUserEnabled(spellcheck);
+  }, [spellcheck]);
+
+  useEffect(() => {
+    if (monacoInstance.current) {
+      monacoInstance.current.updateOptions(autocompleteOptions(autocomplete));
+    }
+  }, [autocomplete]);
 
   return <div ref={editorRef} className="h-full w-full" />;
 };

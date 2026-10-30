@@ -13,7 +13,7 @@ It is built on [`typo-js`](https://github.com/cfinke/Typo.js) (a Hunspell-compat
 | Dictionaries | Hunspell files served from `/dictionaries/<lang>/index.aff` and `index.dic` |
 | Runs on | Client only. The document scan and dictionary lookups run in a Web Worker; only marker/position conversion and UI happen on the main thread |
 | Trigger | 300 ms after the last edit (debounced) |
-| Persistence | Ignored words are stored in `localStorage` (`spell-ignored`), on the main thread |
+| Persistence | Ignored words are stored in `localStorage` (`spell-ignored`), on the main thread. The on/off user setting is stored in `editor-settings` |
 
 ## How it works
 
@@ -101,6 +101,27 @@ Ignored words are stored lowercase in `localStorage` under the `spell-ignored` k
 
 It is sent to the worker once at startup (`init` message) and kept up to date with `ignore` messages whenever a word is added, so the filtering itself happens where the check loop runs.
 
+## User setting
+
+Users can turn the spellchecker off with the **Spellcheck** switch in the **Editor Settings** panel of the toolbar. The check runs only when **both** conditions are true:
+
+- the extension of the open file allows it (`setEnabled`, e.g. enabled for `.typ`, `.md`, `.txt`, `.tex`);
+- the user has not disabled it (`setUserEnabled`).
+
+Disabling it clears the current markers and stops scheduling checks. The worker and its dictionary stay loaded, so turning it back on is instant.
+
+The setting is stored in `localStorage` under the `editor-settings` key, together with the other editor settings (see below). Like the ignore list, it is per browser and not synchronized.
+
+### Other editor settings
+
+The same panel holds the other editor settings, managed in `Editor.jsx` and passed down to `MonacoEditor.jsx`:
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `wordWrap` | `true` | Monaco `wordWrap: 'on'` / `'off'` |
+| `spellcheck` | `true` | `spellcheck.setUserEnabled()` |
+| `autocomplete` | `true` | Monaco suggestions: `quickSuggestions`, `suggestOnTriggerCharacters`, `wordBasedSuggestions` and `parameterHints` |
+
 ## API
 
 ### `initSpellcheck(monaco, editor, initialLang?, options?)`
@@ -113,12 +134,15 @@ Attaches the spellchecker to a Monaco editor instance. It spawns a `Worker` (`sp
 | `editor` | `IStandaloneCodeEditor` | The editor instance to check |
 | `initialLang` | `string` | Language used until the document declares one. Defaults to `'fr'` |
 | `options.onLanguageDetected` | `(lang: string) => void` | Called when the document's language differs from the current one, so the UI (e.g. the toolbar badge) can stay in sync |
+| `options.userEnabled` | `boolean` | Initial value of the user's **Spellcheck** setting. Defaults to `true` |
 
 **Returns** an object with:
 
 | Member | Description |
 | --- | --- |
 | `setLanguage(lang)` | Tells the worker to load the dictionary for `lang` and re-checks the document once it's ready. Concurrent calls are safe: only the most recent one is applied |
+| `setEnabled(value)` | Enables or disables the check for the **current file type**. Called by `openFile` (`useEditor.js`) with the `spellcheck` flag of the file extension (`config/fileExtensions.js`) |
+| `setUserEnabled(value)` | Enables or disables the check from the user's **Spellcheck** setting (see [User setting](#user-setting)) |
 | `dispose()` | Cancels the pending check, unregisters the listener and code action provider, clears the markers, rejects any pending suggestion request, and **terminates the worker** |
 
 ```js
