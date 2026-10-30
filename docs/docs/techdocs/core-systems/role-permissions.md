@@ -24,6 +24,7 @@ A project always has **exactly one** `owner` at a time — `transferProjectOwner
 | Transfer ownership | ✅ (as current owner) | ❌ | ❌ | ❌ | Server (`transferProjectOwnership`) |
 | Leave the project | ✅ *(only if not the sole member — see below)* | ✅ | ✅ | ✅ | Server (`leaveProject`) |
 | Duplicate the project | ✅  | ✅ | ✅ | ✅ | Server (`duplicateProject`) |
+| Download the project (ZIP) | ✅ | ✅ | ✅ | ✅ | Server (`loadProject`), archive built client-side |
 | Add / remove tags | ✅ | ✅ | ❌ | ❌ | Server (`addTagToProject`, `removeTagFromProject`) |
 | Load / view the project | ✅ | ✅ | ✅ | ✅ | Server (`loadProject`) |
 | Save file tree / edit content | ✅ | ✅ | ❌ | ❌ | Server (`/api/projects/save`) |

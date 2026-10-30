@@ -15,7 +15,7 @@ import {
   cleanupProjectObjects,
   projectPrefix,
 } from '@/lib/project-storage';
-import { getLatestVersion, importPackageAsTree } from './github-import';
+import { findTemplate, importTemplateAsTree } from '@/lib/typst-universe';
 import { requireUserId, getAssignment, requireAssignment } from './utils';
 
 /**
@@ -26,9 +26,7 @@ export async function createProject(formData: FormData) {
   const userId = await requireUserId('No authorization');
 
   const title = formData.get('title') as string;
-  const packageBase = formData.get('packageBase') as string;
-  const packageSubPath = formData.get('packageSubPath') as string;
-  const entryFile = formData.get('entryFile') as string;
+  const template = formData.get('template') as string;
 
   const tags = formData
     .getAll('tags')
@@ -39,7 +37,7 @@ export async function createProject(formData: FormData) {
 
   // Expected failures are returned rather than thrown: Next.js strips the message
   // of errors thrown from server actions in production builds.
-  if (!title || !packageBase) {
+  if (!title || !template) {
     return { error: 'Missing project information' };
   }
 
@@ -59,19 +57,24 @@ export async function createProject(formData: FormData) {
     },
   };
 
-  if (packageBase !== 'blank') {
-    const latestVersion = await getLatestVersion(packageBase);
+  if (template !== 'blank') {
+    let universeTemplate;
+    try {
+      universeTemplate = await findTemplate(template);
+    } catch (error) {
+      console.error('Failed to load Typst Universe:', error);
+      return { error: 'Unable to reach Typst Universe. Please try again later.' };
+    }
 
-    const packageId = `${packageBase}/${latestVersion}${
-      packageSubPath ? `/${packageSubPath}` : ''
-    }`;
+    if (!universeTemplate) {
+      return { error: `Template "${template}" not found on Typst Universe.` };
+    }
 
-    const imported = await importPackageAsTree(packageId, entryFile);
-
-    if (imported) {
+    try {
+      const imported = await importTemplateAsTree(universeTemplate);
       projectData.fileTree = imported.fileTree;
-    } else {
-      return { error: 'Template import failed.' };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Template import failed.' };
     }
   } else {
     projectData.fileTree.children['main.typ'] = {

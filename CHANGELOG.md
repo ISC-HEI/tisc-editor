@@ -2,6 +2,22 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-30
+- Added possibility to download the project from the dashboard (`zip`)
+- Enabled line wrapping by default in the editor
+- Added spellcheck and auto-completion switches in the editor settings
+- Editor settings (line wrapping, spellcheck, auto-completion) are now remembered in the browser
+- Added all Typst Universe templates in project creation: search bar (max 10 results with preview, description and version), ISC-HEI templates as favorites, info icon linking to the Typst Universe page
+- Template folder, main file and thumbnail are now read from the package `typst.toml` (`[template]` section) instead of being hard-coded
+- Template files are now listed with a single GitHub API call
+- Added storage usage per user in the admin dashboard (progress bar with used / quota)
+- Added sortable columns in the admin dashboard (user, created, last login, projects, usage)
+- Added global stats in the admin dashboard (projects, total storage, users near quota)
+- Added project sizes in the admin projects dialog
+- Added user deletion in the admin dashboard, with transfer or deletion of owned projects
+- Added last login date of users (`User.lastLoginAt`, requires `prisma db push`)
+- Compilation errors now show their location (`file:line:column`) instead of an empty message
+
 ## 2026-10-26
 - Added delimiter between comments and export section
 - Added possibility to open SVG as image

@@ -10,18 +10,22 @@ Now that you want to create a project, you just have to click on the **New proje
 
 ## Templates
 
-When creating a project, you can start with a blank project or choose one of the official ISC templates.
+When creating a project, you can start with a blank project or use any template published on [Typst Universe](https://typst.app/universe/search/?kind=templates).
+
+By default, the **Favorites** section shows the official ISC templates:
 
 | Name | Utility |
 | --- | --- |
-| ISC-HEI Exec Summary | Template for writing an executive summary |
-| ISC-HEI BThesis | Template for writing a bachelor’s thesis |
-| ISC-HEI Report | Template for writing a report |
-| ISC-HEI Document | Template for writing a small document |
-| ISC-HEI TB Assignment | Template for writing a TB assignment |
-| ISC-HEI Poster | Template for making posters |
+| isc-hei-exec-summary | Template for writing an executive summary |
+| isc-hei-bthesis | Template for writing a bachelor’s thesis |
+| isc-hei-report | Template for writing a report |
+| isc-hei-document | Template for writing a small document |
+| isc-hei-tb-assignment | Template for writing a TB assignment |
+| isc-hei-poster | Template for making posters |
 
-You just have to select the template you want and add a name.
+To find another template, type its name (or a keyword, e.g. `thesis`, `cv`) in the search bar. Up to 10 results are shown, each with a preview, its description and its version. Click the info icon to open the template's page on Typst Universe.
+
+The latest version of the template is always used. You just have to select the template you want and add a name.
 
 ## Tags
 
@@ -37,4 +41,4 @@ A maximum of 10 tags is authorized per project.
 
 Just click on **Confirm and Create** and your project will be created.
 
-This step can take up to 10 seconds if you use a template, because it needs to download it from GitHub.
+This step can take up to 10 seconds if you use a template, because it needs to download it from Typst Universe.

@@ -138,11 +138,16 @@ Creates a new project, optionally from a [template](./templates), and assigns th
 
 ### `loadProject(id)`
 
-Loads a single project (with its tags) for the caller, used when opening a project from the dashboard. Delegates to an internal (non-exported) `getProjectById` helper.
+Loads a single project (with its tags and file tree) for the caller. Delegates to an internal (non-exported) `getProjectById` helper.
+
+It is used in two places:
+
+- When opening a project in the editor (`src/app/page.tsx`).
+- When [downloading a project](../../tutorial/projects/download) from the dashboard (`ProjectActions` in `src/components/Dashboard/ProjectAction.jsx`). The returned `fileTree` is passed through `normalizeFileTree` (`src/lib/filetree.ts`), then zipped in the browser by `exportZip` (`src/hooks/useFileManager.js`), the same function used by the editor's ZIP export.
 
 **Auth:** required.
 
-**Returns** the `Project` record with `tags` resolved to `Tag[]`, or `null` if the caller has no `ProjectAssignment` for it (i.e. no access, rather than a thrown error).
+**Returns** the `Project` record with `tags` resolved to `Tag[]` and `fileTree` rebuilt from its `ProjectFile` rows and the object store, or `null` if the caller has no `ProjectAssignment` for it (i.e. no access, rather than a thrown error).
 
 ### `setProjectActiveStatus(projectId, isActive)`
 

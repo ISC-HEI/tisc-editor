@@ -12,3 +12,5 @@ You can export the compiled rendering of your document as:
 ## Exporting the whole project
 
 You can also export the entire project, including all its files, as a **ZIP** archive.
+
+The same archive can be downloaded from the dashboard, without opening the project. See [Downloading a project](../projects/download).

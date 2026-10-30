@@ -26,6 +26,10 @@ const getGitVersion = () => {
 const nextConfig: NextConfig = {
   serverExternalPackages: ['@myriaddreamin/typst-ts-node-compiler'],
   output: 'standalone',
+  experimental: {
+    // 'lucide-react' is optimized by default, but not the vanilla 'lucide' barrel (~1700 icon modules)
+    optimizePackageImports: ['lucide'],
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: getGitVersion(),
   },

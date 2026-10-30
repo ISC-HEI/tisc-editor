@@ -24,6 +24,7 @@ Everything you need to create, organize, and share your projects.
 - **[Sharing a project](./projects/sharing)** — Collaborate with your team
 - **[Archiving a project](./projects/archive)** — Keep your workspace clean
 - **[Duplicate a project](./projects/duplicate)** — Make a copy of an existing project
+- **[Download a project](./projects/download)** — Download all the files of a project as a ZIP archive
 - **[Request Access](./projects/request-access.md)** — Request access to a project
 
 ---

@@ -14,6 +14,7 @@ erDiagram
         int storageQuota
         boolean disabled
         datetime createdAt
+        datetime lastLoginAt
     }
     Project {
         uuid id PK
@@ -107,7 +108,7 @@ erDiagram
 
 Represents an application user. `storageQuota` is stored in bytes and defaults to `10485760` (10 MB), matching the [storage quota](../../tutorial/storage) described in the user documentation. The quota is checked against the total `size` of the files of the projects the user owns (see [ProjectFile](#projectfile)).
 
-`disabled` (default `false`) blocks the user from signing in: the `signIn` callback refuses disabled accounts and redirects to the login page with an `AccountDisabled` error. `createdAt` records the creation date of the account.
+`disabled` (default `false`) blocks the user from signing in: the `signIn` callback refuses disabled accounts and redirects to the login page with an `AccountDisabled` error. `createdAt` records the creation date of the account. `lastLoginAt` (nullable) is updated by the Auth.js `signIn` event on each successful sign-in.
 
 A user is linked to their projects through `ProjectAssignment`, rather than through a direct relation — this is what allows a project to be shared with multiple users. A user can also have pending or past [access requests](#accessrequest).
 
