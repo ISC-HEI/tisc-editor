@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, X, LayoutTemplate, Loader2, AlertCircle } from 'lucide-react';
-import { TEMPLATES } from '@/lib/templates';
+import TemplatePicker, { BLANK_TEMPLATE } from './TemplatePicker';
 import { createProject } from '@/lib/actions/projects';
 import { getTagsByUser } from '@/lib/actions/tags';
 import { useRouter } from 'next/navigation';
@@ -11,10 +11,9 @@ export default function CreateProjectModal() {
   const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState('blank');
+  const [selectedTemplate, setSelectedTemplate] = useState(BLANK_TEMPLATE);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState(null);
-  const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   // Tags
   const [tags, setTags] = useState([]);
@@ -80,8 +79,7 @@ export default function CreateProjectModal() {
     setError(null);
     setTags([]);
     setTagInput('');
-    setSelectedTemplate('blank');
-    setShowAllTemplates(false);
+    setSelectedTemplate(BLANK_TEMPLATE);
   };
 
   return (
@@ -100,13 +98,13 @@ export default function CreateProjectModal() {
             <div className="absolute inset-0 z-[110] bg-white/70 backdrop-blur-[2px] flex flex-col items-center justify-center cursor-wait animate-in fade-in duration-200">
               <Loader2 className="text-blue-600 animate-spin mb-4" size={48} />
               <p className="text-slate-900 font-bold text-lg">Creating your project...</p>
-              <p className="text-slate-500 text-sm">Downloading templates from GitHub</p>
+              <p className="text-slate-500 text-sm">Downloading the template from Typst Universe</p>
             </div>
           )}
 
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={closeModal} />
 
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 text-left animate-in fade-in zoom-in duration-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 text-left animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
                 <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -154,8 +152,7 @@ export default function CreateProjectModal() {
                   setIsOpen(false);
                   setTags([]);
                   setTagInput('');
-                  setSelectedTemplate('blank');
-                  setShowAllTemplates(false);
+                  setSelectedTemplate(BLANK_TEMPLATE);
 
                   router.push(`/?projectId=${encodeURIComponent(result.id)}`);
                 } catch (err) {
@@ -164,65 +161,15 @@ export default function CreateProjectModal() {
                   setIsCreating(false);
                 }
               }}
-              className="p-6"
+              className="p-6 overflow-y-auto"
             >
-              <input
-                type="hidden"
-                name="entryFile"
-                value={TEMPLATES.find((t) => t.id === selectedTemplate)?.templateFile || ''}
+              <input type="hidden" name="template" value={selectedTemplate} />
+
+              <TemplatePicker
+                selectedTemplate={selectedTemplate}
+                onSelect={setSelectedTemplate}
+                disabled={isCreating}
               />
-
-              <input
-                type="hidden"
-                name="packageBase"
-                value={TEMPLATES.find((t) => t.id === selectedTemplate)?.packageBase || 'blank'}
-              />
-
-              <input
-                type="hidden"
-                name="packageSubPath"
-                value={TEMPLATES.find((t) => t.id === selectedTemplate)?.packageSubPath || ''}
-              />
-
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                {(showAllTemplates ? TEMPLATES : TEMPLATES.slice(0, 4)).map((t) => (
-                  <label
-                    key={t.id}
-                    className={`group relative cursor-pointer p-4 border-2 rounded-xl flex flex-col items-center text-center transition-all ${
-                      selectedTemplate === t.id
-                        ? 'border-blue-500 bg-blue-50/50 ring-4 ring-blue-50'
-                        : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
-                    } ${isCreating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    data-test={t.name}
-                  >
-                    <input
-                      type="radio"
-                      name="template"
-                      value={t.id}
-                      className="hidden"
-                      disabled={isCreating}
-                      onChange={() => setSelectedTemplate(t.id)}
-                      checked={selectedTemplate === t.id}
-                    />
-
-                    <div className="mb-3 transform group-hover:scale-110 transition-transform">
-                      {t.icon}
-                    </div>
-
-                    <span className="font-bold text-sm text-slate-800">{t.name}</span>
-                  </label>
-                ))}
-              </div>
-
-              {TEMPLATES.length > 4 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllTemplates(!showAllTemplates)}
-                  className="w-full -mt-4 mb-8 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  {showAllTemplates ? 'Show less' : 'Show all'}
-                </button>
-              )}
 
               {/* Project name */}
               <div className="space-y-2 mb-6">
