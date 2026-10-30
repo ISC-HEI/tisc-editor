@@ -16,6 +16,7 @@ All notable changes to this project, organized by day.
 - Added project sizes in the admin projects dialog
 - Added user deletion in the admin dashboard, with transfer or deletion of owned projects
 - Added last login date of users (`User.lastLoginAt`, requires `prisma db push`)
+- Compilation errors now show their location (`file:line:column`) instead of an empty message
 
 ## 2026-10-26
 - Added delimiter between comments and export section

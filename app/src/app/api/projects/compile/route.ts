@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { EDIT_ROLES } from '@/lib/comment-anchors';
 import sharp from 'sharp';
+import { cleanPaths, DiagnosticLog, formatDiagnostics } from '@/lib/typst-diagnostics';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -71,12 +72,14 @@ function decodeContent(data: string) {
  * (page + x + y) and map source lines to preview coordinates for edit-sync.
  *
  * @param {string} content - Original .typ source.
- * @returns {{ content: string, markerCount: number }} Source with injected
- *   markers, and how many were inserted.
+ * @returns {{ content: string, markerCount: number, lineMap: number[] }} Source
+ *   with injected markers, how many were inserted, and a map from each output
+ *   line index to its original line index (used to report diagnostics).
  */
 function injectSyncMarkers(content: string) {
   const lines = content.split('\n');
   const out: string[] = [];
+  const lineMap: number[] = [];
   let bracketDepth = 0;
   let inCodeFence = false;
   let mathOpen = false;
@@ -96,6 +99,7 @@ function injectSyncMarkers(content: string) {
     if (trimmed.startsWith('```')) {
       inCodeFence = !inCodeFence;
       out.push(line);
+      lineMap.push(idx);
       countBrackets(line);
       return;
     }
@@ -103,6 +107,7 @@ function injectSyncMarkers(content: string) {
     if (trimmed === '') {
       inParagraph = false;
       out.push(line);
+      lineMap.push(idx);
       return;
     }
 
@@ -110,18 +115,20 @@ function injectSyncMarkers(content: string) {
 
     if (!inParagraph && isSafe) {
       out.push(`#context [#metadata((line: ${idx}, loc: here().position())) <tsync-marker>]`);
+      lineMap.push(idx);
       markerCount++;
     }
     inParagraph = true;
 
     out.push(line);
+    lineMap.push(idx);
     countBrackets(line);
 
     const dollarCount = (line.match(/(?<!\\)\$/g) || []).length;
     if (dollarCount % 2 !== 0) mathOpen = !mathOpen;
   });
 
-  return { content: out.join('\n'), markerCount };
+  return { content: out.join('\n'), markerCount, lineMap };
 }
 
 /**
@@ -321,12 +328,13 @@ async function compile(req: Request, userId: string) {
 
     const mainFileCleanPath = mainFile.replace(/^root\//, '');
 
+    let mainLineMap: number[] | undefined;
     if (sync && format !== 'pdf') {
-      patchMainFileContent(
-        fileTree.children,
-        mainFileCleanPath,
-        (text) => injectSyncMarkers(text).content,
-      );
+      patchMainFileContent(fileTree.children, mainFileCleanPath, (text) => {
+        const injected = injectSyncMarkers(text);
+        mainLineMap = injected.lineMap;
+        return injected.content;
+      });
     }
 
     if (!fs.existsSync(workingDir)) {
@@ -351,19 +359,56 @@ async function compile(req: Request, userId: string) {
       const compileOptions = {
         mainFilePath: absoluteMainPath,
       };
+      const diagnosticContext = { workingDir, absoluteMainPath, mainLineMap };
+
+      const compiled = localCompiler.compile(compileOptions);
+      const document = compiled.result;
+
+      if (compiled.hasError() || !document) {
+        const diagnostics = compiled.takeDiagnostics() ?? compiled.takeError();
+        let logs: DiagnosticLog[] = [];
+        if (diagnostics) {
+          try {
+            logs = formatDiagnostics(
+              localCompiler.fetchDiagnostics(diagnostics),
+              diagnosticContext,
+            );
+          } catch {
+            logs = formatDiagnostics(diagnostics.shortDiagnostics, diagnosticContext);
+          }
+        }
+        const errorLogs = logs.filter((l) => l.type === 'error');
+        if (errorLogs.length === 0) {
+          errorLogs.push({
+            type: 'error',
+            msg: 'Compilation failed, but the compiler did not provide any details.',
+            time: new Date().toLocaleTimeString(),
+          });
+        }
+
+        return NextResponse.json(
+          {
+            success: false,
+            svg: null,
+            syncMarkers: [],
+            logs: [{ ...errorLogs[0], msg: errorLogs.map((l) => l.msg).join('\n') }],
+          },
+          { status: 200 },
+        );
+      }
 
       if (format === 'pdf') {
-        const pdfBuffer = localCompiler.pdf(compileOptions);
+        const pdfBuffer = localCompiler.pdf(document);
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: { 'Content-Type': 'application/pdf' },
         });
       } else {
-        const svg = localCompiler.svg(compileOptions);
+        const svg = localCompiler.svg(document);
 
         let syncMarkers: SyncMarker[] = [];
         if (sync) {
           try {
-            const rawResults = localCompiler.query(compileOptions, { selector: '<tsync-marker>' });
+            const rawResults = localCompiler.query(document, { selector: '<tsync-marker>' });
             syncMarkers = parseSyncMarkers(rawResults);
           } catch (syncErr) {
             const e = syncErr as { message?: string; code?: string } | string;
@@ -421,8 +466,11 @@ async function compile(req: Request, userId: string) {
       }
     } catch (err) {
       const e = err as { message?: string; code?: string } | string;
-      const errorMsg = typeof e === 'string' ? e : e?.message || e?.code || 'Compilation error';
-      const cleanedError = errorMsg.replace(new RegExp(workingDir, 'g'), 'root');
+      const errorMsg =
+        typeof e === 'string'
+          ? e
+          : e?.message || e?.code || 'Compilation failed for an unknown reason.';
+      const cleanedError = cleanPaths(errorMsg, workingDir);
 
       return NextResponse.json(
         {
