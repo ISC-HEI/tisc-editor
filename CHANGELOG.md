@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-10-30
+- Added possibility to download the project from the dashboard (`zip`)
+
 ## 2026-10-26
 - Added delimiter between comments and export section
 - Added possibility to open SVG as image
