@@ -7,7 +7,7 @@ Typst documents are compiled **server-side** in a Next.js API route (`POST`). Th
 | Item | Value |
 |---|---|
 | Library | `@myriaddreamin/typst-ts-node-compiler` (Node bindings of typst.ts) |
-| Version in use | **^0.7.0-rc2** |
+| Version in use | **^0.8.0-rc3** |
 | Used in | The compile route only (`NodeCompiler.create(...)`) |
 | Fonts | `/usr/local/share/fonts` (must exist on the server / in the Docker image) |
 | Output formats | `svg` (default, used for the preview) or `pdf` (export) |
