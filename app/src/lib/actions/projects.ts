@@ -17,6 +17,7 @@ import {
 } from '@/lib/project-storage';
 import { findTemplate, importTemplateAsTree } from '@/lib/typst-universe';
 import { requireUserId, getAssignment, requireAssignment } from './utils';
+import { metrics } from '@/lib/metrics';
 
 /**
  * Creates a new project for the current user, either blank or imported from a
@@ -160,6 +161,7 @@ export async function createProject(formData: FormData) {
 
       return project;
     });
+    metrics.projectsCreated.inc({ source: template === 'blank' ? 'blank' : 'template' });
     revalidatePath('/dashboard');
 
     return { id: project.id };
@@ -573,6 +575,7 @@ export async function duplicateProject(formData: FormData) {
       return created;
     });
 
+    metrics.projectsCreated.inc({ source: 'duplicate' });
     revalidatePath('/dashboard');
 
     return { success: true, id: newProject.id };
