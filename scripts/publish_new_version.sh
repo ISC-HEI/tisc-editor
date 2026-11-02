@@ -173,4 +173,18 @@ until curl -sf http://localhost:8082 >/dev/null 2>&1; do
 done
 echo "==> Nginx ready."
 
+# ---- Free disk space (volumes are never touched, DB/Garage data is safe) ----
+echo "==> Cleaning up Docker resources..."
+docker system df || true
+
+# Old image versions left untagged after rebuilding :latest
+docker image prune -f || true
+# Images not used by any container (running containers are protected)
+docker image prune -af --filter "until=24h" || true
+# BuildKit / build cache
+docker builder prune -af || true
+
+echo "==> Disk usage after cleanup:"
+docker system df || true
+
 echo "==> Deployment completed (version $APP_VER)."

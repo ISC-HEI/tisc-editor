@@ -105,8 +105,29 @@ Adjust the capacity (`-c 10G`) to the disk space you want to dedicate to Garage.
 | **8. Prisma** | Applies the database schema via `prisma db push`. |
 | **9. Documentation** | Starts the `tisc-docs` container and waits for it to be ready. |
 | **10. Reverse proxy** | Starts nginx (`tisc-nginx`) on port `8082`, routing traffic to the app and the docs according to `nginx/default.conf`. |
+| **11. Cleanup** | Frees disk space by removing old images and the Docker build cache (see below). |
 
 At each step, the script actively polls until the previous service is up before moving on, avoiding cascading startup failures.
+
+## Disk cleanup
+
+Each deployment rebuilds the images, which leaves the previous versions and a large build cache on the disk. At the end of the script, the following commands are run to free space:
+
+| Command | Effect |
+| :--- | :--- |
+| `docker image prune -f` | Removes dangling images (previous versions of `isc-hei/tis-editor` and `isc-hei/tisc-docs` that lost their `latest` tag). |
+| `docker image prune -af --filter "until=24h"` | Removes images older than 24 hours that are not used by any container. Images of running containers (PostgreSQL, Garage, nginx, app, docs) are kept. |
+| `docker builder prune -af` | Removes the whole Docker build cache. |
+
+`docker system df` is printed before and after the cleanup to show the space reclaimed. A failure during the cleanup never fails the deployment.
+
+:::info
+Docker volumes are **never** pruned, so the database (`tisc_db_data`) and Garage (`tisc_garage_meta`, `tisc_garage_data`) data are always kept. Stopped containers are not removed either.
+:::
+
+:::tip
+Since the build cache is cleared, the next build starts from scratch and takes longer. To keep a recent cache, replace the last command with `docker builder prune -af --filter "until=72h"`.
+:::
 
 ## Access
 

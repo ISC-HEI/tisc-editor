@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-11-02
+- `publish_new_version.sh` now frees disk space after deployment (old images and Docker build cache are removed, volumes are kept)
+
 ## 2026-10-30
 - Added possibility to download the project from the dashboard (`zip`)
 - Enabled line wrapping by default in the editor

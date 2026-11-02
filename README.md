@@ -255,6 +255,7 @@ This script is executed automatically by the mechanism above.
 | **6. Prisma** | Applies the database schema via `prisma db push`. |
 | **7. Documentation** | Starts the `tisc-docs` container and waits for it to be ready. |
 | **8. Reverse proxy** | Starts nginx (`tisc-nginx`) on port `8082`, routing traffic to the app and the docs according to `nginx/default.conf`. |
+| **9. Cleanup** | Frees disk space: removes old/unused images and the Docker build cache. Volumes (database and Garage data) are never touched. |
 
 At each step, the script actively polls until the previous service is up before moving on, avoiding cascading startup failures.
 
