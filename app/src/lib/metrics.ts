@@ -19,6 +19,10 @@ function createMetrics(): Metrics {
     labelNames: ['source'] as const,
     registers: [registry],
   });
+  // Export every series at 0 from startup so Grafana shows 0 instead of "No data".
+  for (const source of ['blank', 'template', 'duplicate']) {
+    projectsCreated.inc({ source }, 0);
+  }
 
   new Gauge({
     name: 'tisc_projects_total',
