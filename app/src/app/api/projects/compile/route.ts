@@ -298,7 +298,6 @@ function cropSvgToFirstPage(svg: string): string {
   return svg.replace(match[0], header);
 }
 
-
 /**
  * Main API Route Handler for Typst document compilation.
  * Manages session isolation, disk I/O, NodeCompiler execution,
