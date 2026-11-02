@@ -1,4 +1,17 @@
 import { downloadBlob, formatDateNow } from './useUtils';
+import { infos } from './refs';
+
+/**
+ * Builds a filesystem-safe export base name from the current project title.
+ * @returns {string} The sanitized project name, or 'typstDocument' as fallback.
+ */
+function getExportBaseName() {
+  const name = (infos.title || '')
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, '_')
+    .trim();
+  return name || 'typstDocument';
+}
 
 /**
  * Sends the project file tree to the server to compile it into an SVG string.
@@ -97,7 +110,7 @@ export async function exportPdf(fileTree) {
     }
 
     const blob = await response.blob();
-    downloadBlob(blob, `${formatDateNow()}_typstDocument.pdf`);
+    downloadBlob(blob, `${formatDateNow()}_${getExportBaseName()}.pdf`);
   } catch (e) {
     console.error('PDF export error:', e);
   }
@@ -111,7 +124,7 @@ export function exportSvg(svgContent) {
   if (!svgContent) return;
 
   const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-  const filename = `${formatDateNow()}_typstDocument.svg`;
+  const filename = `${formatDateNow()}_${getExportBaseName()}.svg`;
   downloadBlob(blob, filename);
 }
 
