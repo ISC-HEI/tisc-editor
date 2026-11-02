@@ -278,6 +278,28 @@ function parseSyncMarkers(rawResults: unknown) {
 }
 
 /**
+ * Crops a (possibly very tall, multi-page) Typst SVG to its first page area
+ * so libvips never has to rasterize something larger than its pixel limit.
+ */
+function cropSvgToFirstPage(svg: string): string {
+  const match = svg.match(/<svg[^>]*viewBox="0 0 ([\d.]+) ([\d.]+)"[^>]*>/);
+  if (!match) return svg;
+
+  const width = parseFloat(match[1]);
+  const height = parseFloat(match[2]);
+  const firstPageHeight = Math.min(height, width * Math.SQRT2); // ratio A4
+
+  if (height <= firstPageHeight) return svg;
+
+  const header = match[0]
+    .replace(/viewBox="[^"]*"/, `viewBox="0 0 ${width} ${firstPageHeight}"`)
+    .replace(/height="[^"]*"/, `height="${firstPageHeight}"`);
+
+  return svg.replace(match[0], header);
+}
+
+
+/**
  * Main API Route Handler for Typst document compilation.
  * Manages session isolation, disk I/O, NodeCompiler execution,
  * and automated resource cleanup.
@@ -437,7 +459,8 @@ async function compile(req: Request, userId: string) {
               const stale = !existing || Date.now() - existing.updatedAt.getTime() > THROTTLE_MS;
               if (!stale) return;
 
-              const pngBuffer = await sharp(Buffer.from(svg)).resize(400).png().toBuffer();
+              const thumbSvg = cropSvgToFirstPage(svg);
+              const pngBuffer = await sharp(Buffer.from(thumbSvg)).resize(400).png().toBuffer();
               const pngData = Uint8Array.from(pngBuffer);
 
               await prisma.projectThumbnail.upsert({
