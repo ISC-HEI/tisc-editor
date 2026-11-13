@@ -12,6 +12,9 @@ import sharp from 'sharp';
 import { cleanPaths, DiagnosticLog, formatDiagnostics } from '@/lib/typst-diagnostics';
 import { runTypst } from '@/lib/typst-pool';
 
+sharp.cache(false);
+sharp.concurrency(1);
+
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_BODY_SIZE = 15 * 1024 * 1024;
@@ -22,9 +25,19 @@ const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_REQUESTS = 60;
 const recentCompiles = new Map<string, number[]>();
 const inFlight = new Set<string>();
+let lastRatePurge = Date.now();
 
 function isRateLimited(userId: string) {
   const now = Date.now();
+
+  // Drop users with no recent compilation so the map does not grow forever.
+  if (now - lastRatePurge > RATE_WINDOW_MS) {
+    lastRatePurge = now;
+    for (const [id, ts] of recentCompiles) {
+      if (ts.every((t) => now - t >= RATE_WINDOW_MS)) recentCompiles.delete(id);
+    }
+  }
+
   const timestamps = (recentCompiles.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
 
   if (timestamps.length >= RATE_MAX_REQUESTS) {
