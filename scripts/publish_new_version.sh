@@ -37,28 +37,16 @@ AUTH_URL="${AUTH_URL:-https://tisc.isc-vs.dev}"
 
 DATABASE_URL="postgresql://tisc_user:${DB_PASSWORD}@tisc-db:5432/tisc_db"
 
-# ---- Get the version ----
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-GIT_DESC=$(git describe --tags --always --first-parent --dirty=.dev)
-if [ "$BRANCH" != "main" ]; then
-  APP_VER="${GIT_DESC}-${BRANCH}"
-else
-  APP_VER="$GIT_DESC"
-fi
-echo "==> Version : $APP_VER"
+# ---- Pull the images ----
+# Images are built by GitHub Actions (.github/workflows/publish-images.yml) and tagged
+# with the commit SHA. Set IMAGE_TAG to deploy another commit (e.g. a rollback).
+IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse HEAD)}"
+APP_IMAGE="ghcr.io/isc-hei/tisc-editor-app:${IMAGE_TAG}"
+DOCS_IMAGE="ghcr.io/isc-hei/tisc-editor-docs:${IMAGE_TAG}"
+echo "==> Images : $IMAGE_TAG"
 
-# ---- Build the images ----
-docker build \
-  --build-arg NEXT_PUBLIC_APP_VERSION="$APP_VER" \
-  -t isc-hei/tis-editor:latest \
-  ./app
-
-cp CHANGELOG.md docs/docs/techdocs/changelog.md # Add changelog to docs for the next build
-
-docker build \
-  -f docs/Dockerfile \
-  -t isc-hei/tisc-docs:latest \
-  .
+docker pull "$APP_IMAGE"
+docker pull "$DOCS_IMAGE"
 
 # ---- Ensure the Docker network exists ----
 docker network inspect tisc-network >/dev/null 2>&1 || docker network create tisc-network
@@ -118,7 +106,7 @@ docker run -d \
   -e DATABASE_URL="$DATABASE_URL" \
   -e AUTH_URL="$AUTH_URL" \
   --restart unless-stopped \
-  isc-hei/tis-editor:latest
+  "$APP_IMAGE"
 
 echo "==> Waiting for the app to be ready..."
 until docker exec tisc-app-prod sh -c '
@@ -143,7 +131,7 @@ docker run -d \
   --network tisc-network \
   --network-alias docs \
   --restart unless-stopped \
-  isc-hei/tisc-docs:latest
+  "$DOCS_IMAGE"
 
 echo "==> Waiting for the docs to be ready..."
 until docker exec tisc-docs sh -c '
@@ -177,13 +165,12 @@ echo "==> Nginx ready."
 echo "==> Cleaning up Docker resources..."
 docker system df || true
 
-# Old image versions left untagged after rebuilding :latest
+# Untagged images
 docker image prune -f || true
-# Images not used by any container (running containers are protected)
+# Images not used by any container, e.g. previous versions (running containers are protected)
 docker image prune -af --filter "until=24h" || true
-# BuildKit / build cache not used in the last 72h (the recent cache is kept so the next
-# build can reuse unchanged layers: dependencies install, docs build...)
-docker builder prune -af --filter "until=72h" || true
+# Build cache (nothing is built on this server anymore, images come from GHCR)
+docker builder prune -af || true
 
 echo "==> Disk usage after cleanup:"
 docker system df || true

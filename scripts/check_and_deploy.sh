@@ -16,6 +16,9 @@ REPO_DIR="/root/tisc-editor"
 BRANCH="main"
 PUBLISH_SCRIPT="./scripts/publish_new_version.sh"
 STATE_FILE="/var/lib/tisc-editor/last_deployed_sha"
+WAITING_FILE="/var/lib/tisc-editor/waiting_images_sha"
+APP_IMAGE="ghcr.io/isc-hei/tisc-editor-app"
+DOCS_IMAGE="ghcr.io/isc-hei/tisc-editor-docs"
 LOCK_FILE="/var/lock/tisc-editor-deploy.lock"
 LOG_TAG="tisc-deploy"
 
@@ -54,6 +57,19 @@ if [ "$REMOTE_SHA" = "$LAST_SHA" ]; then
     exit 0
 fi
 
+# --- Wait for the images built by GitHub Actions ---------------------------
+# They are pushed to GHCR a few minutes after the commit. If the CI build fails,
+# they never appear and this commit is never deployed.
+if ! docker manifest inspect "${APP_IMAGE}:${REMOTE_SHA}" >/dev/null 2>&1 \
+    || ! docker manifest inspect "${DOCS_IMAGE}:${REMOTE_SHA}" >/dev/null 2>&1; then
+    # Log only once per commit, not on every tick
+    if [ "$(cat "$WAITING_FILE" 2>/dev/null)" != "$REMOTE_SHA" ]; then
+        log "New commit ${REMOTE_SHA}: waiting for its images to be published by GitHub Actions."
+        echo "$REMOTE_SHA" > "$WAITING_FILE"
+    fi
+    exit 0
+fi
+
 log "New commit detected on '${BRANCH}': ${LAST_SHA:-<none>} -> ${REMOTE_SHA}"
 
 # --- Pull and deploy -------------------------------------------------------
@@ -67,13 +83,14 @@ if ! git checkout "$BRANCH"; then
     exit 1
 fi
 
-if ! git reset --hard "origin/${BRANCH}"; then
+# Reset to the exact commit whose images were checked (main may have moved since)
+if ! git reset --hard "$REMOTE_SHA"; then
     log "git reset --hard failed. Aborting deploy."
     exit 1
 fi
 
 log "Running ${PUBLISH_SCRIPT}..."
-if bash "$PUBLISH_SCRIPT"; then
+if IMAGE_TAG="$REMOTE_SHA" bash "$PUBLISH_SCRIPT"; then
     echo "$REMOTE_SHA" > "$STATE_FILE"
     log "Deploy succeeded. Recorded SHA ${REMOTE_SHA} as last deployed."
 else

@@ -232,12 +232,14 @@ A `systemd` timer on the production LXC runs `scripts/check_and_deploy.sh` every
 
 1. It compares the remote SHA of `main` (`git ls-remote`) with the last deployed SHA (stored in `/var/lib/tisc-editor/last_deployed_sha`).
 2. If nothing changed, it exits immediately.
-3. If a new commit is detected, it runs `git fetch` + `git reset --hard origin/main`, then executes `publish_new_version.sh`.
+3. If a new commit is detected, it waits until GitHub Actions has published the Docker images of this commit on GHCR, then runs `git fetch` + `git reset --hard <SHA>` and executes `publish_new_version.sh`.
 4. On success, the new SHA is recorded. On failure, it is **not** recorded, so the deployment is retried automatically on the next tick.
 
 A lock file (`flock`) prevents overlapping runs. The LXC polls GitHub, so no inbound connection from GitHub Actions is required.
 
-> A new version is usually live within 15 minutes after the push to `main`, as the build and deployment process takes some time.
+The images are built by the **Publish images** workflow on GitHub Actions, never on the server: the LXC only pulls them. If that workflow fails, the commit is not deployed.
+
+> A new version is usually live a few minutes after the push to `main`, once the **Publish images** workflow has finished.
 
 Full setup and troubleshooting: [Automatic Deployment documentation](https://tisc.isc-vs.ch/docs/docs/techdocs/automatic-deployment)
 
@@ -247,15 +249,14 @@ This script is executed automatically by the mechanism above.
 
 | Step | Action |
 | :--- | :--- |
-| **1. Versioning** | Determines the version from `git describe` (suffixed with the branch name if not `main`). |
-| **2. Build** | Builds the Docker images for the app (`isc-hei/tis-editor`) and the docs (`isc-hei/tisc-docs`). |
-| **3. Network** | Creates the `tisc-network` Docker network if it doesn't exist. |
-| **4. Database** *(if `--db`)* | Starts PostgreSQL and Garage and waits for it to be ready (`pg_isready`). |
-| **5. Application** | Starts the `tisc-app-prod` container and waits for the API to respond. |
-| **6. Prisma** | Applies the database schema via `prisma db push`. |
-| **7. Documentation** | Starts the `tisc-docs` container and waits for it to be ready. |
-| **8. Reverse proxy** | Starts nginx (`tisc-nginx`) on port `8082`, routing traffic to the app and the docs according to `nginx/default.conf`. |
-| **9. Cleanup** | Frees disk space: removes old/unused images and the Docker build cache. Volumes (database and Garage data) are never touched. |
+| **1. Images** | Pulls the app (`ghcr.io/isc-hei/tisc-editor-app`) and docs (`ghcr.io/isc-hei/tisc-editor-docs`) images tagged with the current commit SHA. |
+| **2. Network** | Creates the `tisc-network` Docker network if it doesn't exist. |
+| **3. Database** *(if `--db`)* | Starts PostgreSQL and Garage and waits for it to be ready (`pg_isready`). |
+| **4. Application** | Starts the `tisc-app-prod` container and waits for the API to respond. |
+| **5. Prisma** | Applies the database schema via `prisma db push`. |
+| **6. Documentation** | Starts the `tisc-docs` container and waits for it to be ready. |
+| **7. Reverse proxy** | Starts nginx (`tisc-nginx`) on port `8082`, routing traffic to the app and the docs according to `nginx/default.conf`. |
+| **8. Cleanup** | Frees disk space: removes old/unused images and any leftover Docker build cache. Volumes (database and Garage data) are never touched. |
 
 At each step, the script actively polls until the previous service is up before moving on, avoiding cascading startup failures.
 
@@ -300,6 +301,7 @@ The project uses **GitHub Actions** to automatically validate every push and pul
 | **Lint** | `lint.yml` | Installs dependencies and runs `bun run lint` (ESLint) from `app/` to verify that the codebase meets the project's linting rules. |
 | **Build Docs** | `build-docs.yml` | Installs dependencies and runs `bun run build` from `docs/` to make sure the documentation site compiles. |
 | **Check changelog updated** | `check_changelog.yml` | Check that on PR the changelog has been updated (bypass by adding `no-changelog`) |
+| **Publish images** | `publish-images.yml` | On `main` only: builds the production Docker images (app + docs) and pushes them to GHCR, where the production server pulls them. |
 
 A local **pre-commit hook** (via Husky) also runs `bun run format:check`, `bun run lint` and `bun run typecheck` before each commit, so issues are caught before code even reaches CI.
 

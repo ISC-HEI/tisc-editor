@@ -68,6 +68,19 @@ Ensures the Docusaurus documentation site builds successfully. Same principle as
   working-directory: docs
 ```
 
+### Publish images
+
+Builds the production Docker images and pushes them to the GitHub Container Registry (GHCR). Unlike the other workflows, it only runs on pushes to `main` (and manually via **Run workflow**), not on pull requests.
+
+| Image | Built from |
+| --- | --- |
+| `ghcr.io/isc-hei/tisc-editor-app` | `app/Dockerfile` |
+| `ghcr.io/isc-hei/tisc-editor-docs` | `docs/Dockerfile` (with `CHANGELOG.md` copied into the docs) |
+
+Each image is tagged with the commit SHA and `latest`. The app version (`NEXT_PUBLIC_APP_VERSION`) is computed with `git describe`, which is why the checkout fetches the full history and the tags. Docker layers are cached between runs (GitHub Actions cache), so unchanged steps such as the dependencies install are not redone.
+
+The production LXC waits for these images before deploying a commit, then only pulls them: see [Automatic Deployment](../automatic-deployment.md).
+
 ## Summary
 
 | Workflow | Command | Working directory | Purpose |
@@ -77,5 +90,6 @@ Ensures the Docusaurus documentation site builds successfully. Same principle as
 | Lint | `bun run lint` | `app` | Confirms code passes ESLint rules |
 | Build Docs | `bun run build` | `docs` | Confirms the documentation site builds without errors |
 | Check changelog updated | `-` | `./` | Check that on PR the changelog has been updated (bypass by adding `no-changelog`) |
+| Publish images | `docker build` + push | `./` | Builds the production images and pushes them to GHCR (on `main` only) |
 
 All workflows must pass before a pull request can be merged into any branch.

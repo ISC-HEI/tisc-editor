@@ -4,7 +4,9 @@ All notable changes to this project, organized by day.
 
 ## 2026-11-13
 - Lighter production build (~25% faster, ~20% less RAM): Monaco now only bundles the editor core (no unused languages / TypeScript worker), and Next.js uses a single build worker
-- `publish_new_version.sh` now keeps the build cache of the last 72h, so unchanged layers (dependencies, docs) are not rebuilt on every deployment
+- Production Docker images (app + docs) are now built by GitHub Actions (`publish-images.yml`) and pushed to GHCR, instead of being built on the production server
+- `check_and_deploy.sh` waits for the images of a new commit to be published before deploying it (a commit whose CI build fails is never deployed)
+- `publish_new_version.sh` now pulls the images instead of building them, and can deploy a given commit with `IMAGE_TAG=<sha>` (e.g. rollback)
 
 ## 2026-11-02
 - `publish_new_version.sh` now frees disk space after deployment (old images and Docker build cache are removed, volumes are kept)
