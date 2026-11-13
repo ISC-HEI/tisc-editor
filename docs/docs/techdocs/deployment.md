@@ -117,7 +117,7 @@ Each deployment rebuilds the images, which leaves the previous versions and a la
 | :--- | :--- |
 | `docker image prune -f` | Removes dangling images (previous versions of `isc-hei/tis-editor` and `isc-hei/tisc-docs` that lost their `latest` tag). |
 | `docker image prune -af --filter "until=24h"` | Removes images older than 24 hours that are not used by any container. Images of running containers (PostgreSQL, Garage, nginx, app, docs) are kept. |
-| `docker builder prune -af` | Removes the whole Docker build cache. |
+| `docker builder prune -af --filter "until=72h"` | Removes the Docker build cache not used in the last 72 hours. |
 
 `docker system df` is printed before and after the cleanup to show the space reclaimed. A failure during the cleanup never fails the deployment.
 
@@ -126,7 +126,7 @@ Docker volumes are **never** pruned, so the database (`tisc_db_data`) and Garage
 :::
 
 :::tip
-Since the build cache is cleared, the next build starts from scratch and takes longer. To keep a recent cache, replace the last command with `docker builder prune -af --filter "until=72h"`.
+The recent build cache is kept on purpose: unchanged layers (dependencies install, docs build) are reused, which makes the next build much faster and lighter on CPU. To reclaim all the space, run `docker builder prune -af` manually (the next build then starts from scratch).
 :::
 
 ## Access

@@ -181,8 +181,9 @@ docker system df || true
 docker image prune -f || true
 # Images not used by any container (running containers are protected)
 docker image prune -af --filter "until=24h" || true
-# BuildKit / build cache
-docker builder prune -af || true
+# BuildKit / build cache not used in the last 72h (the recent cache is kept so the next
+# build can reuse unchanged layers: dependencies install, docs build...)
+docker builder prune -af --filter "until=72h" || true
 
 echo "==> Disk usage after cleanup:"
 docker system df || true

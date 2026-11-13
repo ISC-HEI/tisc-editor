@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@myriaddreamin/typst-ts-node-compiler'],
   output: 'standalone',
   experimental: {
+    // Next sizes its build worker pool on the host's CPU count (it can see 30+ cores inside
+    // a container/LXC), each worker costing RAM. One worker is enough for our few pages.
+    cpus: 1,
     // 'lucide-react' is optimized by default, but not the vanilla 'lucide' barrel (~1700 icon modules)
     optimizePackageImports: ['lucide'],
   },

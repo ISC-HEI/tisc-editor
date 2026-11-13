@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useEffect } from 'react';
-import * as monaco from 'monaco-editor';
+// Editor core only: the full 'monaco-editor' entry also bundles ~80 languages and the
+// TypeScript/CSS/HTML/JSON workers (~10 MB), which we don't use and which slow down the build
+import * as monaco from 'monaco-editor/esm/vs/editor/edcore.main.js';
 import { typstSyntax, typstConfig } from '../../assets/typst-definition';
 import { refs } from '@/hooks/refs';
 import { currentFilePath } from '@/hooks/useEditor';
