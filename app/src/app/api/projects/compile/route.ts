@@ -3,14 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 import { FileTreeNode } from '@/types/filetree';
-import { RawSyncMarkerEntry, SyncMarker } from '@/types/markers';
+import { RawSyncMarkerEntry } from '@/types/markers';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { EDIT_ROLES } from '@/lib/comment-anchors';
 import sharp from 'sharp';
 import { cleanPaths, DiagnosticLog, formatDiagnostics } from '@/lib/typst-diagnostics';
+import { runTypst } from '@/lib/typst-pool';
 
 const MAX_SESSION_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -300,7 +300,7 @@ function cropSvgToFirstPage(svg: string): string {
 
 /**
  * Main API Route Handler for Typst document compilation.
- * Manages session isolation, disk I/O, NodeCompiler execution,
+ * Manages session isolation, disk I/O, Typst execution (in the worker pool),
  * and automated resource cleanup.
  * @param {Request} req - The incoming request containing fileTree, mainFile, and format.
  * @returns {Promise<NextResponse>} The compiled PDF blob or a JSON response (SVG/Logs).
@@ -370,39 +370,26 @@ async function compile(req: Request, userId: string) {
 
     const absoluteMainPath = safeResolve(workingDir, mainFileCleanPath);
 
-    const localCompiler = NodeCompiler.create({
-      workspace: workingDir,
-      inputs: { X: 'u' },
-      fontArgs: [{ fontPaths: ['/usr/local/share/fonts'] }],
-    });
-
     try {
-      const compileOptions = {
-        mainFilePath: absoluteMainPath,
-      };
       const diagnosticContext = { workingDir, absoluteMainPath, mainLineMap };
+      const r = await runTypst({
+        workingDir,
+        mainFilePath: absoluteMainPath,
+        format: format === 'pdf' ? 'pdf' : 'svg',
+        sync: !!sync,
+      });
 
-      const compiled = localCompiler.compile(compileOptions);
-      const document = compiled.result;
-
-      if (compiled.hasError() || !document) {
-        const diagnostics = compiled.takeDiagnostics() ?? compiled.takeError();
-        let logs: DiagnosticLog[] = [];
-        if (diagnostics) {
-          try {
-            logs = formatDiagnostics(
-              localCompiler.fetchDiagnostics(diagnostics),
-              diagnosticContext,
-            );
-          } catch {
-            logs = formatDiagnostics(diagnostics.shortDiagnostics, diagnosticContext);
-          }
-        }
+      if (!r.ok) {
+        const logs: DiagnosticLog[] = r.diagnostics
+          ? formatDiagnostics(r.diagnostics, diagnosticContext)
+          : [];
         const errorLogs = logs.filter((l) => l.type === 'error');
         if (errorLogs.length === 0) {
           errorLogs.push({
             type: 'error',
-            msg: 'Compilation failed, but the compiler did not provide any details.',
+            msg: r.message
+              ? cleanPaths(r.message, workingDir)
+              : 'Compilation failed, but the compiler did not provide any details.',
             time: new Date().toLocaleTimeString(),
           });
         }
@@ -418,26 +405,13 @@ async function compile(req: Request, userId: string) {
         );
       }
 
-      if (format === 'pdf') {
-        const pdfBuffer = localCompiler.pdf(document);
-        return new NextResponse(new Uint8Array(pdfBuffer), {
+      if (r.format === 'pdf') {
+        return new NextResponse(new Uint8Array(r.pdf), {
           headers: { 'Content-Type': 'application/pdf' },
         });
       } else {
-        const svg = localCompiler.svg(document);
-
-        let syncMarkers: SyncMarker[] = [];
-        if (sync) {
-          try {
-            const rawResults = localCompiler.query(document, { selector: '<tsync-marker>' });
-            syncMarkers = parseSyncMarkers(rawResults);
-          } catch (syncErr) {
-            const e = syncErr as { message?: string; code?: string } | string;
-            const errorMsg =
-              typeof e === 'string' ? e : e?.message || e?.code || 'Compilation error';
-            console.warn('Sync marker query failed (non-fatal):', errorMsg);
-          }
-        }
+        const svg = r.svg;
+        const syncMarkers = sync ? parseSyncMarkers(r.syncRaw) : [];
 
         if (typeof projectId === 'string' && projectId) {
           after(async () => {

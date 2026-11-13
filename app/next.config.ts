@@ -38,6 +38,13 @@ const nextConfig: NextConfig = {
       './node_modules/@img/sharp-libvips-linuxmusl-x64/**/*',
       './node_modules/@img/sharp-linuxmusl-x64/**/*',
     ],
+    // The Typst compiler only runs in a forked child (src/lib/typst-pool.ts),
+    // so nothing imports it and file tracing would not pick it up on its own.
+    '/api/projects/compile': [
+      './workers/typst-worker.cjs',
+      './node_modules/@myriaddreamin/typst-ts-node-compiler/**/*',
+      './node_modules/@myriaddreamin/typst-ts-node-compiler-linux-x64-musl/**/*',
+    ],
   },
 };
 
