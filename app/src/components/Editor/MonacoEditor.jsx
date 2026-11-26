@@ -3,7 +3,7 @@ import { useRef, useEffect } from 'react';
 // Editor core only: the full 'monaco-editor' entry also bundles ~80 languages and the
 // TypeScript/CSS/HTML/JSON workers (~10 MB), which we don't use and which slow down the build
 import * as monaco from 'monaco-editor/esm/vs/editor/edcore.main.js';
-import { typstSyntax, typstConfig } from '../../assets/typst-definition';
+import { setupTypstLanguage, TYPST_LANGUAGE_ID, TYPST_THEME } from '../../assets/typst-definition';
 import { refs } from '@/hooks/refs';
 import { currentFilePath } from '@/hooks/useEditor';
 import { initSpellcheck } from '@/hooks/spellcheck';
@@ -34,19 +34,12 @@ export const MonacoEditor = ({
   useEffect(() => {
     if (!editorRef.current) return;
 
-    const langId = 'typst';
-    const isRegistered = monaco.languages.getLanguages().some((l) => l.id === langId);
-
-    if (!isRegistered) {
-      monaco.languages.register({ id: langId });
-      monaco.languages.setLanguageConfiguration(langId, typstConfig);
-      monaco.languages.setMonarchTokensProvider(langId, typstSyntax);
-    }
+    setupTypstLanguage(monaco);
 
     const editor = monaco.editor.create(editorRef.current, {
       value: content || '',
-      language: langId,
-      theme: 'vs-light',
+      language: TYPST_LANGUAGE_ID,
+      theme: TYPST_THEME,
       automaticLayout: true,
       fontSize: fontSize || 14,
       wordWrap: wordWrap ? 'on' : 'off',

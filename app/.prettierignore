@@ -2,3 +2,5 @@ node_modules
 dist
 build
 .next
+# Vendored TextMate grammar (clysto/typst-vscode), kept byte-identical to upstream
+src/assets/typst-grammar
