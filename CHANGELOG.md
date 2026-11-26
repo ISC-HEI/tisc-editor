@@ -5,6 +5,7 @@ All notable changes to this project, organized by day.
 ## 2026-11-26
 - Added a "Share" button in the editor header (next to the active users counter), visible to the project owner, which opens the share dialog
 - On a compilation error, the preview now keeps the last successfully compiled document (dimmed, with an error badge that opens the logs) instead of replacing it with the error
+- In the editor, the cursor and selection of your own other windows on the same project are now shown (labelled "(you)"), and a closed window's cursor is removed right away
 
 ## 2026-11-13
 - Lighter production build (~25% faster, ~20% less RAM): Monaco now only bundles the editor core (no unused languages / TypeScript worker), and Next.js uses a single build worker

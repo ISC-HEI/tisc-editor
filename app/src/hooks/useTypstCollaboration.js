@@ -31,7 +31,10 @@ export const useTypstCollaboration = (docId, userId) => {
   /** @type {Object} Flag to prevent local change emission when applying remote edits */
   const isRemoteChange = useRef(false);
 
-  /** @type {Object} Map of Monaco decoration IDs for each remote user's cursor */
+  /**
+   * Remote cursors keyed by socket id (one per window, so the same user's
+   * other windows are shown too): { [socketId]: { email, ids } }.
+   */
   const remoteCursorsRef = useRef({});
 
   /**
@@ -95,6 +98,13 @@ export const useTypstCollaboration = (docId, userId) => {
     });
     socketRef.current = socket;
     refs.socket = socket;
+
+    const clearRemoteCursor = (socketId) => {
+      const cursor = remoteCursorsRef.current[socketId];
+      if (!cursor) return;
+      refs.editor?.deltaDecorations(cursor.ids, []);
+      delete remoteCursorsRef.current[socketId];
+    };
 
     socket.on('connect', () => {
       socket.emit('join-document', { docId });
@@ -205,10 +215,9 @@ export const useTypstCollaboration = (docId, userId) => {
         left.forEach((email) => {
           makeToast(`${email} left`, 'warning');
 
-          if (refs.editor && remoteCursorsRef.current[email]) {
-            refs.editor.deltaDecorations(remoteCursorsRef.current[email], []);
-            delete remoteCursorsRef.current[email];
-          }
+          Object.entries(remoteCursorsRef.current).forEach(([socketId, cursor]) => {
+            if (cursor.email === email) clearRemoteCursor(socketId);
+          });
 
           const styleElement = document.getElementById(`cursor-style-${email}`);
           if (styleElement) styleElement.remove();
@@ -222,16 +231,14 @@ export const useTypstCollaboration = (docId, userId) => {
      * Uses Monaco 'deltaDecorations' to draw other users' cursors and selections.
      * Dynamically injects CSS for user-specific colors.
      */
-    socket.on('remote-cursor', ({ filename, selection, email, userId: remoteUserId }) => {
-      if (!refs.editor || remoteUserId === userId) return;
+    socket.on('cursor-left', ({ socketId }) => clearRemoteCursor(socketId));
+
+    socket.on('remote-cursor', ({ filename, selection, email, userId: remoteUserId, socketId }) => {
+      // Skip only this window's own cursor: the same user's other windows are shown.
+      if (!refs.editor || !socketId || socketId === socket.id) return;
 
       if (filename !== currentFilePath) {
-        if (remoteCursorsRef.current[email]) {
-          remoteCursorsRef.current[email] = refs.editor.deltaDecorations(
-            remoteCursorsRef.current[email],
-            [],
-          );
-        }
+        clearRemoteCursor(socketId);
         return;
       }
       const monaco = window.monaco || refs.monaco;
@@ -247,7 +254,7 @@ export const useTypstCollaboration = (docId, userId) => {
                         height: 100%;
                     }
                     .remote-cursor-label-${remoteUserId}::after {
-                        content: '${email.split('@')[0]}';
+                        content: '${email.split('@')[0]}${remoteUserId === userId ? ' (you)' : ''}';
                         position: absolute;
                         top: -1.2em;
                         left: -2px;
@@ -300,10 +307,13 @@ export const useTypstCollaboration = (docId, userId) => {
         });
       }
 
-      remoteCursorsRef.current[email] = refs.editor.deltaDecorations(
-        remoteCursorsRef.current[email] || [],
-        decorations,
-      );
+      remoteCursorsRef.current[socketId] = {
+        email,
+        ids: refs.editor.deltaDecorations(
+          remoteCursorsRef.current[socketId]?.ids || [],
+          decorations,
+        ),
+      };
     });
 
     /**
