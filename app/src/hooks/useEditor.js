@@ -392,6 +392,67 @@ function hideLoader() {
   loaderEl.classList.add('opacity-0', '-translate-y-2');
 }
 
+let staleBadgeEl = null;
+/** HTML of the last successfully compiled document, restored on failures. */
+let lastDocumentHtml = null;
+
+/**
+ * Small badge shown over the preview when the last compilation failed but the
+ * previous successful render is kept on screen. Clicking it opens the logs.
+ */
+function showStaleBadge(message) {
+  const host = refs.previewContainer?.parentElement;
+  if (!host) return;
+
+  if (!staleBadgeEl || !host.contains(staleBadgeEl)) {
+    staleBadgeEl = document.createElement('button');
+    staleBadgeEl.type = 'button';
+    staleBadgeEl.dataset.test = 'stale-preview-badge';
+    staleBadgeEl.className =
+      'absolute top-16 left-6 z-20 max-w-sm flex items-center gap-2 rounded-full ' +
+      'bg-red-50/95 backdrop-blur border border-red-200 shadow-lg px-3 py-1.5 ' +
+      'text-[11px] font-semibold text-red-600 hover:bg-red-100 transition-colors';
+    staleBadgeEl.innerHTML = `
+      <span class="h-2 w-2 shrink-0 rounded-full bg-red-500"></span>
+      <span class="truncate"></span>
+    `;
+    staleBadgeEl.addEventListener('click', () =>
+      window.dispatchEvent(new CustomEvent('open-log-pane')),
+    );
+    host.appendChild(staleBadgeEl);
+  }
+
+  const label = staleBadgeEl.querySelector('.truncate');
+  label.textContent = 'Compilation error — showing last successful preview';
+  staleBadgeEl.title = message;
+  staleBadgeEl.hidden = false;
+  refs.page?.classList.add('opacity-60');
+}
+
+function hideStaleBadge() {
+  if (staleBadgeEl) staleBadgeEl.hidden = true;
+  refs.page?.classList.remove('opacity-60');
+}
+
+/**
+ * On a failed compilation, keeps the last successful render on screen (with
+ * a badge) when there is one; otherwise shows the full error panel.
+ */
+function showCompilationFailure(errorHtml, message, scrollState) {
+  // Error panels, skeleton and empty state contain no <svg>: one means a document is shown.
+  if (refs.page?.querySelector('svg')) {
+    showStaleBadge(message);
+    return;
+  }
+  if (lastDocumentHtml) {
+    setPageContent(lastDocumentHtml, scrollState);
+    showStaleBadge(message);
+    return;
+  }
+  hideStaleBadge();
+  setPageContent(errorHtml, scrollState);
+}
+
 const SKELETON_HTML = `
   <div class="bg-white w-full h-full min-h-[600px] p-12 space-y-4 animate-pulse">
     <div class="h-6 w-1/3 bg-slate-200 rounded"></div>
@@ -446,6 +507,8 @@ export async function fetchCompile() {
 
     if (!raw) {
       syncMarkers = [];
+      lastDocumentHtml = null;
+      hideStaleBadge();
       setPageContent(
         `<div class="flex items-center justify-center h-full text-slate-400 text-sm italic">Empty project — start typing to preview.</div>`,
         scrollState,
@@ -474,6 +537,8 @@ export async function fetchCompile() {
       hasCompilationError = false;
       updateExportButtons();
       syncMarkers = Array.isArray(result.syncMarkers) ? result.syncMarkers : [];
+      hideStaleBadge();
+      lastDocumentHtml = result.svg;
       setPageContent(result.svg, scrollState);
     } else {
       let errorMessage = 'Unknown compilation error';
@@ -484,9 +549,8 @@ export async function fetchCompile() {
 
       hasCompilationError = true;
       updateExportButtons();
-      syncMarkers = [];
 
-      setPageContent(
+      showCompilationFailure(
         `
                 <div class="p-8 text-red-600 font-mono text-sm bg-red-50 h-full overflow-auto">
                     <div class="flex items-center gap-2 font-bold mb-4">
@@ -498,6 +562,7 @@ export async function fetchCompile() {
                     <p class="mt-4 text-red-400 text-xs italic">Check the System Logs for more details.</p>
                 </div>
             `,
+        errorMessage,
         scrollState,
       );
     }
@@ -506,8 +571,7 @@ export async function fetchCompile() {
     addLogToPane({ type: 'error', msg: `Network or Server Error: ${err.message}` });
     hasCompilationError = true;
     updateExportButtons();
-    syncMarkers = [];
-    setPageContent(
+    showCompilationFailure(
       `
             <div class="p-8 text-red-600 font-mono text-sm bg-red-50 h-full overflow-auto">
                 <div class="flex items-center gap-2 font-bold mb-4">
@@ -518,6 +582,7 @@ export async function fetchCompile() {
                 </div>
             </div>
         `,
+      err.message,
       scrollState,
     );
   } finally {
