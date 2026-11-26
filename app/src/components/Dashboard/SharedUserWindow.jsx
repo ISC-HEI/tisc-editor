@@ -29,6 +29,7 @@ export default function SharedUserWindow({
   pendingRequests = EMPTY_REQUESTS,
   onClose,
   onRemoveSuccess,
+  onShareSuccess,
 }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -67,6 +68,7 @@ export default function SharedUserWindow({
         setError(result.error);
       } else {
         setEmail('');
+        onShareSuccess?.();
       }
     });
   };
@@ -109,6 +111,7 @@ export default function SharedUserWindow({
         await resolveAccessRequest(requestId, decision);
         setRequests((prev) => prev.filter((r) => r.id !== requestId));
         setSuccess(decision === 'deny' ? 'Acces denied.' : 'Access granted.');
+        if (decision !== 'deny') onShareSuccess?.();
         router.refresh();
       } catch (err) {
         setError(err.message);

@@ -119,6 +119,44 @@ export async function getProjectMembers(projectId: string) {
 }
 
 /**
+ * Returns the data needed by the share dialog: members (excluding the current
+ * user) with their role, and pending access requests. Owner only.
+ */
+export async function getProjectShareData(projectId: string) {
+  const userId = await requireUserId();
+
+  await requireOwnerAssignment(userId, projectId, 'Only owner can share');
+
+  const [members, requests] = await Promise.all([
+    prisma.projectAssignment.findMany({
+      where: { projectId, userId: { not: userId } },
+      include: { user: { select: { id: true, email: true } } },
+    }),
+    prisma.accessRequest.findMany({
+      where: { projectId, status: 'pending' },
+      orderBy: { requestedAt: 'asc' },
+      select: { id: true, requestedAt: true, user: { select: { name: true, email: true } } },
+    }),
+  ]);
+
+  return {
+    users: members.map((m: { user: { id: string; email: string }; role: string }) => ({
+      id: m.user.id,
+      email: m.user.email,
+      role: m.role,
+    })),
+    pendingRequests: requests.map(
+      (r: { id: string; requestedAt: Date; user: { name: string | null; email: string } }) => ({
+        id: r.id,
+        name: r.user.name,
+        email: r.user.email,
+        requestedAt: r.requestedAt.toISOString(),
+      }),
+    ),
+  };
+}
+
+/**
  * Returns id/email pairs for a list of user ids. Only users sharing at least
  * one project with the current user are returned.
  */
