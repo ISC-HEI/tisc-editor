@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-11-26
+- Added a "Share" button in the editor header (next to the active users counter), visible to the project owner, which opens the share dialog
+
 ## 2026-11-13
 - Lighter production build (~25% faster, ~20% less RAM): Monaco now only bundles the editor core (no unused languages / TypeScript worker), and Next.js uses a single build worker
 - Production Docker images (app + docs) are now built by GitHub Actions (`publish-images.yml`) and pushed to GHCR, instead of being built on the production server
