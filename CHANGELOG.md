@@ -2,6 +2,9 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-11-27
+- Added a "Present" button in the preview toolbar: shows the document fullscreen, one page at a time, like a slideshow (←/→, Space, Page Up/Down, Home/End or click to navigate, Esc to exit); the slides follow live recompilations
+
 ## 2026-11-26
 - Added a "Share" button in the editor header (next to the active users counter), visible to the project owner, which opens the share dialog
 - On a compilation error, the preview now keeps the last successfully compiled document (dimmed, with an error badge that opens the logs) instead of replacing it with the error
