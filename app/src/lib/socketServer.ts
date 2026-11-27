@@ -85,6 +85,7 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
       if (!docId) return;
 
       socket.leave(docId);
+      io.to(docId).emit('cursor-left', { socketId: socket.id });
       if (activeUsers[docId]) {
         delete activeUsers[docId][socket.id];
         const uniqueUsers = [...new Set(Object.values(activeUsers[docId]))];
@@ -223,6 +224,7 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
           selection,
           userId: session.userId,
           email: session.email,
+          socketId: socket.id,
         });
       }
     });
@@ -246,6 +248,7 @@ export const initSocket = (httpServer: HTTPServer | HTTPSServer) => {
     });
 
     socket.on('disconnect', () => {
+      if (session.docId) io.to(session.docId).emit('cursor-left', { socketId: socket.id });
       if (session.docId && activeUsers[session.docId]) {
         delete activeUsers[session.docId][socket.id];
 

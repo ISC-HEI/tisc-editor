@@ -2,6 +2,16 @@
 
 All notable changes to this project, organized by day.
 
+## 2026-11-27
+- Added a "Present" button in the preview toolbar: shows the document fullscreen, one page at a time, like a slideshow (←/→, Space, Page Up/Down, Home/End or click to navigate, Esc to exit); the slides follow live recompilations
+- Fixed the "A compilation is already running" error when opening a project: the editor never runs two compilations at once (extra requests are merged into a single follow-up), and waits with the loader shown while another window is compiling
+
+## 2026-11-26
+- Added a "Share" button in the editor header (next to the active users counter), visible to the project owner, which opens the share dialog
+- On a compilation error, the preview now keeps the last successfully compiled document (dimmed, with an error badge that opens the logs) instead of replacing it with the error
+- In the editor, the cursor and selection of your own other windows on the same project are now shown (labelled "(you)"), and a closed window's cursor is removed right away
+- Typst syntax highlighting now uses the TextMate grammar of [clysto/typst-vscode](https://github.com/clysto/typst-vscode) (via Shiki, VS Code "Light+" colors) instead of the custom Monarch grammar
+
 ## 2026-11-13
 - Lighter production build (~25% faster, ~20% less RAM): Monaco now only bundles the editor core (no unused languages / TypeScript worker), and Next.js uses a single build worker
 - Production Docker images (app + docs) are now built by GitHub Actions (`publish-images.yml`) and pushed to GHCR, instead of being built on the production server

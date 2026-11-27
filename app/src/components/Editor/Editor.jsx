@@ -327,7 +327,7 @@ export default function Editor({
         </div>
       )}
 
-      <EditorHeader title={title} tags={tags} />
+      <EditorHeader projectId={projectId} title={title} tags={tags} role={role} />
 
       {!canEdit && role === 'commenter' && (
         <div className="bg-blue-50 border-b border-blue-200 text-blue-700 text-xs font-medium text-center py-1.5">

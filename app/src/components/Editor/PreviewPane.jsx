@@ -1,5 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { ZoomOut, ZoomIn, Download, MessageSquare, MessageSquarePlus } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ZoomOut,
+  ZoomIn,
+  Download,
+  MessageSquare,
+  MessageSquarePlus,
+  Presentation,
+} from 'lucide-react';
 import { initPreviewRefs } from '@/hooks/refs';
 import { useZoomWatcher } from '@/hooks/useZoom';
 import {
@@ -11,6 +18,7 @@ import {
   useComments,
 } from '@/hooks/useComments';
 import { CommentsPanel } from './CommentsPanel';
+import { PresentationMode } from './PresentationMode';
 import Footer from '../Footer';
 
 function PreviewContextMenu({ menu, onClose }) {
@@ -64,6 +72,8 @@ export const PreviewPane = () => {
 
   const comments = useComments();
   const [menu, setMenu] = useState(null);
+  const [isPresenting, setIsPresenting] = useState(false);
+  const closePresentation = useCallback(() => setIsPresenting(false), []);
   const openCount = comments.threads.filter((t) => !t.resolved).length;
 
   useEffect(() => {
@@ -143,6 +153,15 @@ export const PreviewPane = () => {
         <div className="flex gap-2">
           <button
             type="button"
+            onClick={() => setIsPresenting(true)}
+            title="Present (fullscreen, page by page)"
+            data-test="preview-present-button"
+            className="flex items-center gap-2 text-[12px] font-semibold py-1.5 px-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
+            <Presentation size={14} /> Present
+          </button>
+          <button
+            type="button"
             onClick={() => setPanelOpen(!comments.panelOpen)}
             title="Comments"
             className={`flex items-center gap-2 text-[12px] font-semibold py-1.5 px-3 border rounded-lg ${
@@ -193,6 +212,7 @@ export const PreviewPane = () => {
         <CommentsPanel />
       </div>
 
+      {isPresenting && <PresentationMode onClose={closePresentation} />}
       {menu && <PreviewContextMenu menu={menu} onClose={() => setMenu(null)} />}
       <Footer position="absolute" />
     </div>
