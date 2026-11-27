@@ -58,7 +58,11 @@ export async function fetchSvg(fileTree, { sync = false, projectId } = {}) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Erreur compilation: ${errorText || response.statusText}`);
+      const error = new Error(`Erreur compilation: ${errorText || response.statusText}`);
+      error.status = response.status;
+      // The server compiles one document at a time per user (e.g. another window is compiling).
+      error.isBusy = response.status === 429 && /already running/i.test(errorText);
+      throw error;
     }
 
     return await response.text();
