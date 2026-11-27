@@ -4,6 +4,7 @@ All notable changes to this project, organized by day.
 
 ## 2026-11-27
 - Added a "Present" button in the preview toolbar: shows the document fullscreen, one page at a time, like a slideshow (←/→, Space, Page Up/Down, Home/End or click to navigate, Esc to exit); the slides follow live recompilations
+- Fixed the "A compilation is already running" error when opening a project: the editor never runs two compilations at once (extra requests are merged into a single follow-up), and waits with the loader shown while another window is compiling
 
 ## 2026-11-26
 - Added a "Share" button in the editor header (next to the active users counter), visible to the project owner, which opens the share dialog

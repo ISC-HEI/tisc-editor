@@ -493,7 +493,51 @@ function setPageContent(html, scrollState) {
   }
 }
 
-export async function fetchCompile() {
+const BUSY_RETRY_DELAY_MS = 400;
+const BUSY_MAX_RETRIES = 25;
+
+/** Promise of the compilation currently running, if any. */
+let compileInFlight = null;
+/** Promise of the single compilation queued after it, if any. */
+let compileQueued = null;
+
+/**
+ * Compiles the document and renders it in the preview. Never runs two
+ * compilations at once: a call made while one is running queues a single
+ * follow-up (which uses the latest file tree), and further calls share it.
+ */
+export function fetchCompile() {
+  if (!compileInFlight) {
+    compileInFlight = runCompile().finally(() => {
+      compileInFlight = null;
+    });
+    return compileInFlight;
+  }
+  if (!compileQueued) {
+    compileQueued = compileInFlight.then(() => {
+      compileQueued = null;
+      return fetchCompile();
+    });
+  }
+  return compileQueued;
+}
+
+/**
+ * Fetches the SVG, waiting (with the loader shown) while the server is busy
+ * compiling for this user elsewhere, e.g. in another window.
+ */
+async function fetchSvgWhenFree() {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetchSvg(fileTree, { sync: true, projectId: currentProjectId });
+    } catch (err) {
+      if (!err.isBusy || attempt >= BUSY_MAX_RETRIES) throw err;
+      await new Promise((resolve) => setTimeout(resolve, BUSY_RETRY_DELAY_MS));
+    }
+  }
+}
+
+async function runCompile() {
   if (!refs.page) return;
 
   const scrollState = captureScrollState();
@@ -503,7 +547,7 @@ export async function fetchCompile() {
   }
   showLoader();
   try {
-    const raw = await fetchSvg(fileTree, { sync: true, projectId: currentProjectId });
+    const raw = await fetchSvgWhenFree();
 
     if (!raw) {
       syncMarkers = [];
@@ -586,7 +630,8 @@ export async function fetchCompile() {
       scrollState,
     );
   } finally {
-    hideLoader();
+    // Keep the loader on screen when another compilation follows right away.
+    if (!compileQueued) hideLoader();
   }
 }
 
