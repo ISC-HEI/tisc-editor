@@ -30,6 +30,7 @@ const sidebars: SidebarsConfig = {
       { type: 'doc', id: 'tutorial/editor/export', label: 'Export Files' },
       { type: 'doc', id: 'tutorial/editor/multi-editing', label: 'Multi-Editing' },
       { type: 'doc', id: 'tutorial/editor/comments', label: 'Comments' },
+      { type: 'doc', id: 'tutorial/editor/presentation', label: 'Presentation' },
     ]},
     { type: 'doc', id: 'tutorial/storage', label: 'Storage Management' },
   ],
